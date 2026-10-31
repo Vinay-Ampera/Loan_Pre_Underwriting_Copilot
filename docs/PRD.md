@@ -127,7 +127,7 @@ FOIR, job or business stability, salary regularity, cheque and NACH returns, LTV
 | Stability | ≥2 yrs experience, ≥1 yr with employer | Employment or business stability | n/a | Vintage ≥2 yrs; bank credits ≥80% of GST sales; 3+ cheque returns in 12 months = refer | Employment or business stability |
 | Extra | | Existing loans count in FOIR only if >12 instalments unpaid | Co-applicant mandatory | GST or Udyam required | Driving licence, invoice |
 
-Tenure is also limited so that age at maturity stays ≤55. Values are a sample policy modelled on public SBI, HDFC and ICICI criteria. They are not any bank's actual policy.
+Personal loans are capped at ₹25 lakh and business loans at 30% of annual turnover (sample policy; added in Stage 1 so each can fail independently of FOIR). Tenure is also limited so that age at maturity stays ≤55. Age at maturity is the age on the date `application date + total tenure`, where an education loan's tenure includes the moratorium. Values are a sample policy modelled on public SBI, HDFC and ICICI criteria. They are not any bank's actual policy.
 
 ### 6.4 Scoring
 
@@ -165,6 +165,7 @@ Entered by the officer at case creation. The system checks documents against the
 - **Business:** business name, constitution type, GSTIN, Udyam number, vintage, annual turnover.
 - **Vehicle:** make, model, new or used, on-road price, dealer.
 - **Co-applicant:** same identity and income fields plus relationship.
+- **Also collected (added in Stage 1, needed by the rules):** residential status; months in current employment (stability rules); total work experience in months (personal loan only); collateral offered and margin amount (education).
 
 ## 8. Agents and pipeline (summary)
 
@@ -306,10 +307,10 @@ Detail is in `ARCHITECTURE.md`.
 | OI-2 | DPO, TRL, Colab and tuned Qwen from the original idea | **Resolved 2026-10-31:** removed. No training, no local LLM, API only. Learning is precedent-based with admin approval. |
 | OI-3 | Size of the precedent bonus and similarity threshold | Placeholders in the rules file; tune on dev data. |
 | OI-4 | Langfuse cloud versus self-hosted | Cloud if quick, else local. |
-| OI-5 | Exact free model names and rate limits | Verify at Stage 1. |
+| OI-5 | Exact free model names and rate limits | **Resolved 2026-10-31** (verified live, see `docs/AGENTS.md` section 7 and `backend/app/services/llm_models.yaml`). Gemini Flash is `gemini-3.6-flash` (2.5 Flash is closed to new users); Groq `openai/gpt-oss-20b` allows 1,000 requests/day but only **8,000 tokens/minute**; NVIDIA `nvidia/nemotron-3-ultra-550b-a55b` at about 40 requests/minute shared across models; fallback OpenRouter free (20 requests/minute, 50/day). |
 | OI-6 | Fairness groups | Gender, age band, city tier, for monitoring only. |
 | OI-7 | Targets for evaluation metrics | Set after the first baseline run. |
 
 ## 16. Not done yet (by design)
 
-No code has been written. Next step: trainer review of these documents, then Stage 1 of `IMPLEMENTATION_PLAN.md`.
+Stage 1 (foundation and synthetic data) is built and its exit criteria pass; it is awaiting the user's review. Later stages are not started. Next step: Stage 2 of `IMPLEMENTATION_PLAN.md`.

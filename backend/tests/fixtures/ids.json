@@ -1,0 +1,39 @@
+{
+  "pan_valid": [
+    {
+      "pan": "ABCPK1234F",
+      "surname": "Kumar"
+    },
+    {
+      "pan": "ZZZCK0001A",
+      "surname": "Khan"
+    }
+  ],
+  "pan_invalid": [
+    "ABCPK12345",
+    "abcpk1234f",
+    "ABCXK1234F",
+    "ABC1K1234F"
+  ],
+  "aadhaar_valid": [
+    "234567890124"
+  ],
+  "aadhaar_invalid": [
+    "234567890120",
+    "123456789012",
+    "2345678901"
+  ],
+  "gstin_valid": [
+    "27ABCPK1234F1Z5"
+  ],
+  "gstin_invalid": [
+    "27ABCPK1234F1Z0"
+  ],
+  "udyam_valid": [
+    "UDYAM-MH-12-1234567"
+  ],
+  "udyam_invalid": [
+    "UDYAM-MH-12-123456",
+    "UDYAM-M1-12-1234567"
+  ]
+}

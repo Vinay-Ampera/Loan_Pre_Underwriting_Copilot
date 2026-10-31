@@ -1,0 +1,33 @@
+# Stage 1 dependencies. Later stages append (langgraph, sentence-transformers,
+# paddleocr, fastapi, ...). Pin exact versions with `pip freeze` once the set is stable.
+
+# config and schemas
+pydantic>=2.7
+pydantic-settings>=2.3
+pyyaml>=6.0
+
+# database
+sqlalchemy>=2.0
+alembic>=1.13
+psycopg[binary]>=3.2
+pgvector>=0.3
+
+# LLM gateway
+litellm>=1.50
+
+# synthetic data
+faker>=25.0
+reportlab>=4.2
+pillow>=10.3
+numpy>=1.26
+rapidfuzz>=3.9
+opencv-python-headless>=4.9
+pikepdf>=9.0
+pymupdf>=1.24
+
+# dev
+pytest>=8.2
+ruff>=0.5
+mypy>=1.10
+types-PyYAML
+pre-commit>=3.7

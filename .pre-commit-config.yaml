@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.7
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: .venv/bin/mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: block-env-files
+        name: block .env files
+        entry: bash -c 'for f in "$@"; do case "$(basename "$f")" in .env|.env.*) [ "$(basename "$f")" = ".env.example" ] || { echo "refusing $f"; exit 1; } ;; esac; done' --
+        language: system
+        files: (^|/)\.env

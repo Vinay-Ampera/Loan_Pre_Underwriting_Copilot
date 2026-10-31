@@ -1,0 +1,13 @@
+[
+  {
+    "pan": "ABCPK1234F",
+    "cibil_score": 742,
+    "active_loans": [
+      {
+        "lender": "Finserv Capital",
+        "emi": 4000
+      }
+    ],
+    "enquiries": []
+  }
+]

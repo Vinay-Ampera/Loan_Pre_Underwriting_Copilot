@@ -45,7 +45,8 @@ Raw PAN and Aadhaar are synthetic. Full Aadhaar is never stored.
 `id, case_id, officer_id, action (confirm|override), original_recommendation, final_decision, reason (required for override), second_click_at, created_at`
 
 **precedents**
-`id, source_case_id, status (pending|approved|rejected|expired), loan_type, rule_ids text[] (rules involved), original_score, original_recommendation, final_decision, officer_reason, report_summary, embedding vector(384), proposed_by, reviewed_by, reviewed_at, valid_until, times_used, created_at`
+`id, source_case_id, status (pending|held|approved|rejected|expired), loan_type, rule_ids text[] (rules involved), original_score, original_recommendation, final_decision, officer_reason, report_summary, embedding vector(384), proposed_by, reviewed_by, reviewed_at, valid_until, times_used, created_at`
+`held` = failed the code-side hard-rule check; it never reaches the admin or RAG. A CHECK constraint stops a row becoming `approved` without a reviewer, review time, expiry date and embedding.
 Index: HNSW on `embedding`; btree on `(loan_type, status)`.
 
 **audit_log**
@@ -62,7 +63,7 @@ Append-only; no update or delete grants.
 Index: HNSW on `embedding`; btree on `clause_id`.
 
 **rules**
-`rule_id (pk), loan_type (or 'common'), stage, kind (hard|soft), field, operator, threshold, points, policy_clause, source_tag, version, active`
+`rule_id (pk), loan_type (or 'common' when a rule spans several), loan_types text[], stage (kyc|documents|income|credit|policy), kind (hard|soft), subject (each|case), roles text[], when_cond jsonb, field, operator ('tiers' for tier-scored rules), threshold, tiers jsonb, points, fail_class (fix|eligibility), on_fail (stop|cap_refer), policy_clause, source_tag, version, active`
 
 **rule_set_versions**
 `version, checksum, loaded_at, loaded_by`
@@ -78,10 +79,11 @@ Each report stores the policy and rules version used.
 ## 6. Evaluation and fairness
 
 **test_cases**
-`case_id, split (dev|test), expected_band, expected_stop_stage, expected_flags jsonb, target_score`
+`case_id (text key such as SYN-PL-D01), split (dev|test), loan_type, scenario, expected_band, expected_stop_stage, expected_flags jsonb, target_score, case_ref → cases (set when the golden runner creates a real case)`
+Expected band is null for a fix-type stop; target score is null when the run stops early.
 
 **fairness_attributes** (separate and isolated)
-`case_id, applicant_id, gender, age_band, city_tier`
+`case_id (→ test_cases), applicant_role (primary|co), gender, age_band, city_tier`
 Used only by the monitoring report. Agents and the scoring code have no access; enforce with a separate database role and no joins in the pipeline.
 
 ## 7. Roles and access
@@ -100,4 +102,4 @@ Used only by the monitoring report. Agents and the scoring code have no access; 
 
 ## 9. Migrations
 
-Alembic, one migration per change, applied by CI on a throwaway database before merge. Seed scripts load rules, policy chunks and mock data.
+Alembic (`python -m app.db.migrate`), one migration per change, applied by CI on a throwaway database before merge. Roles are created `NOLOGIN` by migration 0005; an admin gives them a password by hand. Seed script `python -m app.db.seed` loads rules, policy chunks (embeddings come from the Stage 4 re-index), mock data and the answer keys. `python -m app.db.check` prints connection facts without exposing the URL.

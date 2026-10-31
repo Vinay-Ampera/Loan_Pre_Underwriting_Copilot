@@ -1,0 +1,51 @@
+[project]
+name = "loan-copilot"
+version = "0.1.0"
+description = "Loan pre-underwriting copilot (capstone, synthetic data only)"
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Editable install exposes `app` (backend/) and `synthetic` (data/) as importable packages,
+# so `python -m app.db.migrate` and `python -m synthetic.generate` work from the repo root.
+[tool.setuptools.packages.find]
+where = ["backend", "data"]
+include = ["app*", "synthetic*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["frontend", "docs", "data/synthetic/output"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "N"]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/app/db/versions/*" = ["E501"]
+"backend/app/db/seed.py" = ["E501"]  # long SQL strings
+# generator: dense data-building code with long literal rows
+"data/synthetic/*" = ["E501", "N806", "SIM108"]
+"backend/tests/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["backend/app"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["litellm.*", "reportlab.*", "pikepdf.*", "cv2.*", "yaml.*", "pgvector.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+addopts = "-q"
+markers = [
+    "db: needs a live DATABASE_URL (skipped when it is not set)",
+    "llm: calls a real LLM provider (skipped unless --run-llm)",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "synthetic"]

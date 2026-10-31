@@ -68,12 +68,16 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 ## Commands (fill in as stages land)
 
 ```
-backend:   uvicorn app.main:app --reload
-tests:     pytest -q
-lint:      ruff check . && ruff format --check . && mypy app
-frontend:  npm run dev
-data:      python -m synthetic.generate --split dev|test
-reindex:   python -m app.rag.reindex
+setup:     virtualenv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/pip install -e .
+backend:   uvicorn app.main:app --reload          (Stage 6)
+tests:     pytest -q                              (DB tests use a throwaway database)
+lint:      ruff check . && ruff format --check . && mypy
+frontend:  npm run dev                            (Stage 6)
+db:        python -m app.db.check | python -m app.db.migrate | python -m app.db.seed
+llm:       python -m app.services.llm_probe | python -m app.services.llm_smoke [--break-primary]
+data:      python -m synthetic.generate --split dev|test|all && python -m synthetic.verify
+fixtures:  python -m synthetic.fixtures
+reindex:   python -m app.rag.reindex              (Stage 4)
 eval:      python -m app.eval.run --split dev
 stack:     docker compose up   (Stage 8)
 diagrams:  python3 docs/diagrams/make_diagrams.py
@@ -81,7 +85,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Planning approved by trainer. Neon ready (pgvector on), LLM keys set. No code written yet. Next: Stage 1 (Foundation and synthetic data).
+Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Next: Stage 2 (intake and parsers).
 
 ## Open items
 

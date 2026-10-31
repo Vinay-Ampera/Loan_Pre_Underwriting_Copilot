@@ -6,7 +6,7 @@ Capstone project. Synthetic data only. No real personal data.
 
 ## Status
 
-Planning complete; documents awaiting approval. No code yet. Next: Stage 1 (foundation and synthetic data).
+Stage 1 (foundation and synthetic data) built; awaiting review. Next: Stage 2 (intake and parsers).
 
 ## Documents
 

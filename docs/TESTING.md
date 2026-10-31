@@ -16,7 +16,9 @@
 ## 2. Test data
 
 - 100 synthetic cases: 60 dev, 40 test (`PRD.md` section 11).
-- Small unit-test fixtures are separate and tiny.
+- Small unit-test fixtures are separate and tiny (`backend/tests/fixtures/`, rebuilt by `python -m synthetic.fixtures`).
+- Generate the 100 cases with `python -m synthetic.generate` (deterministic for a seed; output is gitignored) and check the Stage 1 exit criteria with `python -m synthetic.verify`.
+- Answer-key scores come from the rules file through a reference evaluator (`app/scoring/evaluate.py`), not from guesses. Soft facts that depend on document measurement (blur, OCR confidence) are design targets, calibrated in Stage 2.
 - The **test split is held out**. It is run only at release and for the final report. Never tune on it.
 - Each case has an answer key: expected band, expected stop stage, expected flags, target score.
 - Score spread covers roughly 30, 40, 55, 67, 85, 98 and 100.

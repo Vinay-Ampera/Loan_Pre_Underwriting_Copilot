@@ -80,3 +80,17 @@ Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.m
 ## Precedent flow (not an agent, but touches Decision and Policy)
 
 Override → reason required → LLM summary of the report → proposed precedent (embedding) → code checks hard rules (breach = held) → admin approves or rejects → approved precedent stored with expiry → retrieved by Policy for similar borderline cases.
+
+## 7. Model IDs and fallbacks (verified 2026-10-31)
+
+Source of truth: `backend/app/services/llm_models.yaml`. Agents ask for a role, never a provider model. Re-run `python -m app.services.llm_probe` before relying on limits; free tiers change.
+
+| Role | Primary | Fallbacks, in order |
+|---|---|---|
+| Supervisor, Extraction, Decision | Gemini `gemini-3.6-flash` | OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free`, Gemini `gemini-3.5-flash-lite` |
+| KYC, Risk | Groq `openai/gpt-oss-20b` | NVIDIA `openai/gpt-oss-20b`, OpenRouter nemotron free |
+| Policy | NVIDIA `nvidia/nemotron-3-ultra-550b-a55b` | OpenRouter nemotron free, Gemini flash-lite |
+| Judge (evaluation) | Gemini `gemini-3.5-flash-lite` | NVIDIA `openai/gpt-oss-20b` |
+
+Observed limits: Groq gpt-oss-20b 1,000 requests/day and **8,000 tokens/minute** (keep KYC and Risk prompts small); NVIDIA about 40 requests/minute shared across models; OpenRouter free 20 requests/minute and 50/day. Gemini 3.x preview models sometimes return 503 "high demand", which the router treats as a fallback trigger. `python -m app.services.llm_smoke --break-primary` proves every role completes through a fallback.
+

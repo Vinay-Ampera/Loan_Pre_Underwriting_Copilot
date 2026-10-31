@@ -1,0 +1,180 @@
+# Sample Bank rules file. One row per rule; scoring code reads this, LLMs never do arithmetic on it.
+# Values are a SAMPLE policy modelled on public SBI / HDFC / ICICI criteria and RBI rules.
+# Source tags: public | RBI | sample.   Changing a threshold needs a golden-set rerun.
+#
+# Row fields
+#   rule_id        <LOAN>-<TOPIC>-<NN>   LOAN: CM common, PL, HL, ED, BL, VL
+#   loan_types     list of loan types the rule applies to
+#   stage          kyc | documents | income | credit | policy
+#   kind           hard (gates the case, no points) | soft (earns points)
+#   subject        hard rules only. each = every person in `roles`; case = case-level fact
+#   roles          hard rules only. primary | co  (education: primary = student, co = earner)
+#   when           optional facts that must equal these values for the rule to apply
+#   field/operator/threshold   gte lte gt lt eq ne in
+#   tiers          soft rules: first matching tier wins, else 0 points
+#   points         soft rules: maximum points (must equal the best tier)
+#   on_fail        hard rules: stop (fix | eligibility via fail_class) or cap_refer
+#   policy_clause  clause ID that must exist in data/policy
+#
+# Case-level fact aggregation (done by scoring code, Stage 3):
+#   KYC and document facts: minimum across persons.
+#   Income and credit facts: the "earner" = primary applicant, except education where it is the
+#   co-applicant. FOIR is combined across persons.
+#
+# Stage -> pipeline stage that stops the run: kyc->kyc, documents->extraction, income/credit->risk.
+# If a stage has both a fix and an eligibility failure, fix wins (correct the data, then re-check).
+
+meta:
+  rules_version: "2026.10.31-1"
+  source_note: "Sample Bank policy, synthetic. Not any bank's actual policy."
+
+scoring:
+  stage_weights: {kyc: 20, documents: 15, income: 30, credit: 25, policy: 10}
+  bands: {approve_min: 85, refer_min: 60}     # >=85 approve, 60-84 refer, <60 reject
+  eligibility_score_cap: 59                   # an eligibility-type fail is capped below 60
+
+age:
+  min_age: 21
+  student_min_age: 18
+  max_age_at_maturity: 55                     # OI-1: configurable, treated as age at maturity
+
+precedent:                                    # OI-3 placeholders, tune on dev data
+  bonus_max: 5
+  similarity_min: 0.80
+  valid_months: 12
+
+# Mandatory documents per loan. kyc: true means a missing document is a fix-type hard fail and
+# applies to every person (primary and co). min_count counts units (months, years, files).
+# applicant: who must supply it (default primary). any_of lists alternatives. `when` filters on
+# facts of that applicant (employment_type) or of the case (vehicle_kind, vehicle_condition).
+documents:
+  all:
+    - {type: pan_card, kyc: true}
+    - {type: aadhaar, kyc: true}
+    - {type: photo, kyc: true}
+  personal:
+    - {type: payslip, min_count: 3, when: {employment_type: salaried}}
+    - {type: bank_statement, min_count: 6}
+  home:
+    - {type: payslip, min_count: 3, when: {employment_type: salaried}}
+    - {type: form16, when: {employment_type: salaried}}
+    - {type: itr, min_count: 3, when: {employment_type: self_employed}}
+    - {type: pnl_balance_sheet, when: {employment_type: self_employed}}
+    - {type: bank_statement, min_count: 6}
+    - {type: sale_agreement}
+    - {type: title_deed}
+    - {type: encumbrance_certificate}
+    - {type: approved_plan}
+  education:
+    - {type: admission_letter}
+    - {type: fee_structure}
+    - {type: marksheet}
+    # the co-applicant is mandatory and is the earner; same documents as a primary applicant
+    - {type: payslip, min_count: 3, applicant: co, when: {employment_type: salaried}}
+    - {type: itr, min_count: 2, applicant: co, when: {employment_type: self_employed}}
+    - {type: bank_statement, min_count: 6, applicant: co}
+  business:
+    - {type: business_proof}
+    - {type: gst_registration, any_of: [gst_registration, udyam_certificate]}
+    - {type: bank_statement, min_count: 12}
+    - {type: gst_returns, min_count: 12}
+    - {type: itr, min_count: 2}
+    - {type: pnl_balance_sheet}
+  vehicle:
+    - {type: payslip, min_count: 3, when: {employment_type: salaried}}
+    - {type: itr, min_count: 1, when: {employment_type: self_employed}}
+    - {type: bank_statement, min_count: 6}
+    - {type: dealer_invoice}
+    - {type: driving_licence, when: {vehicle_kind: two_wheeler}}
+    - {type: rc_book, when: {vehicle_condition: used}}
+    - {type: insurance, when: {vehicle_condition: used}}
+
+rules:
+  # ======================= HARD RULES =======================
+  # --- KYC stage: fix-type ---
+  - {rule_id: CM-KYC-01, loan_types: &all [personal, home, education, business, vehicle], stage: kyc, kind: hard, subject: each, roles: [primary, co], field: pan_valid, operator: eq, threshold: true, fail_class: fix, on_fail: stop, policy_clause: CM-KYC-01, source: RBI}
+  - {rule_id: CM-KYC-02, loan_types: *all, stage: kyc, kind: hard, subject: each, roles: [primary, co], field: aadhaar_valid, operator: eq, threshold: true, fail_class: fix, on_fail: stop, policy_clause: CM-KYC-02, source: RBI}
+  - {rule_id: CM-KYC-03, loan_types: *all, stage: kyc, kind: hard, subject: each, roles: [primary, co], field: name_match_score, operator: gte, threshold: 85, fail_class: fix, on_fail: stop, policy_clause: CM-KYC-03, source: sample}
+  - {rule_id: CM-KYC-04, loan_types: *all, stage: kyc, kind: hard, subject: each, roles: [primary, co], field: dob_match, operator: eq, threshold: true, fail_class: fix, on_fail: stop, policy_clause: CM-KYC-03, source: sample}
+  - {rule_id: CM-DOC-01, loan_types: *all, stage: kyc, kind: hard, subject: case, field: kyc_docs_complete, operator: eq, threshold: true, fail_class: fix, on_fail: stop, policy_clause: CM-DOC-01, source: sample}
+  # --- KYC stage: eligibility-type ---
+  - {rule_id: CM-ELIG-01, loan_types: *all, stage: kyc, kind: hard, subject: each, roles: [primary, co], field: is_resident, operator: eq, threshold: true, fail_class: eligibility, on_fail: stop, policy_clause: CM-ELIG-01, source: public}
+  - {rule_id: CM-ELIG-02, loan_types: [personal, home, business, vehicle], stage: kyc, kind: hard, subject: each, roles: [primary, co], field: age_at_application, operator: gte, threshold: 21, fail_class: eligibility, on_fail: stop, policy_clause: CM-ELIG-02, source: public}
+  - {rule_id: ED-ELIG-01, loan_types: [education], stage: kyc, kind: hard, subject: each, roles: [primary], field: age_at_application, operator: gte, threshold: 18, fail_class: eligibility, on_fail: stop, policy_clause: ED-ELIG-01, source: public}
+  - {rule_id: ED-ELIG-02, loan_types: [education], stage: kyc, kind: hard, subject: each, roles: [co], field: age_at_application, operator: gte, threshold: 21, fail_class: eligibility, on_fail: stop, policy_clause: CM-ELIG-02, source: public}
+  - {rule_id: CM-ELIG-03, loan_types: *all, stage: kyc, kind: hard, subject: each, roles: [primary, co], field: age_at_maturity, operator: lte, threshold: 55, fail_class: eligibility, on_fail: stop, policy_clause: CM-ELIG-03, source: sample}
+  # --- Credit stage (risk agent): eligibility floors by product ---
+  - {rule_id: PL-CIBIL-01, loan_types: [personal], stage: credit, kind: hard, subject: each, roles: [primary], field: cibil_score, operator: gte, threshold: 650, fail_class: eligibility, on_fail: stop, policy_clause: PL-ELIG-03, source: public}
+  - {rule_id: HL-CIBIL-01, loan_types: [home], stage: credit, kind: hard, subject: each, roles: [primary], field: cibil_score, operator: gte, threshold: 700, fail_class: eligibility, on_fail: stop, policy_clause: HL-ELIG-03, source: public}
+  - {rule_id: ED-CIBIL-01, loan_types: [education], stage: credit, kind: hard, subject: each, roles: [co], field: cibil_score, operator: gte, threshold: 700, fail_class: eligibility, on_fail: stop, policy_clause: ED-ELIG-03, source: public}
+  - {rule_id: BL-CIBIL-01, loan_types: [business], stage: credit, kind: hard, subject: each, roles: [primary], field: cibil_score, operator: gte, threshold: 650, fail_class: eligibility, on_fail: stop, policy_clause: BL-ELIG-03, source: public}
+  - {rule_id: VL-CIBIL-01, loan_types: [vehicle], stage: credit, kind: hard, subject: each, roles: [primary], field: cibil_score, operator: gte, threshold: 700, fail_class: eligibility, on_fail: stop, policy_clause: VL-ELIG-03, source: public}
+  # --- Refer caps: never a silent pass ---
+  - {rule_id: PL-CIBIL-02, loan_types: [personal], stage: credit, kind: hard, subject: each, roles: [primary], field: cibil_score, operator: gte, threshold: 700, on_fail: cap_refer, policy_clause: PL-ELIG-03, source: public}
+  - {rule_id: CM-FRD-01, loan_types: *all, stage: credit, kind: hard, subject: case, field: tamper_suspected, operator: eq, threshold: false, on_fail: cap_refer, policy_clause: CM-FRD-01, source: sample}
+  - {rule_id: BL-CRD-20, loan_types: [business], stage: credit, kind: hard, subject: case, field: cheque_nach_returns_12m, operator: lt, threshold: 3, on_fail: cap_refer, policy_clause: BL-STAB-02, source: sample}
+
+  # ======================= KYC (20) =======================
+  - {rule_id: CM-KYC-10, loan_types: *all, stage: kyc, kind: soft, field: identity_lookup_match, operator: eq, threshold: true, points: 6, policy_clause: CM-KYC-04, source: sample}
+  - {rule_id: CM-KYC-11, loan_types: *all, stage: kyc, kind: soft, field: name_match_score, points: 5, tiers: [{operator: gte, threshold: 95, points: 5}, {operator: gte, threshold: 85, points: 3}], policy_clause: CM-KYC-03, source: sample}
+  - {rule_id: CM-KYC-12, loan_types: *all, stage: kyc, kind: soft, field: address_match_score, points: 4, tiers: [{operator: gte, threshold: 85, points: 4}, {operator: gte, threshold: 60, points: 2}], policy_clause: CM-KYC-05, source: sample}
+  - {rule_id: CM-KYC-13, loan_types: *all, stage: kyc, kind: soft, field: kyc_doc_quality, points: 5, tiers: [{operator: gte, threshold: 80, points: 5}, {operator: gte, threshold: 60, points: 3}], policy_clause: CM-DOC-03, source: sample}
+
+  # ======================= DOCUMENTS (15) =======================
+  - {rule_id: CM-DOC-10, loan_types: *all, stage: documents, kind: soft, field: mandatory_docs_ratio, points: 6, tiers: [{operator: gte, threshold: 1.0, points: 6}, {operator: gte, threshold: 0.8, points: 3}], policy_clause: CM-DOC-02, source: sample}
+  - {rule_id: CM-DOC-11, loan_types: *all, stage: documents, kind: soft, field: doc_quality_score, points: 4, tiers: [{operator: gte, threshold: 80, points: 4}, {operator: gte, threshold: 60, points: 2}], policy_clause: CM-DOC-03, source: sample}
+  - {rule_id: CM-DOC-12, loan_types: *all, stage: documents, kind: soft, field: avg_field_confidence, points: 3, tiers: [{operator: gte, threshold: 0.9, points: 3}, {operator: gte, threshold: 0.75, points: 1}], policy_clause: CM-DOC-03, source: sample}
+  - {rule_id: CM-DOC-13, loan_types: *all, stage: documents, kind: soft, field: totals_tie_out, operator: eq, threshold: true, points: 2, policy_clause: CM-DOC-04, source: sample}
+
+  # ======================= INCOME AND FOIR (30) =======================
+  - {rule_id: CM-INC-10, loan_types: *all, stage: income, kind: soft, field: foir, points: 12, tiers: [{operator: lte, threshold: 40, points: 12}, {operator: lte, threshold: 50, points: 6}], policy_clause: CM-INC-01, source: sample}
+  - {rule_id: CM-INC-12, loan_types: *all, stage: income, kind: soft, field: income_verified_ratio, points: 5, tiers: [{operator: gte, threshold: 0.9, points: 5}, {operator: gte, threshold: 0.75, points: 3}], policy_clause: CM-INC-03, source: sample}
+  - {rule_id: CM-INC-13, loan_types: *all, stage: income, kind: soft, field: income_regularity, points: 4, tiers: [{operator: gte, threshold: 0.9, points: 4}, {operator: gte, threshold: 0.65, points: 2}], policy_clause: CM-INC-04, source: sample}
+  # minimum income by product
+  - {rule_id: PL-INC-11, loan_types: [personal], stage: income, kind: soft, field: net_monthly_income, operator: gte, threshold: 25000, points: 6, policy_clause: PL-ELIG-04, source: public}
+  - {rule_id: HL-INC-11, loan_types: [home], stage: income, kind: soft, field: net_monthly_income, operator: gte, threshold: 25000, points: 6, policy_clause: HL-ELIG-04, source: public}
+  - {rule_id: VL-INC-11, loan_types: [vehicle], stage: income, kind: soft, field: net_monthly_income, operator: gte, threshold: 25000, points: 6, policy_clause: VL-ELIG-04, source: public}
+  - {rule_id: BL-INC-11, loan_types: [business], stage: income, kind: soft, field: annual_turnover, operator: gte, threshold: 3600000, points: 6, policy_clause: BL-ELIG-04, source: public}
+  - {rule_id: ED-INC-11, loan_types: [education], stage: income, kind: soft, field: coapp_income_verified, operator: eq, threshold: true, points: 6, policy_clause: ED-ELIG-04, source: public}
+  # stability by product
+  - {rule_id: PL-INC-12, loan_types: [personal], stage: income, kind: soft, field: total_experience_months, operator: gte, threshold: 24, points: 1.5, policy_clause: PL-STAB-01, source: public}
+  - {rule_id: PL-INC-13, loan_types: [personal], stage: income, kind: soft, field: months_with_current_employer, operator: gte, threshold: 12, points: 1.5, policy_clause: PL-STAB-01, source: public}
+  - {rule_id: HL-INC-12, loan_types: [home], stage: income, kind: soft, field: stability_months, operator: gte, threshold: 24, points: 3, policy_clause: HL-STAB-01, source: sample}
+  - {rule_id: VL-INC-12, loan_types: [vehicle], stage: income, kind: soft, field: stability_months, operator: gte, threshold: 24, points: 3, policy_clause: VL-STAB-01, source: sample}
+  - {rule_id: BL-INC-12, loan_types: [business], stage: income, kind: soft, field: business_vintage_months, operator: gte, threshold: 24, points: 3, policy_clause: BL-STAB-01, source: public}
+  - {rule_id: ED-INC-12, loan_types: [education], stage: income, kind: soft, field: stability_months, operator: gte, threshold: 24, points: 3, policy_clause: ED-STAB-01, source: sample}
+
+  # ======================= CREDIT AND BEHAVIOUR (25) =======================
+  - {rule_id: CM-CRD-10, loan_types: [personal, home, education, vehicle], stage: credit, kind: soft, field: cibil_score, points: 12, tiers: [{operator: gte, threshold: 750, points: 12}, {operator: gte, threshold: 700, points: 9}, {operator: gte, threshold: 650, points: 5}], policy_clause: CM-CRD-01, source: public}
+  - {rule_id: BL-CRD-10, loan_types: [business], stage: credit, kind: soft, field: cibil_score, points: 12, tiers: [{operator: gte, threshold: 700, points: 12}, {operator: gte, threshold: 650, points: 8}], policy_clause: BL-ELIG-03, source: public}
+  - {rule_id: CM-CRD-11, loan_types: *all, stage: credit, kind: soft, field: cheque_nach_returns_12m, points: 6, tiers: [{operator: lte, threshold: 0, points: 6}, {operator: lte, threshold: 1, points: 3}, {operator: lte, threshold: 2, points: 1}], policy_clause: CM-CRD-02, source: sample}
+  - {rule_id: CM-CRD-12, loan_types: *all, stage: credit, kind: soft, field: bureau_dpd_max_12m, points: 4, tiers: [{operator: lte, threshold: 0, points: 4}, {operator: lte, threshold: 30, points: 2}], policy_clause: CM-CRD-03, source: sample}
+  - {rule_id: CM-CRD-13, loan_types: [personal, home, education, vehicle], stage: credit, kind: soft, field: enquiries_6m, points: 3, tiers: [{operator: lte, threshold: 2, points: 3}, {operator: lte, threshold: 4, points: 1}], policy_clause: CM-CRD-04, source: sample}
+  - {rule_id: BL-CRD-13, loan_types: [business], stage: credit, kind: soft, field: bank_credit_to_gst_ratio, operator: gte, threshold: 0.8, points: 3, policy_clause: BL-STAB-02, source: sample}
+
+  # ======================= POLICY FIT (10) =======================
+  # personal
+  - {rule_id: PL-POL-10, loan_types: [personal], stage: policy, kind: soft, field: tenure_months, operator: lte, threshold: 60, points: 3, policy_clause: PL-PROD-01, source: public}
+  - {rule_id: PL-POL-11, loan_types: [personal], stage: policy, kind: soft, field: loan_amount, operator: lte, threshold: 2500000, points: 4, policy_clause: PL-PROD-02, source: sample}
+  - {rule_id: PL-POL-12, loan_types: [personal], stage: policy, kind: soft, field: loan_purpose_allowed, operator: eq, threshold: true, points: 3, policy_clause: PL-PROD-03, source: sample}
+  # home
+  - {rule_id: HL-POL-10, loan_types: [home], stage: policy, kind: soft, field: tenure_months, operator: lte, threshold: 360, points: 3, policy_clause: HL-PROD-01, source: public}
+  - {rule_id: HL-POL-11A, loan_types: [home], stage: policy, kind: soft, when: {amount_band: upto_30l}, field: ltv_percent, operator: lte, threshold: 90, points: 4, policy_clause: HL-PROD-02, source: RBI}
+  - {rule_id: HL-POL-11B, loan_types: [home], stage: policy, kind: soft, when: {amount_band: upto_75l}, field: ltv_percent, operator: lte, threshold: 80, points: 4, policy_clause: HL-PROD-02, source: RBI}
+  - {rule_id: HL-POL-11C, loan_types: [home], stage: policy, kind: soft, when: {amount_band: above_75l}, field: ltv_percent, operator: lte, threshold: 75, points: 4, policy_clause: HL-PROD-02, source: RBI}
+  - {rule_id: HL-POL-12, loan_types: [home], stage: policy, kind: soft, field: property_docs_valid, operator: eq, threshold: true, points: 3, policy_clause: HL-PROD-03, source: sample}
+  # education
+  - {rule_id: ED-POL-10, loan_types: [education], stage: policy, kind: soft, field: repayment_years, operator: lte, threshold: 15, points: 3, policy_clause: ED-PROD-01, source: public}
+  - {rule_id: ED-POL-11, loan_types: [education], stage: policy, kind: soft, field: collateral_ok, operator: eq, threshold: true, points: 4, policy_clause: ED-PROD-02, source: RBI}
+  - {rule_id: ED-POL-12, loan_types: [education], stage: policy, kind: soft, field: margin_ok, operator: eq, threshold: true, points: 3, policy_clause: ED-PROD-03, source: public}
+  # business
+  - {rule_id: BL-POL-10, loan_types: [business], stage: policy, kind: soft, field: tenure_months, operator: lte, threshold: 84, points: 3, policy_clause: BL-PROD-01, source: sample}
+  - {rule_id: BL-POL-11, loan_types: [business], stage: policy, kind: soft, field: gst_or_udyam_valid, operator: eq, threshold: true, points: 4, policy_clause: BL-PROD-02, source: public}
+  - {rule_id: BL-POL-12, loan_types: [business], stage: policy, kind: soft, field: loan_to_turnover, operator: lte, threshold: 0.3, points: 3, policy_clause: BL-PROD-03, source: sample}
+  # vehicle
+  - {rule_id: VL-POL-10A, loan_types: [vehicle], stage: policy, kind: soft, when: {vehicle_kind: new_car}, field: tenure_months, operator: lte, threshold: 84, points: 3, policy_clause: VL-PROD-01, source: public}
+  - {rule_id: VL-POL-10B, loan_types: [vehicle], stage: policy, kind: soft, when: {vehicle_kind: used_car}, field: tenure_months, operator: lte, threshold: 60, points: 3, policy_clause: VL-PROD-01, source: public}
+  - {rule_id: VL-POL-10C, loan_types: [vehicle], stage: policy, kind: soft, when: {vehicle_kind: two_wheeler}, field: tenure_months, operator: lte, threshold: 60, points: 3, policy_clause: VL-PROD-01, source: public}
+  - {rule_id: VL-POL-11A, loan_types: [vehicle], stage: policy, kind: soft, when: {vehicle_condition: new}, field: ltv_percent, operator: lte, threshold: 85, points: 4, policy_clause: VL-PROD-02, source: public}
+  - {rule_id: VL-POL-11B, loan_types: [vehicle], stage: policy, kind: soft, when: {vehicle_condition: used}, field: ltv_percent, operator: lte, threshold: 80, points: 4, policy_clause: VL-PROD-02, source: public}
+  - {rule_id: VL-POL-12, loan_types: [vehicle], stage: policy, kind: soft, field: vehicle_docs_valid, operator: eq, threshold: true, points: 3, policy_clause: VL-PROD-03, source: sample}
