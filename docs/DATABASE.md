@@ -1,6 +1,6 @@
 # DATABASE
 
-Neon Postgres with the `pgvector` extension. One database holds relational and vector data. LangGraph checkpoint tables are created by the library in their own schema. All data is synthetic.
+Neon Postgres with the `pgvector` extension. One database holds relational and vector data. LangGraph checkpoint tables are created by the library in their own schema (`langgraph`, created by `app/agents/checkpoint.py` on first use; one thread per case, `thread_id` = `cases.id`). All data is synthetic.
 
 Conventions: `id` is UUID primary key; `created_at` and `updated_at` are `timestamptz`; enums are Postgres enums or CHECK constraints; embeddings are `vector(384)` (BGE-small) with HNSW indexes.
 
@@ -26,12 +26,14 @@ Raw PAN and Aadhaar are synthetic. Full Aadhaar is never stored.
 
 **stage_runs**
 `id, case_id, applicant_id (nullable), stage (extraction|kyc|policy|risk|decision), status (passed|failed|stopped|unverified), score, max_score, hard_fail bool, fail_class, findings jsonb, model_used, prompt_version, retries, fallback_used, started_at, finished_at`
+One row per (case, stage); a stage that runs again (resume, correction) replaces its row. `applicant_id` stays null: per-person detail lives in `rule_results.evidence.role` and the report sections. A stage that was not run (after a hard stop, or Policy beside a Risk stop) has no row. The Supervisor has no row (it scores nothing); its calls are in `llm_calls` with a null `stage_run_id`.
 
 **rule_results**
 `id, stage_run_id, rule_id, kind (hard|soft), passed, points_awarded, points_max, evidence jsonb, clause_id`
 
 **reports**
 `id, case_id, version, summary_md, rejection_reason, report_json jsonb, pdf_path, created_at`
+`version` is the run number: 1 for the first run, +1 each time a correction re-runs the case (`Pipeline.resume_after_fix`). A node that runs twice replaces its own row (upsert on `case_id, version`).
 
 **eval_scores**
 `id, case_id, stage_run_id, metric, value, method (code|judge), created_at`

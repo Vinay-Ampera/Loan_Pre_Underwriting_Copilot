@@ -28,7 +28,7 @@ from app.scoring.models import (
     Role,
     StatementAnalytics,
 )
-from app.scoring.rules import RuleSet
+from app.scoring.rules import DocRequirement, RuleSet
 
 KYC_TYPES = ("pan_card", "aadhaar", "photo")
 RESIDENT_WORDS = {"resident", "resident indian", "ri", "indian resident"}
@@ -143,6 +143,43 @@ def base_facts(inp: CaseInput, rs: RuleSet) -> Derived:
 
 
 # --- documents ------------------------------------------------------------------------------
+def applicable_requirements(
+    rs: RuleSet, loan_type: str, employment: dict[Role, str], details: dict[str, Any]
+) -> list[DocRequirement]:
+    """The checklist: required documents that apply to this case's people and loan details.
+    `employment` maps each role present on the application to its employment type."""
+    env_case = {
+        "vehicle_kind": details.get("vehicle_kind"),
+        "vehicle_condition": details.get("vehicle_condition"),
+    }
+    out = []
+    for req in rs.required_documents(loan_type):
+        env = {"employment_type": employment.get(req.applicant), **env_case}
+        if all(env.get(k) == v for k, v in (req.when or {}).items()):
+            out.append(req)
+    return out
+
+
+def document_shortfalls(inp: CaseInput, rs: RuleSet) -> list[dict[str, Any]]:
+    """Checklist items the uploads do not cover yet: [{type, applicant, needed, have, kyc}]."""
+    employment = {p.role: p.employment_type for p in inp.persons}
+    out: list[dict[str, Any]] = []
+    for req in applicable_requirements(rs, inp.loan_type, employment, inp.details):
+        roles: list[Role] = ["primary", "co"] if req.kyc else [req.applicant]
+        for role in roles:
+            if role == "co" and not any(p.role == "co" for p in inp.persons):
+                continue
+            if req.any_of:
+                have = sum(x.units for t in req.any_of for x in _docs(inp, t))
+            else:
+                have = sum(x.units for x in _docs(inp, req.type, role))
+            if have < req.min_count:
+                out.append({"type": req.type if not req.any_of else "/".join(req.any_of),
+                            "applicant": role, "needed": req.min_count, "have": have,
+                            "kyc": req.kyc})  # fmt: skip
+    return out
+
+
 def documents_facts(inp: CaseInput, rs: RuleSet, d: Derived) -> None:
     required = have = 0
     for req in rs.required_documents(inp.loan_type):

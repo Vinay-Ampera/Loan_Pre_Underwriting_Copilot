@@ -33,6 +33,10 @@ rapidocr>=3.0  # PaddleOCR PP-OCR models on onnxruntime; see IMPLEMENTATION_PLAN
 # build is enough: pip install torch --index-url https://download.pytorch.org/whl/cpu
 sentence-transformers>=5.0
 
+# agent pipeline (Stage 5): graph with Postgres checkpoints for pause and resume
+langgraph>=1.0
+langgraph-checkpoint-postgres>=3.0
+
 # dev
 pytest>=8.2
 ruff>=0.5

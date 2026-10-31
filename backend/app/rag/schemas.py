@@ -57,7 +57,12 @@ class PolicyResult(BaseModel):
     fit_findings: list[FitFinding]
     score: float | None  # policy-fit points from the scoring code (10 max); None if not reached
     unverified: bool = False  # grounding failed twice: the officer sees code-written findings
+    llm_skipped: bool = False  # run without a model: findings are code-written by design
     grounding_issues: list[str] = Field(default_factory=list)
     model: str | None = None
     tokens_in: int = 0
     tokens_out: int = 0
+    cost_usd: float = 0.0
+    latency_ms: int = 0
+    fallback_used: bool = False
+    retries: int = 0

@@ -15,7 +15,7 @@ from app.intake import checks
 from app.intake.fields import SPECS, parse_date, parse_money
 from app.intake.masker import Masker, assert_masked
 from app.intake.models import DocType, ExtractedField
-from app.services.llm import complete
+from app.services.llm import LLMResult, complete
 
 PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "extraction.md"
 MAX_CHARS = 6000  # keeps the prompt small for free-tier token limits
@@ -66,13 +66,16 @@ def _coerce(name: str, value: str | float | int | None) -> str | float | int | N
 
 
 async def llm_extract(router: Router, doc_type: DocType, raw_text: str, masker: Masker,
-                      wanted: list[str]) -> list[ExtractedField]:  # fmt: skip
+                      wanted: list[str], calls: "list[LLMResult[LLMFields]] | None" = None,
+                      ) -> list[ExtractedField]:  # fmt: skip
     """Ask for `wanted` fields. `raw_text` is the local text; only its masked form is sent."""
     if not wanted:
         return []
     messages = build_messages(doc_type, masker.mask(raw_text), wanted)
     assert_masked(*(m["content"] for m in messages))
     result = await complete(router, "extraction", messages, LLMFields)
+    if calls is not None:  # the pipeline logs tokens and cost for every call
+        calls.append(result)
     out: list[ExtractedField] = []
     for f in result.output.fields:
         if f.name not in wanted or f.value is None:

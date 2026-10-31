@@ -61,6 +61,35 @@ Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.m
 - **If the run stopped early:** report shows "stopped at <stage>, remaining stages not run", scores for completed stages only.
 - **Code checks:** total equals code result; every reason cites a finding or clause; banned terms and protected attributes absent; wording rules met.
 
+## How the pipeline runs (Stage 5, `app/agents/`)
+
+| Module | Role |
+|---|---|
+| `graph.py` | The LangGraph graph, gates, `Pipeline` (start, resume, resume after a fix, officer action) |
+| `state.py`, `submission.py` | JSON graph state (never document text); the form plus file paths a case is built from |
+| `runtime.py` | `AgentContext`, and `ask()`: the one place a model is called (schema, guardrails, retry once, then `unverified`) |
+| `supervisor.py` | Checklist from the rules file, briefing note (model, or code text) |
+| `assemble.py` | Extraction: files to checked documents, duplicates, masked LLM fill, then the `CaseInput` |
+| `kyc.py`, `risk.py`, `policy.py`, `decision.py` | The agents; `explain.py` is the shared "explain these results" call |
+| `report.py` | The `Report` shape and the code-written parts (stage scores, findings, citations, fallback text) |
+| `guardrails.py`, `evals.py` | Output checks; online evaluation hooks written to `eval_scores` |
+| `store.py`, `checkpoint.py` | Database writes (idempotent per case and stage); Postgres checkpoints in schema `langgraph` |
+| `run.py` | Command line: dev runs, resume, forced 429, crash test |
+
+**Flow.** `supervisor -> extraction -> gate_E -> kyc -> gate_K -> (policy || risk) -> gate_PR -> decision -> await_officer`. The rules engine runs **once**, at the end of Extraction, and every later node reads that result: the nodes explain and check, they never score. A hard fail sets `stop`, and the gate routes straight to `decision`, which writes the short report ("stopped at <stage>, remaining stages not run"). A hard fail in Risk skips Policy (it is not run). A fix-type stop ends the graph at `decision` with status `stopped`; every other case pauses at `await_officer` (status `awaiting_confirmation`).
+
+**Retries.** A node that raises is retried once, then `kyc`, `risk` and `policy` fall back to code-only output marked `unverified` (Supervisor, Extraction and Decision errors stop the run loudly; the checkpoint is kept). A model reply that fails its schema or a guardrail is sent back once with the reasons, then the code-written text is used and the stage is `unverified` in the report.
+
+**Co-applicant.** Documents are read per person (the role comes from the upload folder). Rule results, findings and report sections carry the role; FOIR is combined in the engine as before.
+
+**Pause and resume.** After every node the state is checkpointed in Postgres (thread id = `cases.id`). `Pipeline.resume(case)` continues a killed run from its last checkpoint and gives the same result, because nodes are functions of the state and the files, and every database write replaces its own rows. `Pipeline.resume_after_fix(case, replace_docs=...)` takes a fix-type stop, replaces files or the form, and re-enters at Extraction (everything derived from the files is stale, so earlier stages are not reused). `Pipeline.officer_action(...)` resumes the paused case: confirm needs the second click; override also needs a written reason and a final decision. The officer's values are validated before the graph is resumed.
+
+**Online evaluation.** Each agent writes code checks to `eval_scores` (schema valid, rules reproduced, citation validity, recomputed FOIR/DTI/LTV match, total equals code, wording clean). A check that code cannot settle is stored as inconclusive and, only then, the judge model is asked (`method = judge`).
+
+**Models off.** `--no-llm` (router `None`) skips every model call: explanations are left out, Policy and Decision text is code-written, nothing is marked `unverified` because of it. The same run with models on fills in explanations and the narrative.
+
+**Cross-document tamper hints** (E-12) are computed by `risk.cross_document_hints` and applied once when the case is assembled, so Policy and Risk, which run side by side, score the same input.
+
 ## Gate rules (after every agent)
 
 | Check | On failure |

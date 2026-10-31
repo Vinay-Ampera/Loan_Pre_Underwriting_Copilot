@@ -226,3 +226,18 @@ Tests written and passing, docs updated if behaviour changed, no real PII, secre
 - **Environment:** the Neon database was unreachable during this stage (the hostname lookup hung), so the migration, seed, index and tests ran on a private throwaway Postgres 17 cluster with `DATABASE_URL` overridden in the shell. Neon still needs `python -m app.db.migrate` and `python -m app.rag.reindex` before the next stage.
 - **Not done here (later stages):** RAGAS faithfulness on the Policy agent and the online judge (Stage 7); wiring into LangGraph gates (Stage 5).
 
+---
+
+## Stage 5 build notes (2026-10-31)
+
+- **Modules:** `app/agents/` (see `AGENTS.md`, "How the pipeline runs"). Prompts `backend/prompts/{supervisor,kyc,risk,decision}.md` (v1). New dependency: `langgraph`, `langgraph-checkpoint-postgres`.
+- **Scoring runs once.** The rules engine is called at the end of Extraction; KYC, Risk, Policy and Decision read its result. Models explain and write; every model reply is schema-checked, guardrail-checked (decision words, protected attributes, invented numbers, unknown ids), retried once, then replaced by code-written text and marked `unverified`.
+- **Extraction path:** upload checks, intake, duplicate check, masked LLM fill for missing fields only, then the `CaseInput` is built from the form, the mock identity, bureau and GST lookups and the bank-statement analytics. Bank statements and GST returns now carry their month counts (`units`). Cross-document tamper hints are applied here once.
+- **Checkpoints:** Postgres schema `langgraph`; `python -m app.agents.run --resume CASE` continues a killed run. `--crash-before STAGE` kills the process as a stage starts, for the resume check. `Pipeline.resume_after_fix` and `Pipeline.officer_action` are the entry points the Stage 6 API will call.
+- **Models off:** `--no-llm` skips every model call. Used for the 60-case runs, CI and offline work; the live run is the same code with the router on.
+- **Exit criteria** (measured in `docs/TESTING.md` section 2d, dev split, models off): all 60 cases finish; **stop stage and class match the key for 51 of 60**, so the first exit criterion is **not fully met**. All 9 misses are the cases whose ID photographs are too blurred for local OCR (EDGE_CASES E-27, decision needed). Kill and resume gives the same result (tests plus a real `exit 137`); a forced 429 on every primary completes through the fallbacks (real Router, mocked providers; a live forced 429 is too slow on the free tiers to be practical); injected instructions change nothing (obedient scripted model plus a poisoned payslip).
+- **Models on:** tried live on 5 cases; max output tokens were raised (Gemini 3.x and gpt-oss spend part of the limit on reasoning, and 300 to 900 truncated the JSON).
+- **Intake changes made here:** an accepted passport-style photograph gets the "good photo" quality (94) instead of a score read from OCR noise (it pulled `kyc_doc_quality` down to 55 to 63 for clean cases); `ExtractedDocument.meta` carries `units`.
+- **Decisions taken:** E-18 is left as measured (see `EDGE_CASES.md`); `CM-DOC-11` and `CM-KYC-13` tiers are unchanged. A weak hint counts once per document, so three round-figure payslips are three hints (Stage 3 behaviour, kept).
+- **Not done here (later stages):** Langfuse traces and Prometheus metrics (Stage 7), RAGAS faithfulness for the Policy agent and the offline judge run (Stage 7), the HTTP API and the confirm/override screens (Stage 6; `Pipeline.officer_action` and `officer_actions` rows exist), Neon `migrate` and `reindex` (Neon was unreachable again; see Stage 4 notes).
+

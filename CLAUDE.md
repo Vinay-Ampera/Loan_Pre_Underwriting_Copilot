@@ -82,6 +82,7 @@ reindex:   python -m app.rag.reindex [--force]
 rag eval:  python -m app.rag.evaluate --split dev [--write-baseline]
 intake:    python -m app.intake.cli FILE [--llm] | python -m app.intake.evaluate --split dev
 scoring:   python -m app.scoring.replay --split dev [--case ID] [--verbose]
+pipeline:  python -m app.agents.run --split dev [--case ID] [--no-llm] [--force-429] [--cache] | --resume ID | --crash-before STAGE
 eval:      python -m app.eval.run --split dev
 stack:     docker compose up   (Stage 8)
 diagrams:  python3 docs/diagrams/make_diagrams.py
@@ -89,7 +90,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Stage 4 (RAG and Policy agent) is built and its exit criteria pass (awaiting review). Next: Stage 5 (agent pipeline on LangGraph); do not start it until the user says Stage 4 is committed.
+Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Stage 4 (RAG and Policy agent) is built and its exit criteria pass (awaiting review). Stage 5 (agent pipeline on LangGraph) is built (awaiting review): all 60 dev cases finish and kill-and-resume, forced 429 and injection checks pass, but stop stage matches the key for 51 of 60 because 9 `poor` KYC photographs are unreadable by local OCR (decision needed, `docs/EDGE_CASES.md` E-27). Next: Stage 6 (API and frontend); do not start it until the user says Stage 5 is committed.
 
 ## Open items
 

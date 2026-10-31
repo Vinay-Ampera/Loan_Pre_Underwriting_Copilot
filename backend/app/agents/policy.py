@@ -121,7 +121,7 @@ def code_findings(results: list[RuleOutcome], retrieved: list[RetrievedClause]) 
 
 async def run_policy_agent(
     conn: Connection,
-    router: Router,
+    router: Router | None,
     inp: CaseInput,
     score: ScoreReport,
     ruleset: RuleSet,
@@ -146,11 +146,14 @@ async def run_policy_agent(
     findings: list[FitFindingLLM] = []
     report = GroundingReport()
     model, tokens_in, tokens_out = None, 0, 0
-    for attempt in range(2):  # one retry
+    cost_usd, latency_ms, fallback_used, retries = 0.0, 0, False, 0
+    for attempt in range(2 if router is not None else 0):  # one retry; none without a model
+        retries = attempt
         messages = build_messages(
             prompt_clauses, score.results, masker, report if attempt else None
         )
         try:
+            assert router is not None  # the loop does not run without one
             res = await complete(router, "policy", messages, PolicyLLMOutput, max_tokens=2500)
         except LLMOutputError as exc:
             report = GroundingReport([GroundingIssue("bad_output", str(exc))])
@@ -163,12 +166,15 @@ async def run_policy_agent(
             tokens_in + res.tokens_in,
             tokens_out + res.tokens_out,
         )
+        cost_usd, latency_ms = cost_usd + res.cost_usd, latency_ms + res.latency_ms
+        fallback_used |= res.fallback_used
         findings = res.output.fit_findings
         report = check_grounding(findings, retrieved, inp.loan_type, ruleset, cfg.min_relevance)
         if report.ok:
             break
 
-    verified = report.ok and bool(findings or not score.results)
+    skipped = router is None  # offline run: code-written findings, not a failure
+    verified = skipped or (report.ok and bool(findings or not score.results))
     fit = (
         [FitFinding(**f.model_dump(), source="model") for f in findings]
         if verified
@@ -181,8 +187,13 @@ async def run_policy_agent(
         fit_findings=fit,
         score=policy_score,
         unverified=not verified,
-        grounding_issues=[str(i) for i in report.issues],
+        llm_skipped=skipped,
+        grounding_issues=[str(i) for i in report.issues] if not skipped else [],
         model=model,
         tokens_in=tokens_in,
         tokens_out=tokens_out,
+        cost_usd=cost_usd,
+        latency_ms=latency_ms,
+        fallback_used=fallback_used,
+        retries=retries,
     )  # fmt: skip

@@ -29,8 +29,12 @@ from app.intake.fields import parse_money
 from app.intake.masker import Masker
 from app.intake.models import DocType, ExtractedDocument, ExtractedField, PageKind, UploadCheck
 from app.intake.reader import ReadDocument, read_document
+from app.services.llm import LLMResult
 
 DIGITAL_QUALITY = 95.0  # design value for a clean text-layer PDF (docs/TESTING.md)
+ID_PHOTO_QUALITY = (
+    94.0  # an accepted passport-style photograph: no text to measure, so the "good photo" value
+)
 PHOTO_MAX_CELLS = 3  # an image with this little text and no title is a photograph
 
 
@@ -118,6 +122,7 @@ def process_file(data: bytes, filename: str, *, as_of: date | None = None,
         flags.append("missing_required_fields")
     if injection.scan(read.text):
         flags.append("possible_prompt_injection")
+    units = len(_gst_months(read)) if doc_type is DocType.GST_RETURNS else None
     low = [f.name for f in flds if f.low_confidence]
     if low:
         flags.append("low_confidence_fields")
@@ -133,11 +138,13 @@ def process_file(data: bytes, filename: str, *, as_of: date | None = None,
     doc = ExtractedDocument(
         doc_type=doc_type, fields=flds, quality_flags=flags, tamper_hints=hints, issues=issues,
         transactions=txns, statement_style=style,
-        quality_score=measure_quality(check, read, len(issues), len(low), len(flds)),
+        quality_score=ID_PHOTO_QUALITY
+        if doc_type is DocType.PHOTO
+        else measure_quality(check, read, len(issues), len(low), len(flds)),
         avg_confidence=None if avg is None else round(avg, 3), upload=check,
         meta={"classifier_confidence": cls_conf, "pages": len(read.pages), "ocr_engine": read.ocr_engine,
               "ocr_confidence": None if read.ocr_confidence is None else round(read.ocr_confidence, 3),
-              "missing_fields": missing},
+              "missing_fields": missing, "units": units},
     )  # fmt: skip
     return IntakeResult(
         upload=check,
@@ -159,7 +166,8 @@ def register_known(masker: Masker, doc: ExtractedDocument) -> None:
                 masker.add_known("ADDR", f.value)
 
 
-async def enrich(result: IntakeResult, router: Router, masker: Masker) -> IntakeResult:
+async def enrich(result: IntakeResult, router: Router, masker: Masker,
+                 calls: "list[LLMResult[llm_extract.LLMFields]] | None" = None) -> IntakeResult:  # fmt: skip
     """LLM pass on masked text for missing fields (or all generic fields of an unknown document).
     Local values always win: the model only fills gaps."""
     doc = result.document
@@ -176,7 +184,9 @@ async def enrich(result: IntakeResult, router: Router, masker: Masker) -> Intake
     if not wanted:
         return result
     register_known(masker, doc)
-    extra = await llm_extract.llm_extract(router, doc.doc_type, result.raw_text, masker, wanted)
+    extra = await llm_extract.llm_extract(
+        router, doc.doc_type, result.raw_text, masker, wanted, calls
+    )
     merged = checks.apply_confidence_rules(
         [*doc.fields, *extra], checks.check_ids(doc.doc_type, [*doc.fields, *extra])
     )

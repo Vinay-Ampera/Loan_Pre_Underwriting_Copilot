@@ -43,7 +43,7 @@ START → supervisor → extraction → gate_E → kyc → gate_K ─┬─ hard
 - **Fixed edges.** The Supervisor LLM does supervision work (checklist, task hand-off, retries, final summary), not route choice.
 - **State** carries: case ID, applicant list (primary, co), document handles, extracted fields, stage results, flags, retry counters, model-used log.
 - **Gates** are code: hard-fail check, confidence threshold, schema validity, citation validity. A failed check retries once, then marks the stage `unverified` and continues to the officer.
-- **Pause and resume:** after `decision` the graph ends in `awaiting_officer`. A stopped case resumes from its failed stage after corrections. LangGraph checkpoints live in Postgres.
+- **Pause and resume:** after `decision` the graph pauses at `await_officer` (status `awaiting_confirmation`; a fix-type stop ends with status `stopped` instead). A stopped case resumes from its failed stage after corrections. LangGraph checkpoints live in Postgres.
 - **Co-applicant:** extraction, KYC and risk run once per person with a role tag; decision aggregates.
 - Details per agent: `AGENTS.md`.
 

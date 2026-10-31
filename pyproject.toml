@@ -30,6 +30,8 @@ select = ["E", "F", "I", "B", "UP", "SIM", "N"]
 "backend/tests/*" = ["E501"]
 # intake: dense label tables and messages
 "backend/app/intake/*" = ["E501"]
+# agents: long prompt-feedback strings and SQL
+"backend/app/agents/*" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"
