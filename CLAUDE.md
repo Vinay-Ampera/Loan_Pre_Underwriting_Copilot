@@ -78,7 +78,8 @@ db:        python -m app.db.check | python -m app.db.migrate | python -m app.db.
 llm:       python -m app.services.llm_probe | python -m app.services.llm_smoke [--break-primary]
 data:      python -m synthetic.generate --split dev|test|all && python -m synthetic.verify
 fixtures:  python -m synthetic.fixtures
-reindex:   python -m app.rag.reindex              (Stage 4)
+reindex:   python -m app.rag.reindex [--force]
+rag eval:  python -m app.rag.evaluate --split dev [--write-baseline]
 intake:    python -m app.intake.cli FILE [--llm] | python -m app.intake.evaluate --split dev
 scoring:   python -m app.scoring.replay --split dev [--case ID] [--verbose]
 eval:      python -m app.eval.run --split dev
@@ -88,7 +89,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Next: Stage 4 (RAG and Policy agent); do not start it until the user says Stage 3 is committed.
+Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Stage 4 (RAG and Policy agent) is built and its exit criteria pass (awaiting review). Next: Stage 5 (agent pipeline on LangGraph); do not start it until the user says Stage 4 is committed.
 
 ## Open items
 

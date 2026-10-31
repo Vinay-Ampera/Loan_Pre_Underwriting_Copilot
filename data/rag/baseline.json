@@ -1,0 +1,32 @@
+{
+  "targets": {
+    "recall@5": 0.95,
+    "hit@3": 0.95,
+    "hit@1": 0.8,
+    "mrr": 0.88,
+    "citation_validity": 1.0
+  },
+  "baseline_dev": {
+    "recall@1": 0.78,
+    "hit@1": 0.8,
+    "recall@3": 0.97,
+    "hit@3": 0.98,
+    "recall@5": 0.99,
+    "hit@5": 1.0,
+    "mrr": 0.8883,
+    "citation_validity": 1.0,
+    "queries": 50.0
+  },
+  "baseline_dev_with_rerank": {
+    "recall@1": 0.82,
+    "hit@1": 0.84,
+    "recall@3": 0.95,
+    "hit@3": 0.96,
+    "recall@5": 1.0,
+    "hit@5": 1.0,
+    "mrr": 0.9033,
+    "citation_validity": 1.0,
+    "queries": 50.0
+  },
+  "note": "baseline_dev = vector search only, recorded 2026-10-31 on 50 dev queries; targets set after seeing it (OI: baseline-then-target). Test split is for the final report only."
+}

@@ -213,3 +213,16 @@ Tests written and passing, docs updated if behaviour changed, no real PII, secre
 - **Replay result (dev):** band 60 of 60, stop stage and class 60 of 60, score and failed rules 59 of 60. Agreed minimums: band 95%, exact 90%. The test split was not run (final evaluation only).
 - **Precedent bonus:** `apply_precedent_bonus` is a stub (0 until Stage 4 and 7). It is capped by `precedent.bonus_max`, only touches a refer-band case that no cap rule holds, and never overrides a hard rule.
 
+---
+
+## Stage 4 build notes (2026-10-31)
+
+- **Modules:** `app/rag/` (`policy_loader`, `embedder`, `index`, `reindex`, `retrieve`, `precedents`, `grounding`, `schemas`, `config`, `evaluate`) and `app/agents/policy.py`; prompt `backend/prompts/policy.md` (v1). Settings in `data/rag/config.yaml`; migration 0007 adds `checksum` and `indexed_at` to `policy_documents`.
+- **Index:** BGE-small (384-d, normalised) and the MiniLM cross-encoder run locally from the venv (`sentence-transformers` on CPU `torch`; models load from the local cache first). `python -m app.rag.reindex` parses the policy files, re-embeds only new or changed clauses, handles new versions (one active per loan type) and removed clauses, reloads the rules file, and writes an `audit_log` row. It refuses to run if a rule cites a clause that is not in `data/policy`.
+- **Retrieval:** top 12 by cosine, rerank, keep 5 per query; filters are the active version and `common` + the case's loan type. The agent also fetches the clauses that rule results point at (`via="rule"`, relevance 1.0), so every rule-based finding has its clause available.
+- **Precedents:** `find_precedents` returns approved, unexpired, same-loan-type precedents at or above `precedent.similarity_min`, only for a refer-band case with no hard stop. Nothing writes precedents yet (Stage 7); `precedent_text()` defines the text that Stage 7 must embed so both sides match. The score bonus stays 0.
+- **Measured (50 dev queries, local Postgres 17 + pgvector):** vector only: hit@1 0.80, recall@5 0.99, MRR 0.888; with rerank: hit@1 0.84, recall@5 1.00, MRR 0.903; citation validity 1.00. Targets are recorded in `data/rag/baseline.json` (recall@5 0.95, hit@3 0.95, hit@1 0.80, MRR 0.88, validity 1.0). The 12 test queries were not run.
+- **Live check:** one synthetic personal case through the real Nemotron model gave grounded findings on the first try; another run failed the quote check twice and fell back to code-written findings, which is the designed behaviour. Model wording varies between runs.
+- **Environment:** the Neon database was unreachable during this stage (the hostname lookup hung), so the migration, seed, index and tests ran on a private throwaway Postgres 17 cluster with `DATABASE_URL` overridden in the shell. Neon still needs `python -m app.db.migrate` and `python -m app.rag.reindex` before the next stage.
+- **Not done here (later stages):** RAGAS faithfulness on the Policy agent and the online judge (Stage 7); wiring into LangGraph gates (Stage 5).
+

@@ -43,6 +43,7 @@ Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.m
 - **Output:** `PolicyResult { clauses[{clause_id, text, relevance}], precedent_matches[{id, similarity, summary}], fit_findings[], score }` (10 points; precedent bonus capped by the rules file).
 - **Guardrails:** every cited `clause_id` must exist in retrieved text; no uncited claim; precedents only for refer-band cases, same loan type, above the similarity threshold, never over a hard rule.
 - **Code checks:** citation existence, retrieval score above threshold, clause matches loan type, active policy version.
+- **How it works (Stage 4, `app/agents/policy.py`):** queries come from the rule results (never from personal data); retrieval is pgvector search then a cross-encoder rerank, filtered to the active common policy plus the case's loan type; the clauses that rule results point at (`policy_clause`) are added directly. The model only writes `fit_findings` (rule ID, clause IDs, assessment, a statement and a `quote`). `app/rag/grounding.py` then checks in code: cited clause was retrieved, loan type fits, version active, search hit above the relevance threshold, rule ID belongs to the case's loan type, and the quote really appears in a cited clause. One retry with the failed checks in the prompt, then `unverified=true` and findings written by code from the rule results. The score is the policy stage score from `app.scoring`; extra fields such as a score in the model output are rejected by the schema.
 
 ## 5. Risk (runs in parallel with Policy)
 

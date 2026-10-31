@@ -1,0 +1,69 @@
+# Retrieval evaluation set (Stage 4). Each query is what an officer or the Policy agent would ask;
+# `expected` lists the clause IDs that answer it (any one of them counts as a hit for MRR/hit@1;
+# recall@k counts how many of them are found). Written by hand against data/policy; synthetic.
+# Split: dev queries tune data/rag/config.yaml; test queries are for the final report only.
+queries:
+  # --- dev ---------------------------------------------------------------------------------
+  - {id: Q01, split: dev, loan_type: personal, query: "what credit score does a personal loan applicant need", expected: [PL-ELIG-03]}
+  - {id: Q02, split: dev, loan_type: personal, query: "minimum monthly salary for a personal loan", expected: [PL-ELIG-04]}
+  - {id: Q03, split: dev, loan_type: personal, query: "what is the maximum personal loan amount", expected: [PL-PROD-02]}
+  - {id: Q04, split: dev, loan_type: personal, query: "can the loan money be used for buying shares or speculation", expected: [PL-PROD-03]}
+  - {id: Q05, split: dev, loan_type: personal, query: "how long must the applicant have been working", expected: [PL-STAB-01]}
+  - {id: Q06, split: dev, loan_type: personal, query: "longest repayment period for a personal loan", expected: [PL-PROD-01]}
+  - {id: Q07, split: dev, loan_type: home, query: "home loan credit score floor", expected: [HL-ELIG-03]}
+  - {id: Q08, split: dev, loan_type: home, query: "how much of the property value can be financed", expected: [HL-PROD-02]}
+  - {id: Q09, split: dev, loan_type: home, query: "which property papers must be submitted", expected: [HL-PROD-03]}
+  - {id: Q10, split: dev, loan_type: home, query: "do existing loans count in the repayment burden calculation", expected: [HL-PROD-04, CM-INC-01]}
+  - {id: Q11, split: dev, loan_type: home, query: "can a co-applicant be added and how is the age checked", expected: [HL-ELIG-01]}
+  - {id: Q12, split: dev, loan_type: home, query: "maximum home loan tenure in years", expected: [HL-PROD-01]}
+  - {id: Q13, split: dev, loan_type: education, query: "is a co-applicant mandatory for a student loan", expected: [ED-ELIG-02]}
+  - {id: Q14, split: dev, loan_type: education, query: "when does a student loan need collateral", expected: [ED-PROD-02]}
+  - {id: Q15, split: dev, loan_type: education, query: "how long is the moratorium after the course ends", expected: [ED-PROD-01]}
+  - {id: Q16, split: dev, loan_type: education, query: "what share of the course fee must the family pay upfront", expected: [ED-PROD-03]}
+  - {id: Q17, split: dev, loan_type: education, query: "proof of admission and fee structure", expected: [ED-PROD-04]}
+  - {id: Q18, split: dev, loan_type: education, query: "youngest age for a student borrower", expected: [ED-ELIG-01]}
+  - {id: Q19, split: dev, loan_type: business, query: "how old must the business be", expected: [BL-STAB-01]}
+  - {id: Q20, split: dev, loan_type: business, query: "GST registration or Udyam requirement", expected: [BL-PROD-02]}
+  - {id: Q21, split: dev, loan_type: business, query: "minimum annual turnover for a business loan", expected: [BL-ELIG-04]}
+  - {id: Q22, split: dev, loan_type: business, query: "how is the loan size limited by sales", expected: [BL-PROD-03]}
+  - {id: Q23, split: dev, loan_type: business, query: "bank statement credits compared with GST turnover", expected: [BL-STAB-02]}
+  - {id: Q24, split: dev, loan_type: vehicle, query: "maximum loan to value on a car loan", expected: [VL-PROD-02]}
+  - {id: Q25, split: dev, loan_type: vehicle, query: "papers needed for the vehicle being financed", expected: [VL-PROD-03]}
+  - {id: Q26, split: dev, loan_type: vehicle, query: "vehicle loan minimum income", expected: [VL-ELIG-04]}
+  - {id: Q27, split: dev, loan_type: personal, query: "personal loan requirement for fixed obligations to income ratio", expected: [CM-INC-01]}
+  - {id: Q28, split: dev, loan_type: home, query: "what happens when the debt burden is above fifty percent of income", expected: [CM-INC-01]}
+  - {id: Q29, split: dev, loan_type: personal, query: "PAN number format check", expected: [CM-KYC-01]}
+  - {id: Q30, split: dev, loan_type: personal, query: "is Aadhaar mandatory and how is it stored", expected: [CM-KYC-02]}
+  - {id: Q31, split: dev, loan_type: personal, query: "name differs between PAN and payslip", expected: [CM-KYC-03]}
+  - {id: Q32, split: dev, loan_type: home, query: "address on application does not match identity proof", expected: [CM-KYC-05]}
+  - {id: Q33, split: dev, loan_type: personal, query: "a required KYC document is missing", expected: [CM-DOC-01]}
+  - {id: Q34, split: dev, loan_type: vehicle, query: "photo is blurry or cropped, can it be accepted", expected: [CM-DOC-03]}
+  - {id: Q35, split: dev, loan_type: personal, query: "payslip net pay does not equal gross minus deductions", expected: [CM-DOC-04]}
+  - {id: Q36, split: dev, loan_type: home, query: "applicant is not an Indian resident", expected: [CM-ELIG-01]}
+  - {id: Q37, split: dev, loan_type: vehicle, query: "borrower will be older than 55 when the loan ends", expected: [CM-ELIG-03]}
+  - {id: Q38, split: dev, loan_type: personal, query: "signs that a salary slip was edited or forged", expected: [CM-FRD-01]}
+  - {id: Q39, split: dev, loan_type: personal, query: "how is salaried income verified", expected: [CM-INC-02]}
+  - {id: Q40, split: dev, loan_type: home, query: "declared income is much higher than what the documents show", expected: [CM-INC-03]}
+  - {id: Q41, split: dev, loan_type: vehicle, query: "salary credits missing in some months", expected: [CM-INC-04]}
+  - {id: Q42, split: dev, loan_type: personal, query: "bounced cheques and failed NACH mandates", expected: [CM-CRD-02]}
+  - {id: Q43, split: dev, loan_type: home, query: "late payments on existing loans in the last year", expected: [CM-CRD-03]}
+  - {id: Q44, split: dev, loan_type: vehicle, query: "many recent loan enquiries", expected: [CM-CRD-04]}
+  - {id: Q45, split: dev, loan_type: personal, query: "must we tell the applicant why the loan was rejected", expected: [CM-RBI-01]}
+  - {id: Q46, split: dev, loan_type: home, query: "how long can bureau data be kept", expected: [CM-RBI-02]}
+  - {id: Q47, split: dev, loan_type: vehicle, query: "document of loan terms and charges given before sanction", expected: [CM-RBI-03]}
+  - {id: Q48, split: dev, loan_type: home, query: "penalty for closing a floating rate loan early", expected: [CM-RBI-04]}
+  - {id: Q49, split: dev, loan_type: personal, query: "can gender or religion be used in the assessment", expected: [CM-RBI-05]}
+  - {id: Q50, split: dev, loan_type: personal, query: "minimum age of an applicant", expected: [CM-ELIG-02, PL-ELIG-01]}
+  # --- test (final report only; do not tune on these) --------------------------------------
+  - {id: T01, split: test, loan_type: personal, query: "lowest bureau score accepted for a personal loan", expected: [PL-ELIG-03]}
+  - {id: T02, split: test, loan_type: home, query: "what income must a home loan applicant earn each month", expected: [HL-ELIG-04]}
+  - {id: T03, split: test, loan_type: home, query: "loan to value limit for a large home loan", expected: [HL-PROD-02]}
+  - {id: T04, split: test, loan_type: education, query: "minimum credit score of the parent who co-signs", expected: [ED-ELIG-03]}
+  - {id: T05, split: test, loan_type: education, query: "earning requirement for the co-borrower", expected: [ED-ELIG-04]}
+  - {id: T06, split: test, loan_type: business, query: "who can apply for a business loan", expected: [BL-ELIG-02]}
+  - {id: T07, split: test, loan_type: vehicle, query: "credit score needed to finance a vehicle", expected: [VL-ELIG-03]}
+  - {id: T08, split: test, loan_type: personal, query: "identity check against the identity service", expected: [CM-KYC-04]}
+  - {id: T09, split: test, loan_type: home, query: "which documents are compulsory for each product", expected: [CM-DOC-02]}
+  - {id: T10, split: test, loan_type: vehicle, query: "returned cheques in the last twelve months", expected: [CM-CRD-02]}
+  - {id: T11, split: test, loan_type: personal, query: "applicant has no PAN card", expected: [CM-KYC-01]}
+  - {id: T12, split: test, loan_type: business, query: "business loan tenure limit", expected: [BL-PROD-01]}

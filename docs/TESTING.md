@@ -61,7 +61,7 @@ The one miss is SYN-BL-D13 (see EDGE_CASES E-17). Unit tests cover every operato
 | Field accuracy | Extracted fields equal ground truth (per document type) |
 | Citation validity | Every cited clause exists in retrieved text (target 100%) |
 | Faithfulness | RAGAS: answer supported by retrieved context |
-| Retrieval quality | Recall at k and rerank quality on a query-to-clause set |
+| Retrieval quality | hit@k, recall@k and MRR on `data/rag/retrieval_eval.yaml` (50 dev queries, 12 test queries), vector-only baseline vs with rerank; targets in `data/rag/baseline.json`; `python -m app.rag.evaluate --split dev` exits non-zero on a miss |
 | Hard-rule integrity | No hard-fail case passes, with or without precedents (target 100%) |
 | Unverified rate | Share of agent outputs marked unverified |
 | Override rate | Officer overrides over total cases (demo and monitoring) |

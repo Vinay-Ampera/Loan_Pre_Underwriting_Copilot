@@ -56,7 +56,7 @@ Append-only; no update or delete grants.
 ## 4. Policy and rules
 
 **policy_documents**
-`id, loan_type (or 'common'), title, version, source_tag (public|RBI|sample), file_path, effective_from, active`
+`id, loan_type (or 'common'), title, version, source_tag (public|RBI|sample), file_path, effective_from, active, checksum (sha256 of the file), indexed_at`. One active version per loan type; a new `version` in a file's front matter adds a row and deactivates the old one. `policy_chunks.metadata` holds `source_tag`, `title` and `text_hash` (a clause is re-embedded only when the hash changes).
 
 **policy_chunks**
 `id, policy_document_id, clause_id, text, embedding vector(384), metadata jsonb`
@@ -102,4 +102,4 @@ Used only by the monitoring report. Agents and the scoring code have no access; 
 
 ## 9. Migrations
 
-Alembic (`python -m app.db.migrate`), one migration per change, applied by CI on a throwaway database before merge. Roles are created `NOLOGIN` by migration 0005; an admin gives them a password by hand. Seed script `python -m app.db.seed` loads rules, policy chunks (embeddings come from the Stage 4 re-index), mock data and the answer keys. `python -m app.db.check` prints connection facts without exposing the URL.
+Alembic (`python -m app.db.migrate`), one migration per change, applied by CI on a throwaway database before merge. Roles are created `NOLOGIN` by migration 0005; an admin gives them a password by hand. Seed script `python -m app.db.seed` loads rules, policy chunks (embeddings come from `python -m app.rag.reindex`, which also records the policy and rules versions and writes an `audit_log` row), mock data and the answer keys. `python -m app.db.check` prints connection facts without exposing the URL.
