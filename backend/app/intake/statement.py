@@ -41,6 +41,11 @@ def detect_style(text: str) -> str:
     return "imperial"
 
 
+def is_return_entry(desc: str) -> bool:
+    """A returned cheque or NACH debit (not the charges line that follows it)."""
+    return _is_return(desc)
+
+
 def _is_return(desc: str) -> bool:
     d = desc.upper()
     return "RETURN" in d and ("CHEQUE" in d or "NACH" in d) and "CHARGES" not in d

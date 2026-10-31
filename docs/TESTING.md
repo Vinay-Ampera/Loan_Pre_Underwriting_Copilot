@@ -39,6 +39,18 @@
 
 The held-out test split is run once, for the final report (`--allow-test`).
 
+## 2c. Scoring replay (Stage 3, dev split, `python -m app.scoring.replay --split dev`)
+
+The engine is fed structured inputs only (application form, the field values each document carries, the mock identity, bureau and GST records). No document is opened and no LLM is called. Four values are measured by intake on real documents and cannot be read from fields, so the answer key supplies them: document quality, field confidence, totals tie-out, and income regularity. Everything else, including FOIR, LTV, ages, matching and statement counts, is derived by the engine independently of the generator.
+
+| Measure | Result | Agreed minimum |
+|---|---|---|
+| Band reproduced | 60 of 60 | 95% |
+| Stop stage and class reproduced | 60 of 60 | 100% |
+| Total score, stage scores and failed rule IDs reproduced | 59 of 60 | 90% |
+
+The one miss is SYN-BL-D13 (see EDGE_CASES E-17). Unit tests cover every operator, every hard rule (generated from the rules file, so a new hard rule is tested automatically), every soft-rule tier, and the "change a threshold in the file, behaviour changes" check.
+
 ## 3. Metrics
 
 | Metric | Meaning |

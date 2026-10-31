@@ -25,7 +25,7 @@
 # If a stage has both a fix and an eligibility failure, fix wins (correct the data, then re-check).
 
 meta:
-  rules_version: "2026.10.31-1"
+  rules_version: "2026.10.31-2"
   source_note: "Sample Bank policy, synthetic. Not any bank's actual policy."
 
 scoring:
@@ -42,6 +42,36 @@ precedent:                                    # OI-3 placeholders, tune on dev d
   bonus_max: 5
   similarity_min: 0.80
   valid_months: 12
+
+# Indicative interest rate used to size the new instalment when computing FOIR (Stage 3).
+pricing:
+  rate_pct: {personal: 12.0, home: 8.75, education: 9.5, business: 12.5, vehicle: 9.5}
+
+# Parameters read by the fact derivation code in app/scoring (no thresholds live in code).
+params:
+  existing_loan_min_remaining_emis: 12        # HL-PROD-04: counts in FOIR only above this
+  foir_cap_pct: 50                            # reported as a finding when exceeded
+  enquiry_window_days: 183                    # enquiries_6m
+  return_window_months: 12                    # cheque_nach_returns_12m
+  coapp_verified_min_ratio: 0.75              # ED-INC-11
+  party_match_min: 85                         # sale agreement / title deed / invoice name matches
+  price_tolerance_pct: 1.0                    # invoice price vs application
+  home_amount_bands: [{name: upto_30l, max: 3000000}, {name: upto_75l, max: 7500000}, {name: above_75l}]
+  disallowed_purposes: [stock market investment, speculation, gambling, lottery, cryptocurrency trading]
+  education:
+    collateral_required_above: 750000
+    margin_free_fee_up_to: 400000
+    margin_pct_india: 5
+    margin_pct_abroad: 15
+  tamper:
+    weak_codes: [ROUND_SALARY]                # a weak hint alone does not raise tamper_suspected
+    weak_hints_needed: 2                      # ...but this many weak hints do
+  statement:
+    salary_keywords: [SALARY, PAYROLL, SAL CR]
+    recurring_amount_tolerance_pct: 3.0       # recurring same-amount credits count as salary
+    recurring_min_months: 3
+    min_income_credit: 5000
+    salary_cross_check_tolerance_pct: 2.0     # bank credit vs payslip net
 
 # Mandatory documents per loan. kyc: true means a missing document is a fix-type hard fail and
 # applies to every person (primary and co). min_count counts units (months, years, files).

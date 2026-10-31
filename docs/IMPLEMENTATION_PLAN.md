@@ -201,3 +201,15 @@ Tests written and passing, docs updated if behaviour changed, no real PII, secre
 - **Calibrated quality score** (feeds CM-DOC-11 / CM-KYC-13): digital 95, good photo 94, mild photo 80, poor photo 57. Scanned statements measure about 90 because the generated scans are sharp; the design targets (72 and 55) were for degraded images.
 - Blur reject below 10, warn below 60 (variance of the Laplacian at 1000 px width). Cropped = page aspect ratio outside 1.30 to 1.55. Images under 500 px on the short side are treated as ID photographs and get no blur or crop verdict.
 - Cross-document tamper hints (`salary_credit_hint`, `odd_credit_hints`) are functions in `tamper.py`; the Risk agent calls them in Stage 5.
+
+---
+
+## Stage 3 build notes (2026-10-31)
+
+- **Module `app/scoring/`:** `rules.py` (loader, schema, checksum), `evaluate.py` (reference evaluator, now with a public `evaluate_rule` and "unverified = fail/0 points"), `finance.py` (EMI, age, FOIR, DTI, LTV: the only place these are computed), `matching.py` (names, PAN, DOB, address), `analytics.py` (bank-statement analytics), `facts.py` (derive the facts the rules read, with co-applicant aggregation), `engine.py` (`score_case`: stage groups, early stop, caps, precedent-bonus stub), `models.py` (inputs and the `ScoreReport`), `replay.py` (dev-split replay).
+- **Rules file additions** (`rules_version` 2026.10.31-2): `pricing` (rate per loan type for sizing the new instalment) and `params` (existing-loan cut-off, bands, disallowed purposes, education margin/collateral limits, tamper hint rules, statement detection). No threshold or parameter lives in code.
+- **Early stop:** groups run extraction, KYC, risk (income and credit), policy. A hard `stop` failure ends the run after its group; later groups never derive facts. Fix-type gives `fix_required` with no score; eligibility-type gives `recommend_reject` with an indicative score capped at 59.
+- **Where values come from:** FOIR = (bureau EMIs with more than 12 instalments left + new EMI at the pricing rate) / combined verified income. Education sizes the new EMI over the repayment period, not the moratorium. Income is the documented figure held down to what the bank statement supports. Details and decided edge cases: `docs/EDGE_CASES.md` E-13 to E-18.
+- **Replay result (dev):** band 60 of 60, stop stage and class 60 of 60, score and failed rules 59 of 60. Agreed minimums: band 95%, exact 90%. The test split was not run (final evaluation only).
+- **Precedent bonus:** `apply_precedent_bonus` is a stub (0 until Stage 4 and 7). It is capped by `precedent.bonus_max`, only touches a refer-band case that no cap rule holds, and never overrides a hard rule.
+

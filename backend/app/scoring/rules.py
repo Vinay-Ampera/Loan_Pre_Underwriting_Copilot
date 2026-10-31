@@ -106,6 +106,56 @@ class PrecedentRules(BaseModel):
     valid_months: int
 
 
+class Pricing(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rate_pct: dict[LoanType, float]
+
+
+class AmountBand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    max: float | None = None  # None = no upper bound
+
+
+class EducationParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    collateral_required_above: float
+    margin_free_fee_up_to: float
+    margin_pct_india: float
+    margin_pct_abroad: float
+
+
+class TamperParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    weak_codes: list[str]
+    weak_hints_needed: int
+
+
+class StatementParams(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    salary_keywords: list[str]
+    recurring_amount_tolerance_pct: float
+    recurring_min_months: int
+    min_income_credit: float
+    salary_cross_check_tolerance_pct: float
+
+
+class Params(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    existing_loan_min_remaining_emis: int
+    foir_cap_pct: float
+    enquiry_window_days: int
+    return_window_months: int
+    coapp_verified_min_ratio: float
+    party_match_min: float
+    price_tolerance_pct: float
+    home_amount_bands: list[AmountBand]
+    disallowed_purposes: list[str]
+    education: EducationParams
+    tamper: TamperParams
+    statement: StatementParams
+
+
 class DocRequirement(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: str
@@ -123,6 +173,8 @@ class RuleSet(BaseModel):
     scoring: Scoring
     age: AgeRules
     precedent: PrecedentRules
+    pricing: Pricing
+    params: Params
     documents: dict[str, list[DocRequirement]]
     rules: list[Rule]
     checksum: str = ""

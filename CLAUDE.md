@@ -80,6 +80,7 @@ data:      python -m synthetic.generate --split dev|test|all && python -m synthe
 fixtures:  python -m synthetic.fixtures
 reindex:   python -m app.rag.reindex              (Stage 4)
 intake:    python -m app.intake.cli FILE [--llm] | python -m app.intake.evaluate --split dev
+scoring:   python -m app.scoring.replay --split dev [--case ID] [--verbose]
 eval:      python -m app.eval.run --split dev
 stack:     docker compose up   (Stage 8)
 diagrams:  python3 docs/diagrams/make_diagrams.py
@@ -87,7 +88,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Next: Stage 3 (rules engine and scoring); do not start it until the user says Stage 2 is committed.
+Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Next: Stage 4 (RAG and Policy agent); do not start it until the user says Stage 3 is committed.
 
 ## Open items
 

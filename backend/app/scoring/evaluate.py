@@ -104,13 +104,22 @@ def evaluate_case(
 ) -> CaseEvaluation:
     results: list[RuleResult] = []
     for rule in ruleset.rules_for(loan_type):
-        if not _applies(rule, loan_type, case):
-            continue
-        if rule.kind == "hard":
-            results.extend(_hard(rule, case, persons))
-        else:
-            results.append(_soft(rule, case))
+        results.extend(evaluate_rule(rule, loan_type, case, persons))
+    return summarise(ruleset, results)
 
+
+def evaluate_rule(
+    rule: Rule, loan_type: str, case: dict[str, Any], persons: list[dict[str, Any]]
+) -> list[RuleResult]:
+    """Results of one rule: none when it does not apply, one per person for `each` hard rules."""
+    if not _applies(rule, loan_type, case):
+        return []
+    if rule.kind == "hard":
+        return _hard(rule, case, persons)
+    return [_soft(rule, case)]
+
+
+def summarise(ruleset: RuleSet, results: list[RuleResult]) -> CaseEvaluation:
     stage_scores: dict[str, float] = {s: 0.0 for s in ruleset.scoring.stage_weights}
     for r in results:
         if r.kind == "soft":
@@ -158,7 +167,7 @@ def _hard(rule: Rule, case: dict[str, Any], persons: list[dict[str, Any]]) -> li
     out = []
     for role, facts in subjects:
         value = _get(facts, rule.field, rule.rule_id)
-        ok = compare(rule.operator, value, rule.threshold)
+        ok = value is not None and compare(rule.operator, value, rule.threshold)  # unverified fails
         out.append(
             RuleResult(
                 rule_id=rule.rule_id, stage=rule.stage, kind="hard", passed=ok,
@@ -172,7 +181,9 @@ def _hard(rule: Rule, case: dict[str, Any], persons: list[dict[str, Any]]) -> li
 
 def _soft(rule: Rule, case: dict[str, Any]) -> RuleResult:
     value = _get(case, rule.field, rule.rule_id)
-    if rule.tiers is not None:
+    if value is None:  # could not be verified: no points
+        pts = 0.0
+    elif rule.tiers is not None:
         pts = _tier_points(rule.tiers, value)
     else:
         assert rule.operator is not None
