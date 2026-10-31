@@ -57,7 +57,7 @@ Spacing: 4-pixel base (4, 8, 12, 16, 24, 32). Radius 8 for cards, 6 for inputs. 
 3. **New case:** loan type, application form, co-applicant section.
 4. **Case workspace:** tabs for Documents, Extracted fields, Report, Audit. Upload happens here; "Submit for assessment" enabled once KYC documents are present.
 5. **Report and confirm:** stage cards, citations, confirm bar at the bottom.
-6. **Reviewer queue:** pending precedents.
+6. **Admin precedent queue:** pending precedents.
 7. **Admin:** users; policy and rule file status, last re-index, version.
 8. **Monitoring link:** opens Grafana (applications per day, time to decision, override trend, tokens and cost).
 

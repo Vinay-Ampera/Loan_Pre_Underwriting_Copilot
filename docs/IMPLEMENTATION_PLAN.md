@@ -127,18 +127,18 @@ Exit criteria
 
 ## Stage 6: API and frontend (L)
 
-**Goal:** loan officer and reviewer use the system through a browser.
+**Goal:** loan officer and admin use the system through a browser.
 
 Tasks
-1. FastAPI: auth with roles, case CRUD, uploads with checks, submit, status, report, confirm and override, reviewer queue, audit writes.
+1. FastAPI: auth with roles, case CRUD, uploads with checks, submit, status, report, confirm and override, admin precedent queue, audit writes.
 2. Background execution of the graph from the API (no Celery in v1).
-3. React screens per `DESIGN_SYSTEM.md`: login, case queue, new case form, upload with per-file results, case detail with document viewer, extracted fields, stage cards and report, confirm panel with double confirmation, override with reason, reviewer queue.
+3. React screens per `DESIGN_SYSTEM.md`: login, case queue, new case form, upload with per-file results, case detail with document viewer, extracted fields, stage cards and report, confirm panel with double confirmation, override with reason, admin precedent queue.
 4. PDF export of the report.
 5. End-to-end test with a browser test tool for one case per loan type.
 
 Exit criteria
 - One case per loan type completed through the UI.
-- Roles enforced: officer cannot approve precedents; reviewer cannot upload.
+- Roles enforced: officer cannot approve precedents; admin cannot upload.
 - Confirm and override both need a second click; override blocked without a reason.
 
 ---
@@ -148,7 +148,7 @@ Exit criteria
 **Goal:** the system learns from overrides; quality and cost are measured.
 
 Tasks
-1. Precedent creation on override (reason plus LLM summary), reviewer approval, expiry date, embedding.
+1. Precedent creation on override (reason plus LLM summary), hard-rule check, admin approval, expiry date, embedding.
 2. Precedent retrieval inside the Policy agent: borderline only, same loan type, similarity threshold, capped bonus, never over a hard rule.
 3. RAGAS and DeepEval suites; full run on dev and test; GitHub Actions gate on PRs with metric thresholds.
 4. Fairness report from the separate attributes table (monitoring only).

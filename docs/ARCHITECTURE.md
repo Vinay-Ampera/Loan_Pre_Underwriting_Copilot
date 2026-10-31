@@ -19,7 +19,7 @@ Companion to `PRD.md`. Diagrams are in `diagrams/` (regenerate with `python3 dia
 
 | Component | Role | Tech |
 |---|---|---|
-| Frontend | Queue, case form, upload, report, confirm/override, reviewer queue | React, TypeScript, Tailwind |
+| Frontend | Queue, case form, upload, report, confirm/override, admin precedent queue | React, TypeScript, Tailwind |
 | API | Auth and roles, case, upload and report endpoints, audit writes, starts and resumes runs | FastAPI |
 | Upload checks | Type, size, password-protected rejection, blur and crop score | Python in the API process |
 | Intake and parsers | Text and table extraction, OCR, classification, PII masking, ID validators | PyMuPDF, pdfplumber, OpenCV, PaddleOCR (Tesseract fallback) |
@@ -75,7 +75,7 @@ Full controls: `SECURITY.md`.
 
 ## 6. Learning loop in the architecture
 
-Override → proposed precedent (reason + LLM summary + embedding) → reviewer approval → stored in `precedents` with an expiry. The Policy agent retrieves approved precedents only for borderline cases, same loan type, above a similarity threshold. A precedent can add a capped bonus and relabel a borderline case; it never overrides a hard rule. Main policy files are never edited by learning.
+Override → proposed precedent (reason + LLM summary + embedding) → hard-rule check in code, then admin approval → stored in `precedents` with an expiry. The Policy agent retrieves approved precedents only for borderline cases, same loan type, above a similarity threshold. A precedent can add a capped bonus and relabel a borderline case; it never overrides a hard rule. Main policy files are never edited by learning.
 
 ## 7. Evaluation hooks
 

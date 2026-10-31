@@ -27,7 +27,7 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 
 ## 4. Access control
 
-- **D. Roles:** loan officer (cases, upload, confirm), reviewer (approve precedents), admin (users, policy and rule files, re-index).
+- **D. Roles:** loan officer (cases, upload, confirm; any number of officers), admin (approve precedents, approve hard-rule changes, users, policy and rule files, re-index).
 - Server-side checks on every endpoint; the UI hides what a role cannot use, but never relies on that.
 - Passwords hashed (argon2 or bcrypt); short-lived JWTs; lockout after repeated failures.
 - Officers see only their cases unless granted otherwise.
@@ -76,7 +76,7 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 | Forged or edited documents | Tamper hints, arithmetic and bank-credit cross-checks, human review |
 | Biased outcomes | Protected attributes excluded, monitoring only |
 | Over-trust in the model | Human confirms every case, "recommended" wording, unverified flag |
-| Bad precedent poisons future cases | Reviewer approval, expiry, hard rules cannot be overridden |
+| Bad precedent poisons future cases | Hard-rule check in code, admin approval, expiry, hard rules cannot be overridden |
 | Credential leak | `.env`, secret scanning, key rotation |
 | Malicious upload | Type and signature checks, size limits, no execution |
 

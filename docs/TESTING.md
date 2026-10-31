@@ -75,5 +75,5 @@ On release: full dev run plus one run on the held-out test split; results attach
 - Clean case per loan type completes with report.
 - Hard-fail case stops at the right stage with a short report.
 - Password-protected upload rejected.
-- Override, reviewer approval, similar case re-run shows the precedent.
+- Override, admin approval, similar case re-run shows the precedent.
 - Forced model failure triggers fallback; case still completes.

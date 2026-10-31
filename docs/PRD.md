@@ -29,10 +29,9 @@ The users are **bank staff**, not applicants. Applicants never log in.
 | Role | What they do |
 |---|---|
 | Loan officer | Creates a case, picks the loan type, fills the application form, uploads documents (all at once or one by one), clicks "Submit for assessment", reads the report, confirms or overrides (with a reason) |
-| Reviewer | Approves or rejects each proposed precedent before it enters the knowledge base |
-| Admin | Manages users, edits policy and rule files, triggers re-indexing |
+| Admin | Sits above the loan officers. Manages users (any number of officers), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits policy and rule files, triggers re-indexing |
 
-(Earlier we discussed a separate underwriter. For v1 the loan officer plays that role. Reviewer is a separate person for precedent quality.)
+(Earlier we discussed a separate underwriter and a reviewer. For v1 the loan officer plays the underwriter, and the admin plays the reviewer. Two roles only: admin and loan officer.)
 
 ## 4. Scope
 
@@ -55,7 +54,7 @@ The users are **bank staff**, not applicants. Applicants never log in.
 - Automatic approval or rejection without a human.
 - NRI applicants, non-English documents.
 - Applicant-facing portal.
-- Training or hosting any local LLM. DPO, TRL, Colab and a tuned Qwen model from the first idea are **deferred, not deleted**. They stay as a possible future upgrade.
+- Training any model or hosting any local LLM. DPO, TRL, Colab and a tuned Qwen model are **removed** (user decision, 2026-10-31). LLMs are used only through APIs. Local embeddings, reranker and OCR (from the pip venv) are not LLMs and stay.
 - Celery and Redis (not needed for v1; can be added later).
 - Hosted file storage (local disk in v1).
 - Admin UI for policy upload (v1 uses files plus a re-index command).
@@ -70,7 +69,7 @@ The users are **bank staff**, not applicants. Applicants never log in.
 6. Report is shown with stage scores, findings, citations and a recommendation worded "recommended, awaiting your confirmation".
 7. Officer reviews the report and documents, then confirms or overrides. Both need a second confirming click. An override needs a written reason.
 8. For an override, the system creates a **proposed precedent**: officer reason plus an LLM summary of the report.
-9. A reviewer approves or rejects the proposal. Approved precedents enter the knowledge base.
+9. A code check tests the proposal against the hard rules. A proposal that breaches a hard rule is **held** and never enters the knowledge base. Otherwise the admin approves or rejects it; approved precedents enter the knowledge base.
 10. Everything is written to the audit log.
 
 A stopped case can be resumed from the failed stage after the officer corrects data or re-uploads, under the same case ID. Stopped is **not** a final reject.
@@ -217,7 +216,7 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 ### 9.4 Learning loop (precedents)
 
 - FR-15 On override, store: officer reason, LLM summary of the report, loan type, rules involved, original score and recommendation, final decision, embedding.
-- FR-16 Reviewer approves each precedent. Approved ones get an expiry (revalidation) date.
+- FR-16 Three gates before a precedent is stored: officer override with reason, rule-based hard-rule check in code, admin approval. Any change touching a hard rule needs admin approval. Approved ones get an expiry (revalidation) date.
 - FR-17 Precedents are retrieved only for borderline cases (refer band), above a similarity threshold, same loan type, same failing rules.
 - FR-18 A precedent **never overrides a hard rule**. A strong approved precedent can lift a borderline case's label (for example "refer → recommend approve, supported by precedent P-0042") by a capped bonus set in the rules file. The officer still confirms.
 - FR-19 Main policy files are never modified by learning. Precedents are stored separately.
@@ -304,7 +303,7 @@ Detail is in `ARCHITECTURE.md`.
 | ID | Item | Current handling |
 |---|---|---|
 | OI-1 | "No applicant above 55": confirmed as a cap for every applicant and co-applicant. The exact meaning (age at application or at maturity) was not stated. | Treated as age at maturity ≤55, configurable. For education loans this shortens parent co-applicant tenure; confirm this is intended. |
-| OI-2 | DPO, TRL, Colab and tuned Qwen from the original idea | Deferred, not removed. Learning is precedent-based. Confirm status. |
+| OI-2 | DPO, TRL, Colab and tuned Qwen from the original idea | **Resolved 2026-10-31:** removed. No training, no local LLM, API only. Learning is precedent-based with admin approval. |
 | OI-3 | Size of the precedent bonus and similarity threshold | Placeholders in the rules file; tune on dev data. |
 | OI-4 | Langfuse cloud versus self-hosted | Cloud if quick, else local. |
 | OI-5 | Exact free model names and rate limits | Verify at Stage 1. |

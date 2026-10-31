@@ -4,7 +4,7 @@ Read this file first. It tells you what the project is, which document to open f
 
 ## What this project is
 
-A copilot for banks and NBFCs. A loan officer uploads an applicant's documents; a LangGraph multi-agent pipeline checks them stage by stage, scores the case **in code**, and writes a report with a recommendation and policy citations. **A human confirms every case.** Overrides become reviewer-approved "precedents" stored in the knowledge base. No model is trained. Capstone project; **synthetic data only**; solo developer; trainer approves the docs before any implementation.
+A copilot for banks and NBFCs. A loan officer uploads an applicant's documents; a LangGraph multi-agent pipeline checks them stage by stage, scores the case **in code**, and writes a report with a recommendation and policy citations. **A human confirms every case.** Overrides become admin-approved "precedents" stored in the knowledge base. No model is trained. Capstone project; **synthetic data only**; solo developer; trainer approves the docs before any implementation.
 
 Loan types: personal, home, education, business, vehicle. One blended "Sample Bank" policy based on public SBI, HDFC, ICICI criteria and RBI rules.
 
@@ -33,14 +33,14 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 5. **Age cap 55 at maturity for every applicant and co-applicant** (see open item OI-1 in `docs/PRD.md`). Minimum 21 (education student 18).
 6. **Co-applicant:** optional second upload set for home; mandatory for education. Same pipeline per person, combined FOIR.
 7. **Rules live in a rules file plus policy documents** linked by rule ID. Learning never edits them.
-8. **Learning = precedent store** in RAG. Reviewer approves each precedent. Used only for borderline cases, same loan type, above a similarity threshold, never over a hard rule, capped bonus, expiry date.
-9. **Security:** synthetic data only; mask PII before any cloud LLM call (text only, never raw PDFs); local OCR first; document text is data, not instructions; roles for officer, reviewer, admin; audit log; secrets in `.env`.
+8. **Learning = precedent store** in RAG. Override → LLM summary by loan type → rule-based hard-rule check in code (a hard-rule breach is held, never enters RAG) → **admin** approves → stored. Three gates: officer, code, admin. Used only for borderline cases, same loan type, above a similarity threshold, never over a hard rule, capped bonus, expiry date.
+9. **Security:** synthetic data only; mask PII before any cloud LLM call (text only, never raw PDFs); local OCR first; document text is data, not instructions; roles: admin on top, any number of loan officers under the admin (count is configurable); audit log; secrets in `.env`.
 10. **Stack:** React + TypeScript + Tailwind; FastAPI; LangGraph with Postgres checkpoints; LiteLLM; Neon Postgres + pgvector; BGE-small (384-d) with a local cross-encoder reranker; PaddleOCR; PyMuPDF + pdfplumber + OpenCV; Langfuse; Prometheus, Loki, Tempo, Grafana; GitHub Actions; Docker Compose at the last stage.
 11. **Models:** Gemini Flash (Supervisor, Extraction, Decision), Groq gpt-oss-20b (KYC, Risk), NVIDIA Nemotron (Policy), a free fallback via LiteLLM. Verify exact IDs and limits at Stage 1.
 12. **No Celery or Redis in v1.** Local disk for uploads. Policy updates via files plus a re-index command.
 13. **Data:** 100 synthetic cases (60 dev, 40 held-out test), answer key per case. Never tune on the test split.
 14. **Fairness** attributes are monitoring-only, in a separate table the pipeline cannot read.
-15. **Nothing is dropped without the user's permission.** DPO, TRL, Colab and the tuned Qwen model are *deferred*, not removed.
+15. **Nothing is dropped without the user's permission.** DPO, TRL, Colab and the tuned Qwen model are **removed** (user decision, 2026-10-31): no model training and no local LLM. Only LLM calls go through APIs; embeddings, reranker and OCR still run locally from the pip venv.
 
 ## Hard constraints for any code you write
 
@@ -51,6 +51,11 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 - Never use gender, religion, caste or similar attributes.
 - Write a test with each change; keep CI green including the evaluation gate.
 - Update the matching doc in the same PR if behaviour changes.
+
+## Hard rules for Claude (also enforced in `.claude/settings.json`)
+
+- **Never read or write `.env`** (or `.env.local`, `.env.production` etc.). Claude may read and write `.env.example` only; the user fills `.env` by hand.
+- **Never run git write commands:** no `add`, `commit`, `push`, `stash`, `reset`, `rebase`, `merge`, branch switching or PR creation. Read-only git (`status`, `diff`, `log`) is fine. At the end of a piece of work, **give a suggested conventional-commit message** and stop; the user commits and pushes.
 
 ## How to work
 
@@ -76,7 +81,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Planning complete; documents awaiting trainer approval. No code written. Next: Stage 1 (Foundation and synthetic data).
+Planning approved by trainer. Neon ready (pgvector on), LLM keys set. No code written yet. Next: Stage 1 (Foundation and synthetic data).
 
 ## Open items
 

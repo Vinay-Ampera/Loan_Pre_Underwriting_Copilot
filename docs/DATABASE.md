@@ -7,7 +7,7 @@ Conventions: `id` is UUID primary key; `created_at` and `updated_at` are `timest
 ## 1. Core case data
 
 **users**
-`id, name, email (unique), password_hash, role (officer|reviewer|admin), active, created_at`
+`id, name, email (unique), password_hash, role (officer|admin), active, created_at`
 
 **cases**
 `id, case_no (CASE-YYYY-NNNN, unique), loan_type (personal|home|education|business|vehicle), status (draft|uploaded|running|stopped|awaiting_confirmation|confirmed|overridden), created_by → users, loan_amount, tenure_months, purpose, form_data jsonb (type-specific fields), stopped_stage, stop_class (fix|eligibility|null), total_score (null if stopped), band (approve|refer|reject|null), recommendation, policy_version, rules_version, created_at, updated_at`

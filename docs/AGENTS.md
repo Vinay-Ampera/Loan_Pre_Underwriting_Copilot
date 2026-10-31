@@ -79,4 +79,4 @@ Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.m
 
 ## Precedent flow (not an agent, but touches Decision and Policy)
 
-Override → reason required → LLM summary of the report → proposed precedent (embedding) → reviewer approves or rejects → approved precedent stored with expiry → retrieved by Policy for similar borderline cases.
+Override → reason required → LLM summary of the report → proposed precedent (embedding) → code checks hard rules (breach = held) → admin approves or rejects → approved precedent stored with expiry → retrieved by Policy for similar borderline cases.

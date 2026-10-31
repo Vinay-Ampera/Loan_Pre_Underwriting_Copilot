@@ -102,14 +102,14 @@ def architecture():
     # staff
     rect(ax, 5.4, 11.65, 11.4, 1.35, "staff")
     tag(ax, 5.6, 12.75, "Bank staff (browser)", fs=11)
-    for x, t in [(6.0, "Loan officer"), (9.8, "Reviewer"), (13.6, "Admin")]:
+    for x, t in [(6.8, "Loan officers (many)"), (11.6, "Admin")]:
         box(ax, x, 11.8, 2.8, 0.7, t, kind="white", fs=11)
 
     # frontend
     rect(ax, 0.6, 10.0, 16.4, 1.0, "fe")
     ax.text(8.8, 10.7, "Frontend: React + TypeScript + Tailwind", ha="center", va="center",
             fontsize=11.5, fontweight="bold", color=INK, zorder=3)
-    ax.text(8.8, 10.3, "Case queue  ·  New case  ·  Upload  ·  Report  ·  Confirm / Override  ·  Reviewer queue",
+    ax.text(8.8, 10.3, "Case queue  ·  New case  ·  Upload  ·  Report  ·  Confirm / Override  ·  Admin precedent queue",
             ha="center", va="center", fontsize=10.5, color=INK, zorder=3)
     for x in (7.4, 11.2, 15.0):
         arrow(ax, [(x, 11.8), (x, 11.0)])
@@ -125,7 +125,7 @@ def architecture():
     box(ax, 4.6, 7.6, 6.0, 0.95, "Case · Upload · Report · Confirm APIs",
         "upload checks: type · password · blur", "white")
     box(ax, 11.1, 7.6, 2.6, 0.95, "Audit writer", "every action logged", "white")
-    box(ax, 14.2, 7.6, 2.6, 0.95, "Auth + roles", "officer · reviewer · admin", "white")
+    box(ax, 14.2, 7.6, 2.6, 0.95, "Auth + roles", "officer · admin", "white")
     arrow(ax, [(8.8, 10.0), (8.8, 8.55)])
     lab(ax, 9.9, 9.55, "HTTPS / JSON")
     arrow(ax, [(4.6, 8.07), (4.1, 8.07)])
@@ -304,7 +304,7 @@ def dataflow():
     arrow(ax, [(8.6, y3), (8.6, y4 + 1.1)], color="#2E8F82")
     lab(ax, 9.5, 3.55, "override + reason", fs=9.3, color="#1F6F65")
     box(ax, 7.2, y4, 5.0, 1.1, "16  Proposed precedent", "officer reason + LLM report summary\n+ embedding", "learn")
-    box(ax, 12.9, y4, 3.7, 1.1, "17  Reviewer decides", "approve or reject", "learn")
+    box(ax, 12.9, y4, 3.7, 1.1, "17  Admin decides", "hard-rule check, then\napprove or reject", "learn")
     box(ax, 17.3, y4, 3.6, 1.1, "18  Precedent stored", "expiry date set", "learn")
     arrow(ax, [(12.2, y4 + 0.55), (12.9, y4 + 0.55)])
     arrow(ax, [(16.6, y4 + 0.55), (17.3, y4 + 0.55)])
