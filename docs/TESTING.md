@@ -24,6 +24,21 @@
 - Score spread covers roughly 30, 40, 55, 67, 85, 98 and 100.
 - Special files: password-protected PDFs, blurry and cropped photos, tampered documents, poisoned documents for injection tests.
 
+## 2b. Parser baseline (Stage 2, dev split, `python -m app.intake.evaluate --split dev`)
+
+| Measure | Result | Target going forward |
+|---|---|---|
+| Field accuracy, digital PDFs | 100% | 99% or more |
+| Field accuracy, good and mild photos | 99% | 97% or more |
+| Field accuracy, scanned statements | 100% | 97% or more |
+| Field accuracy, poor photos | 30% | no target; low-confidence fields are flagged, never guessed |
+| Classifier accuracy | 98.7% | 98% or more |
+| Raw PAN/Aadhaar/GSTIN/email in masked text | 0 | 0 (fixed) |
+| Password-protected files rejected | 3 of 3 | 100% (fixed) |
+| Tampered cases with at least one hint | 5 of 5 | 100% |
+
+The held-out test split is run once, for the final report (`--allow-test`).
+
 ## 3. Metrics
 
 | Metric | Meaning |

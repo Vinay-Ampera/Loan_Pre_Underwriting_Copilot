@@ -1,7 +1,7 @@
 """LiteLLM wrapper: role -> model with fallback, output validated against a Pydantic schema.
 
-Callers pass MASKED messages only (masking lives in app.intake, Stage 2). This module never
-logs message content.
+Callers pass MASKED messages only (masking lives in app.intake.masker; `complete` enforces it).
+This module never logs message content.
 """
 
 import json
@@ -14,6 +14,7 @@ from litellm.router import Router
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import Settings, get_settings
+from app.intake.masker import assert_masked
 
 CONFIG_PATH = Path(__file__).with_name("llm_models.yaml")
 
@@ -89,7 +90,12 @@ async def complete[T: BaseModel](
     schema: type[T],
     max_tokens: int = 2000,
 ) -> LLMResult[T]:
-    """Call `role`, fall back on errors, validate the reply as `schema`. Raises LLMOutputError."""
+    """Call `role`, fall back on errors, validate the reply as `schema`. Raises LLMOutputError.
+
+    Raises MaskingError before any network call if a message still holds a raw PAN, Aadhaar,
+    GSTIN or email.
+    """
+    assert_masked(*(m["content"] for m in messages))
     resp: Any = await router.acompletion(  # litellm's response types are loose; validated below
         model=role,
         messages=messages,  # type: ignore[arg-type]

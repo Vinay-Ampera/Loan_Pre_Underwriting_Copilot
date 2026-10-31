@@ -191,3 +191,13 @@ Highest risks first so we meet them early: synthetic data realism (Stage 1), OCR
 ## Definition of done (every stage)
 
 Tests written and passing, docs updated if behaviour changed, no real PII, secrets only in `.env`, PR reviewed against `CODE_STYLE.md`, CI green.
+
+---
+
+## Stage 2 build notes (2026-10-31)
+
+- **OCR engine:** RapidOCR (the PaddleOCR PP-OCR detection and recognition models run through onnxruntime) is the primary engine. The `paddlepaddle`/`paddlex` wheels pin PyYAML 6.0.2 and `opencv-contrib-python`, which clash with LiteLLM and the headless OpenCV already in the venv. `app/intake/ocr.py` still tries PaddleOCR, then Tesseract, if either is installed. Same models, same local-only guarantee. Needs the user's OK to keep (CLAUDE.md decision 10 says "PaddleOCR").
+- **Measured on the dev split (607 documents):** upload accepted 100%; classifier 98.7%; field accuracy 100% on digital PDFs, 99% on good and mild photos, 100% on scanned statements, 30% on `poor` photos (the officer sees `missing_required_fields` and a quality score near 57); zero raw PAN/Aadhaar/GSTIN/email after masking; every tamper case has at least one hint; 0.8% of clean documents get the weak `ROUND_SALARY` hint.
+- **Calibrated quality score** (feeds CM-DOC-11 / CM-KYC-13): digital 95, good photo 94, mild photo 80, poor photo 57. Scanned statements measure about 90 because the generated scans are sharp; the design targets (72 and 55) were for degraded images.
+- Blur reject below 10, warn below 60 (variance of the Laplacian at 1000 px width). Cropped = page aspect ratio outside 1.30 to 1.55. Images under 500 px on the short side are treated as ID photographs and get no blur or crop verdict.
+- Cross-document tamper hints (`salary_credit_hint`, `odd_credit_hints`) are functions in `tamper.py`; the Risk agent calls them in Stage 5.

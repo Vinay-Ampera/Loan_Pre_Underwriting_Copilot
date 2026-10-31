@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     jwt_secret: SecretStr = SecretStr("change-me-to-a-long-random-string")
     upload_dir: Path = Path("./data/uploads")
+    max_upload_mb: int = 10  # per file
+    max_case_upload_mb: int = 60  # per case
 
     def sqlalchemy_url(self) -> str:
         """DATABASE_URL rewritten for SQLAlchemy's psycopg (v3) driver."""

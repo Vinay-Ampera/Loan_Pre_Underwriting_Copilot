@@ -28,6 +28,8 @@ select = ["E", "F", "I", "B", "UP", "SIM", "N"]
 # generator: dense data-building code with long literal rows
 "data/synthetic/*" = ["E501", "N806", "SIM108"]
 "backend/tests/*" = ["E501"]
+# intake: dense label tables and messages
+"backend/app/intake/*" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -36,7 +38,7 @@ files = ["backend/app"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["litellm.*", "reportlab.*", "pikepdf.*", "cv2.*", "yaml.*", "pgvector.*"]
+module = ["litellm.*", "reportlab.*", "pikepdf.*", "cv2.*", "yaml.*", "pgvector.*", "pdfplumber.*", "rapidocr.*", "pymupdf.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -49,3 +51,10 @@ markers = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "synthetic"]
+
+# PyMuPDF and the OCR wrappers ship loose types; calls into them are checked by tests instead
+[[tool.mypy.overrides]]
+module = ["app.intake.upload", "app.intake.reader", "app.intake.ocr", "app.intake.evaluate"]
+disallow_untyped_calls = false
+warn_return_any = false
+disallow_any_expr = false
