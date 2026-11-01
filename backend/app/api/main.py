@@ -14,7 +14,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy import Engine, create_engine
@@ -26,6 +26,7 @@ from app.api import admin, auth, cases
 from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
+from app.observability import metrics
 from app.rag.embedder import embed_passages
 from app.scoring.rules import load_rules
 
@@ -88,6 +89,12 @@ def create_app(
     for r in (auth.router, cases.router, admin.router):
         app.include_router(r, prefix="/api/v1")
 
+    @app.get("/metrics", include_in_schema=False)
+    def prometheus_metrics() -> Response:
+        """Aggregate counters only (no case numbers, names or text); scrape from the internal network."""
+        body, content_type = metrics.render()
+        return Response(body, media_type=content_type)
+
     @app.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -99,7 +106,7 @@ def create_app(
 
         @app.get("/{path:path}", include_in_schema=False)
         def spa(path: str) -> FileResponse:
-            if path.startswith("api/"):
+            if path.startswith(("api/", "metrics")):
                 raise HTTPException(404)
             target = (DIST / path).resolve()
             if path and target.is_file() and DIST.resolve() in target.parents:

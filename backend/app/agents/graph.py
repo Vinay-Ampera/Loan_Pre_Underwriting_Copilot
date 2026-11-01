@@ -20,6 +20,7 @@ from uuid import UUID
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
+from sqlalchemy import text
 
 from app.agents import evals, store
 from app.agents.assemble import extract
@@ -34,6 +35,10 @@ from app.agents.runtime import AgentContext
 from app.agents.state import RESET, EvalRecord, Flag, LLMCallRecord, PipelineState
 from app.agents.submission import DocumentRef, Submission
 from app.agents.supervisor import CasePlan, run_supervisor
+from app.learning.bonus import precedent_bonus
+from app.learning.proposal import propose_precedent
+from app.observability import metrics, tracing
+from app.observability.tracing import stage_span
 from app.rag.schemas import PolicyResult
 from app.scoring.engine import score_case
 from app.scoring.models import CaseInput, ScoreReport
@@ -79,7 +84,8 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             last: Exception | None = None
             for _ in range(2):
                 try:
-                    update: Update = await fn(state)
+                    with stage_span(str(state["case_uuid"]), stage):
+                        update: Update = await fn(state)
                     return update
                 except NO_RETRY:
                     raise
@@ -267,9 +273,17 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
     # ---------------------------------------------------------------- decision
     async def decision(state: PipelineState) -> Update:
         score = _score(state)
+        pol_r = PolicyResult.model_validate(state["policy"]) if state.get("policy") else None
+        if pol_r and pol_r.precedent_matches:
+            bonus, used = precedent_bonus(pol_r.precedent_matches, rs)
+            if bonus > 0:  # rescored in code; score_case refuses it unless the case is borderline
+                score = score_case(_input(state), rs, precedent_bonus=bonus)
+                if score.precedent_bonus > 0 and used:
+                    with ctx.engine.begin() as conn:
+                        conn.execute(text("UPDATE precedents SET times_used = times_used + 1 WHERE id = :i"),
+                                     {"i": used})  # fmt: skip
         kyc_r = KycResult.model_validate(state["kyc"]) if state.get("kyc") else None
         risk_r = RiskResult.model_validate(state["risk"]) if state.get("risk") else None
-        pol_r = PolicyResult.model_validate(state["policy"]) if state.get("policy") else None
         plan = CasePlan.model_validate(state["plan"])
         flags = _flags(state)
         ext = state["extraction"]
@@ -326,6 +340,11 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             store.update_case(conn, _case(state), status, report)
             store.audit(conn, "pipeline_finished", state["case_uuid"],
                         {"status": status, "recommendation": report.recommendation})  # fmt: skip
+        metrics.record_run(report.model_dump(mode="json"), all_calls)
+        tracing.score_case(
+            str(state["case_uuid"]),
+            {f"{e.stage}.{e.metric}": e.value for e in all_evals if e.value is not None},
+        )
         return {
             "report": report.model_dump(mode="json"),
             "status": status,
@@ -358,7 +377,16 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
                 {"final": final},
                 actor_id=answer.get("officer_id"),
             )
-        return {"officer": {"action": action, "final_decision": final, "reason": answer.get("reason")},
+        metrics.OFFICER.labels(action).inc()
+        precedent = None
+        if action == "override" and answer.get("officer_id"):
+            precedent = await propose_precedent(
+                ctx, UUID(str(state["case_uuid"])), officer_id=str(answer["officer_id"]),
+                score=_score(state), report=report, final_decision=final,
+                reason=str(answer["reason"]),
+            )  # fmt: skip
+        return {"officer": {"action": action, "final_decision": final, "reason": answer.get("reason"),
+                            "precedent": precedent},
                 "status": status}  # fmt: skip
 
     g: Any = StateGraph(PipelineState)  # langgraph's overloads are too strict for plain async nodes

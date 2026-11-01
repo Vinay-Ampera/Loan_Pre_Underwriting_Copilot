@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_enabled: bool = True  # False = never send traces (tests set this)
+    otel_exporter_otlp_endpoint: str = ""  # Tempo (OTLP gRPC); empty = no span export
 
     app_env: str = "dev"
     jwt_secret: SecretStr = SecretStr("change-me-to-a-long-random-string")

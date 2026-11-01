@@ -49,7 +49,7 @@ def _card(conn: Connection, r: Any, latest: date) -> dict[str, Any]:
 
 
 _SELECT = """SELECT p.*, c.case_no, pu.name AS proposed_by_name, ru.name AS reviewed_by_name
-             FROM precedents p JOIN cases c ON c.id = p.source_case_id
+             FROM precedents p LEFT JOIN cases c ON c.id = p.source_case_id
              JOIN users pu ON pu.id = p.proposed_by LEFT JOIN users ru ON ru.id = p.reviewed_by"""
 
 

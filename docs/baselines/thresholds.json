@@ -1,0 +1,31 @@
+{
+  "note": "Floors for the CI gate. Targets for OI-7: fixed from day one are hard_rule_integrity 1.0; the rest are set from the first dev baseline.",
+  "metrics": {
+    "band_accuracy": {
+      "min": 0.95,
+      "max_drop": 0.02
+    },
+    "stop_accuracy": {
+      "min": 0.95,
+      "max_drop": 0.02
+    },
+    "total_score_exact": {
+      "min": 0.95,
+      "max_drop": 0.02
+    },
+    "stage_scores_exact": {
+      "min": 0.95,
+      "max_drop": 0.02
+    },
+    "failed_rules_exact": {
+      "min": 0.95,
+      "max_drop": 0.02
+    },
+    "mean_score_error": {
+      "max": 0.5
+    },
+    "hard_rule_integrity": {
+      "min": 1.0
+    }
+  }
+}

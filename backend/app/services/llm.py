@@ -17,6 +17,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.core.config import Settings, get_settings
 from app.intake.masker import assert_masked
+from app.observability.tracing import generation
 
 CONFIG_PATH = Path(__file__).with_name("llm_models.yaml")
 
@@ -135,13 +136,23 @@ async def complete[T: BaseModel](
     """
     assert_masked(*(m["content"] for m in messages))
     started = time.perf_counter()
-    resp: Any = await router.acompletion(  # litellm's response types are loose; validated below
-        model=role,
-        messages=messages,  # type: ignore[arg-type]
-        max_tokens=max_tokens,
-        response_format={"type": "json_object"},
-        temperature=0,
-    )
+    with generation(role) as traced:
+        resp: Any = await router.acompletion(  # litellm's response types are loose; validated below
+            model=role,
+            messages=messages,  # type: ignore[arg-type]
+            max_tokens=max_tokens,
+            response_format={"type": "json_object"},
+            temperature=0,
+        )
+        usage_ = getattr(resp, "usage", None)
+        traced(
+            str(resp.model),
+            getattr(usage_, "prompt_tokens", 0),
+            getattr(usage_, "completion_tokens", 0),
+            _cost(resp),
+            round((time.perf_counter() - started) * 1000),
+            _is_fallback(router, role, resp),
+        )
     content = resp.choices[0].message.content or ""
     try:
         output = schema.model_validate(_extract_json(content))

@@ -1,3 +1,4 @@
+import os
 import uuid
 from collections.abc import Iterator
 
@@ -6,6 +7,9 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
 from app.core.config import get_settings
+
+os.environ.setdefault("LANGFUSE_ENABLED", "false")  # tests never send traces to the cloud
+get_settings.cache_clear()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

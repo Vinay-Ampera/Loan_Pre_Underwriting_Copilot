@@ -70,6 +70,7 @@ class Report(BaseModel):
     sections: dict[str, list[int]]  # primary | co | case -> indexes into `findings`
     citations: list[ClauseRef]
     precedents: list[PrecedentMatch] = Field(default_factory=list)
+    precedent_bonus: float = 0.0  # points added by an approved precedent (capped, refer band only)
     rejection_reason: str | None
     summary: str
     summary_source: Literal["model", "code"]

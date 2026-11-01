@@ -204,6 +204,7 @@ async def run_decision(
         stop_text=stop, findings=findings, sections=group_sections(findings),
         citations=citations_for(findings, clauses, policy_clauses),
         precedents=list(policy.precedent_matches) if policy else [],
+        precedent_bonus=score.precedent_bonus,
         rejection_reason=reason, summary=summary, summary_source=origin,
         flags=[f.model_dump() for f in flags], unverified=unverified, applicants=applicants,
         documents=documents,

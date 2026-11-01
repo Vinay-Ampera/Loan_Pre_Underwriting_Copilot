@@ -87,11 +87,19 @@ Full controls: `SECURITY.md`.
 
 Override → proposed precedent (reason + LLM summary + embedding) → hard-rule check in code, then admin approval → stored in `precedents` with an expiry. The Policy agent retrieves approved precedents only for borderline cases, same loan type, above a similarity threshold. A precedent can add a capped bonus and relabel a borderline case; it never overrides a hard rule. Main policy files are never edited by learning.
 
+Built in Stage 7 (`app/learning/`): the `await_officer` node calls `propose_precedent` on an override. A masked LLM summary (code-written if the model fails its checks) is stored with the officer's reason; `hard_rule_breach` holds any proposal that would approve a case with a failed hard rule or a stop (`held`, never in the queue). The Decision node asks `precedent_bonus` for points (approve-final precedents only, `bonus_max` × similarity) and re-runs `score_case`, which refuses the bonus unless the case is refer band with no stop and no cap-to-refer rule. The report carries `precedents` and `precedent_bonus`.
+
 ## 7. Evaluation hooks
 
 - After each agent: code checks (schema, recompute, citation exists, score equals code result). LLM judge only if the code checks are inconclusive.
 - Offline: RAGAS and DeepEval on the 100-case golden set; GitHub Actions gate.
 - Scores are logged to `eval_scores` and Langfuse.
+- `python -m app.eval.run --split dev` replays the split through the rules engine (no database, no model), writes/compares `docs/baselines/`, and is the CI gate. `app.eval.fairness` is monitoring only.
+
+### 7b. Observability (Stage 7)
+
+- **Langfuse** (`app/observability/tracing.py`): one trace per case (id derived from the case id, so resumes join it), a span per stage, a generation per model call with model, tokens, cost, latency, fallback flag; evaluation scores attached at the end. No prompt, reply or document text is sent. Off without keys or with `LANGFUSE_ENABLED=false`; a tracing error never fails a case. `llm_calls.langfuse_trace_id` holds the id.
+- **Prometheus** (`/metrics`, aggregate counters only), **Loki** (JSON lines in `logs/app.log` through Promtail), **Tempo** (OTLP spans when `OTEL_EXPORTER_OTLP_ENDPOINT` is set), **Grafana** (provisioned datasources and a "Loan Copilot" dashboard). Config in `ops/`; start with `docker compose -f ops/docker-compose.observability.yml up -d`, Grafana on port 3000.
 
 ## 8. Configuration
 

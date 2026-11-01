@@ -48,7 +48,7 @@ One row per (case, stage); a stage that runs again (resume, correction) replaces
 `id, case_id, officer_id, action (confirm|override), original_recommendation, final_decision, reason (required for override), second_click_at, created_at`
 
 **precedents**
-`id, source_case_id, status (pending|held|approved|rejected|expired), loan_type, rule_ids text[] (rules involved), original_score, original_recommendation, final_decision, officer_reason, report_summary, embedding vector(384), proposed_by, reviewed_by, reviewed_at, valid_until, times_used, created_at`
+`id, source_case_id (nullable; cleared if the source case is deleted), status (pending|held|approved|rejected|expired), loan_type, rule_ids text[] (rules involved), original_score, original_recommendation, final_decision, officer_reason, report_summary, embedding vector(384), proposed_by, reviewed_by, reviewed_at, valid_until, times_used, created_at`
 `held` = failed the code-side hard-rule check; it never reaches the admin or RAG. A CHECK constraint stops a row becoming `approved` without a reviewer, review time, expiry date and embedding.
 Index: HNSW on `embedding`; btree on `(loan_type, status)`.
 

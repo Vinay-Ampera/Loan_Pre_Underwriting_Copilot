@@ -40,6 +40,8 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 - No PII in application logs, Langfuse traces or Grafana. Masked text only.
 - LiteLLM logs tokens and cost, not raw prompts, unless masked.
 
+Observability (Stage 7): Langfuse and Tempo receive stage names, model names, token counts, cost, latency and scores only, never prompt, reply or document text (tested with a fake client and the leak patterns). Logs are JSON lines built from ids and counts. `/metrics` has no authentication and holds aggregate counters with stage and model labels only; expose it on the internal network, not publicly. `LANGFUSE_ENABLED=false` in CI and tests.
+
 ## 6. Upload hardening
 
 - Allow-list types: PDF, JPG, PNG. Check content type by file signature, not extension.

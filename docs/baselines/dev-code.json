@@ -1,0 +1,15 @@
+{
+  "rules_version": "2026.10.31-2",
+  "split": "dev",
+  "metrics": {
+    "cases": 60.0,
+    "band_accuracy": 1.0,
+    "stop_accuracy": 1.0,
+    "total_score_exact": 0.9833333333333333,
+    "stage_scores_exact": 0.9833333333333333,
+    "failed_rules_exact": 0.9833333333333333,
+    "mean_score_error": 0.122,
+    "hard_rule_integrity": 1.0,
+    "bonus_lifts_label": 0.0
+  }
+}

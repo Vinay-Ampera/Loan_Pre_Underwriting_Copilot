@@ -118,6 +118,8 @@ GitHub Actions on every PR:
 
 On release: full dev run plus one run on the held-out test split; results attached to the release tag with model versions.
 
+**What the PR gate runs today** (`.github/workflows/ci.yml`): ruff, mypy, synthetic data, `pytest -q` (throwaway Postgres with pgvector, models off), `python -m app.eval.run --split dev` against `docs/baselines/thresholds.json` (floors, a ceiling on score error, a maximum drop from `dev-code.json`, and hard-rule integrity 1.0 with the largest precedent bonus applied to every case), dependency audit, and the frontend lint, tests and build. No API keys are used. The RAG retrieval gate (`app.rag.evaluate`, real embedder) and the RAGAS/DeepEval judge suites run locally before a release.
+
 ## 7. Regression practice
 
 - Every bug gets a failing test first.

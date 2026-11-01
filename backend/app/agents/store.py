@@ -19,6 +19,7 @@ from app.agents.results import RuleCheck
 from app.agents.state import EvalRecord, LLMCallRecord
 from app.agents.submission import Submission
 from app.intake.masker import Masker
+from app.observability import tracing
 from app.scoring.models import CaseInput
 
 SYSTEM_EMAIL = "pipeline@local.invalid"
@@ -152,16 +153,17 @@ def save_logs(
 ) -> None:
     """Replace the case's LLM-call and evaluation logs with the run's (idempotent)."""
     ids = stage_run_ids(conn, case_id)
+    trace_id = tracing.trace_id_for(str(case_id))
     conn.execute(text("DELETE FROM llm_calls WHERE case_id = :c"), {"c": case_id})
     conn.execute(text("DELETE FROM eval_scores WHERE case_id = :c"), {"c": case_id})
     for c in calls:
         conn.execute(
             text("""INSERT INTO llm_calls (case_id, stage_run_id, provider, model, tokens_in, tokens_out,
-                        cost_usd, latency_ms, fallback_used)
-                    VALUES (:c, :s, :p, :m, :ti, :to, :cost, :lat, :fb)"""),
+                        cost_usd, latency_ms, fallback_used, langfuse_trace_id)
+                    VALUES (:c, :s, :p, :m, :ti, :to, :cost, :lat, :fb, :tr)"""),
             {"c": case_id, "s": ids.get(c.stage), "p": c.provider or "unknown", "m": c.model,
              "ti": c.tokens_in, "to": c.tokens_out, "cost": c.cost_usd, "lat": c.latency_ms,
-             "fb": c.fallback_used},
+             "fb": c.fallback_used, "tr": trace_id},
         )  # fmt: skip
     for e in evals:
         if e.value is None:

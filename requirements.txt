@@ -51,3 +51,9 @@ ruff>=0.5
 mypy>=1.10
 types-PyYAML
 pre-commit>=3.7
+
+# Stage 7: observability and evaluation
+prometheus-client>=0.20
+langfuse>=3.0
+opentelemetry-sdk>=1.25
+opentelemetry-exporter-otlp-proto-grpc>=1.25
