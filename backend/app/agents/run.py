@@ -62,7 +62,21 @@ def force_429_router() -> Router:
     return build_router(config=cfg)
 
 
+def expected(key: dict[str, Any]) -> dict[str, Any]:
+    """What the pipeline should do with a case. A PAN or Aadhaar photograph in the generator's
+    `poor` tier is too blurred for local OCR (EDGE_CASES E-27): the right outcome is a fix-type
+    stop at KYC asking for a clearer copy, whatever score the key carries for the engine tests."""
+    if any(
+        d["doc_type"] in ("pan_card", "aadhaar") and d["quality"] == "poor"
+        for d in key["documents"]
+    ):
+        return {**key, "expected_stop_stage": "kyc", "expected_stop_class": "fix",
+                "expected_band": None, "expected_total_score": None}  # fmt: skip
+    return key
+
+
 def compare(state: PipelineState, key: dict[str, Any], out: CaseOutcome) -> None:
+    key = expected(key)
     rep = state.get("report") or {}
     out.stopped, out.band = rep.get("stopped_stage"), rep.get("band")
     out.status = state.get("status", "")

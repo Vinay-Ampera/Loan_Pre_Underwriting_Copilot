@@ -178,11 +178,13 @@ def test_payslip_above_bank_credits_is_held_down_and_flags_tamper(rs: RuleSet) -
     )
 
 
-def test_a_single_weak_tamper_hint_does_not_flag_but_two_do(rs: RuleSet) -> None:
+def test_a_weak_tamper_hint_counts_once_per_kind(rs: RuleSet) -> None:
     one = personal_case(extra_tamper_hints=["ROUND_SALARY"])
-    two = personal_case(extra_tamper_hints=["ROUND_SALARY", "ROUND_SALARY"])
+    repeated = personal_case(extra_tamper_hints=["ROUND_SALARY", "ROUND_SALARY"])
     assert score_case(one, rs).case_facts["tamper_suspected"] is False
-    assert score_case(two, rs).case_facts["tamper_suspected"] is True
+    assert (
+        score_case(repeated, rs).case_facts["tamper_suspected"] is False
+    )  # one kind, counted once
 
 
 def test_a_strong_hint_from_intake_caps_to_refer(rs: RuleSet) -> None:

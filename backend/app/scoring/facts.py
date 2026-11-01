@@ -453,7 +453,10 @@ def credit_facts(inp: CaseInput, rs: RuleSet, d: Derived, cross_hints: list[str]
     ]
     weak = set(rs.params.tamper.weak_codes)
     strong = [h for h in hints if h not in weak]
-    d.case["tamper_suspected"] = bool(strong) or (len(hints) >= rs.params.tamper.weak_hints_needed)
+    # weak hints count once per kind: a round salary repeated on every payslip is one hint
+    d.case["tamper_suspected"] = bool(strong) or (
+        len(set(hints)) >= rs.params.tamper.weak_hints_needed
+    )
     if d.case["tamper_suspected"]:
         d.findings.append(
             Finding(

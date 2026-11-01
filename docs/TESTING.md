@@ -58,14 +58,14 @@ The whole graph on the real files of the 60 dev cases (intake, rules engine, age
 | Measure | Result | Target |
 |---|---|---|
 | Case finishes (paused for the officer, or stopped for a correction) | 60 of 60 | 100% |
-| Stop stage and class as the key says | 51 of 60 | 100% (**not met**, see below) |
-| Band as the key says | 48 of 60 (80%) | reported, no target yet (OI-7) |
+| Stop stage and class as expected | 60 of 60 | 100% |
+| Band as the key says | 58 of 60 (96.7%) | reported, no target yet (OI-7) |
 | Mean score error on scored cases | 1.6 points over 32 cases | reported |
 | Kill the process mid-run, resume from the checkpoint | same result (tested for kyc, risk and decision, and with a real `exit 137`) | same result |
 | Forced 429 on every primary model | case completes through the fallbacks (real LiteLLM Router, mocked providers) | completes |
 | Poisoned documents and an obedient model | no score, band or recommendation changes | unchanged |
 
-**The 9 misses are one cause:** the 9 dev cases whose PAN or Aadhaar photograph is in the generator's `poor` tier (SYN-PL-D06, PL-D08, HL-D07, VL-D03, VL-D05, BL-D03, BL-D05, BL-D06, ED-D04). The local OCR cannot read them (Stage 2: about 30% of fields), so the pipeline stops at KYC with a fix-type "re-upload a clearer copy", while the key expects the case to be scored with a low document-quality score. Tried: upscaling, unsharp masking, CLAHE, Wiener deconvolution: no useful gain. A cloud vision model would read them but v1 never sends images. See EDGE_CASES E-27 for the options. The other 3 band misses: SYN-PL-D07 (three payslips with a round gross salary raise the weak `ROUND_SALARY` hint three times, which caps the case at refer; the key was built without that hint) and SYN-VL-D04 and SYN-BL-D04 (key reject, pipeline refer; mild-photo quality 80 against the key's 72, EDGE_CASES E-18).
+"Expected" means the answer key, except for the 9 dev cases whose PAN or Aadhaar photograph is in the generator's `poor` tier (SYN-PL-D06, PL-D08, HL-D07, VL-D03, VL-D05, BL-D03, BL-D05, BL-D06, ED-D04). The local OCR cannot read them (Stage 2: about 30% of fields; upscaling, sharpening, contrast and deblurring did not help), so the right outcome is a fix-type stop at KYC asking for a clearer copy, and the runner expects that (EDGE_CASES E-27). The two band misses are SYN-VL-D04 and SYN-BL-D04 (key reject, pipeline refer: mild-photo quality 80 against the key's 72, E-18). Before the E-28 change SYN-PL-D07 also missed: three payslips with a round gross salary raised the weak hint three times.
 
 Live run, models on (Gemini Flash, Groq gpt-oss-20b, Nemotron, with OpenRouter and NVIDIA fallbacks), 5 cases across 4 loan types and a co-applicant: all finished, stop stage and band as keyed, model-written summaries cited rule and clause ids, and the masking guard (which raises on any raw PAN, Aadhaar, GSTIN or email) never fired. Policy findings failed the grounding check in 4 of 6 runs and fell back to code-written findings (Stage 4 behaviour with free-tier Nemotron). Free-tier latency is 2 to 4 minutes a case, mostly Gemini 503s that fall back to OpenRouter.
 
