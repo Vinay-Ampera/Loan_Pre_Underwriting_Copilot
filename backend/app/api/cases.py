@@ -228,7 +228,7 @@ def _insert_applicants(conn: Connection, case_id: UUID, body: CaseIn) -> None:
 
 
 def _is_masked(a: Any) -> bool:
-    return "*" in a.pan or "*" in a.phone
+    return "*" in a.pan or "*" in (a.phone or "")
 
 
 def _show_details(details: dict[str, Any]) -> dict[str, Any]:
@@ -253,7 +253,7 @@ def _merge_masked(
             if old is None or display.mask_pan(old["pan"]) != a.pan:
                 raise HTTPException(422, f"Type the full PAN for the {a.role} applicant.")
             a.pan = old["pan"]
-        if "*" in a.phone:
+        if a.phone and "*" in a.phone:
             if old is None or display.mask_phone(old["phone"]) != a.phone:
                 raise HTTPException(422, f"Type the full mobile number for the {a.role} applicant.")
             a.phone = old["phone"]

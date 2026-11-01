@@ -36,7 +36,7 @@ Spacing: 4-pixel base (4, 8, 12, 16, 24, 32). Radius 8 for cards, 6 for inputs. 
 | `CaseQueueTable` | Case no, applicant, loan type, status chip, score, age of case, assigned officer; filter and search |
 | `StatusChip` | Label + icon + colour from tokens above |
 | `LoanTypePicker` | Five cards at case creation |
-| `ApplicationForm` | Common fields plus loan-specific section; co-applicant section for home and education |
+| `ApplicationForm` | Common fields plus loan-specific section; co-applicant section for home and education. Required fields show `*`, optional ones show "(optional)", and a short note at the top explains both |
 | `UploadZone` | Multi-file and one by one; per-file result: accepted, warning (blur), rejected (password, blur) |
 | `DocumentChecklist` | Required vs uploaded per applicant; missing in amber |
 | `DocumentViewer` | PDF and image viewer with extracted fields beside it; low-confidence fields highlighted |

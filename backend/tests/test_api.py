@@ -228,6 +228,27 @@ def test_case_form_rules_follow_the_loan_type(client: TestClient) -> None:
     assert r["co_applicant"]["education"] == "required" and r["fields"]["personal"] == []
 
 
+def test_optional_fields_can_be_left_empty_but_required_ones_cannot(client: TestClient) -> None:
+    h = login(client, "asha")
+    no_phone = minimal()
+    no_phone["applicants"][0]["phone"] = None
+    assert client.post("/api/v1/cases", json=no_phone, headers=h).status_code == 201
+    blank_phone = minimal()
+    blank_phone["applicants"][0]["phone"] = ""
+    assert client.post("/api/v1/cases", json=blank_phone, headers=h).status_code == 201
+    bad_phone = minimal()
+    bad_phone["applicants"][0]["phone"] = "123"
+    assert client.post("/api/v1/cases", json=bad_phone, headers=h).status_code == 422
+    home = {"property_value": 5000000}  # seller, owner and property address are optional
+    assert client.post("/api/v1/cases", json=minimal("home", loan_details=home), headers=h
+                       ).status_code == 201  # fmt: skip
+    assert client.post("/api/v1/cases", json=minimal("home", loan_details={}), headers=h
+                       ).status_code == 422  # fmt: skip
+    fields = client.get("/api/v1/meta/loan-types", headers=h).json()["fields"]["home"]
+    optional = {f["name"] for f in fields if f.get("required") is False}
+    assert optional == {"property_address", "seller_or_builder", "owner_name"}
+
+
 def test_identifiers_are_masked_in_the_case_view(client: TestClient) -> None:
     h = login(client, "asha")
     view = client.get(f"/api/v1/cases/{create(client, h, minimal())}", headers=h)

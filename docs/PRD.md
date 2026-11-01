@@ -165,6 +165,7 @@ Entered by the officer at case creation. The system checks documents against the
 - **Business:** business name, constitution type, GSTIN, Udyam number, vintage, annual turnover.
 - **Vehicle:** make, model, new or used, on-road price, dealer.
 - **Co-applicant:** same identity and income fields plus relationship.
+- **Required and optional (changed 2026-11-01):** the form marks required fields with `*` and optional ones with "(optional)", and opens with a short note saying what each means. Optional fields: mobile number, employer or business, months in current job, total experience, residential status (defaults to resident), purpose, application date, relationship (co-applicant); home: property address, seller or builder, owner name; education: institution, course duration; business: Udyam number. No scoring rule reads the loan-type ones. An empty optional field is simply skipped; a filled one is compared with the documents like any other. Everything else is required.
 - **Also collected (added in Stage 1, needed by the rules):** residential status; months in current employment (stability rules); total work experience in months (personal loan only); collateral offered and margin amount (education).
 
 ## 8. Agents and pipeline (summary)

@@ -14,15 +14,30 @@ LOAN_FIELDS: dict[str, list[dict[str, Any]]] = {
     "personal": [],
     "home": [
         {"name": "property_value", "label": "Property value (INR)", "kind": "number"},
-        {"name": "property_address", "label": "Property address", "kind": "text"},
-        {"name": "seller_or_builder", "label": "Seller or builder", "kind": "text"},
-        {"name": "owner_name", "label": "Property owner name", "kind": "text"},
+        {
+            "name": "property_address",
+            "label": "Property address",
+            "kind": "text",
+            "required": False,
+        },
+        {
+            "name": "seller_or_builder",
+            "label": "Seller or builder",
+            "kind": "text",
+            "required": False,
+        },
+        {"name": "owner_name", "label": "Property owner name", "kind": "text", "required": False},
     ],
     "education": [
         {"name": "course", "label": "Course", "kind": "text"},
-        {"name": "institution", "label": "Institution", "kind": "text"},
+        {"name": "institution", "label": "Institution", "kind": "text", "required": False},
         {"name": "country", "label": "Country of study", "kind": "text"},
-        {"name": "course_duration_months", "label": "Course duration (months)", "kind": "number"},
+        {
+            "name": "course_duration_months",
+            "label": "Course duration (months)",
+            "kind": "number",
+            "required": False,
+        },
         {"name": "total_fee", "label": "Total fee (INR)", "kind": "number"},
         {"name": "moratorium_months", "label": "Moratorium (months)", "kind": "number"},
         {"name": "margin_amount", "label": "Margin money (INR)", "kind": "number"},
@@ -37,7 +52,7 @@ LOAN_FIELDS: dict[str, list[dict[str, Any]]] = {
             "options": ["Proprietorship", "Partnership", "Private Limited", "LLP"],
         },  # fmt: skip
         {"name": "gstin", "label": "GSTIN", "kind": "text"},
-        {"name": "udyam_number", "label": "Udyam number", "kind": "text"},
+        {"name": "udyam_number", "label": "Udyam number", "kind": "text", "required": False},
         {"name": "vintage_months", "label": "Business vintage (months)", "kind": "number"},
         {"name": "annual_turnover", "label": "Annual turnover (INR)", "kind": "number"},
     ],
@@ -79,7 +94,7 @@ class ApplicantIn(BaseModel):
     pan: str = Field(pattern=r"^[A-Z]{5}([0-9]{4}|\*{4})[A-Z]$")
     aadhaar_last4: str = Field(pattern=r"^[0-9]{4}$")
     address: str = Field(min_length=5, max_length=300)
-    phone: str = Field(pattern=r"^([6-9][0-9]{9}|\*{6}[0-9]{4})$")
+    phone: str | None = Field(default=None, pattern=r"^([6-9][0-9]{9}|\*{6}[0-9]{4})$")
     employment_type: EmploymentType
     employer_or_business: str | None = Field(default=None, max_length=160)
     declared_monthly_income: float | None = Field(default=None, ge=0)
@@ -87,6 +102,11 @@ class ApplicantIn(BaseModel):
     residential_status: Literal["resident", "NRI"] = "resident"
     months_in_current_employment: int | None = Field(default=None, ge=0, le=1200)
     total_experience_months: int | None = Field(default=None, ge=0, le=1200)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def _blank_phone(cls, v: object) -> object:
+        return None if isinstance(v, str) and not v.strip() else v
 
     @field_validator("pan", mode="before")
     @classmethod
@@ -125,7 +145,7 @@ class CaseIn(BaseModel):
             raise ValueError(f"unknown loan details: {', '.join(sorted(extra))}")
         missing = [f["label"] for f in LOAN_FIELDS[self.loan_type]
                    if self.loan_details.get(f["name"]) in (None, "")
-                   and f["kind"] != "boolean"]  # fmt: skip
+                   and f["kind"] != "boolean" and f.get("required", True)]  # fmt: skip
         if missing:
             raise ValueError(f"missing loan details: {', '.join(missing)}")
         return self

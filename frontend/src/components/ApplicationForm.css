@@ -27,3 +27,23 @@
   display: flex;
   justify-content: flex-end;
 }
+.form-note {
+  background: var(--primary-soft);
+  border-radius: var(--radius-card);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-14);
+}
+.form-note p {
+  margin: 0 0 var(--s-2);
+}
+.form-note p:last-child {
+  margin-bottom: 0;
+}
+.req {
+  color: var(--reject);
+  font-weight: 600;
+}
+.opt {
+  color: var(--muted);
+  font-weight: 400;
+}

@@ -41,10 +41,21 @@ export function stateFromCase(c) {
   }
 }
 
-function Field({ id, label, error, hint, children }) {
+/** `required` is always passed: a field shows either a * or "(optional)", never neither. */
+function Field({ id, label, required, error, hint, children }) {
   return (
     <div className="field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>
+        {label}
+        {required ? (
+          <span className="req" title="Required">
+            {' '}
+            *
+          </span>
+        ) : (
+          <span className="opt"> (optional)</span>
+        )}
+      </label>
       {children}
       {hint && !error && <span className="small muted">{hint}</span>}
       {error && (
@@ -68,15 +79,16 @@ function Person({ p, set, errors, editing, prefix }) {
   const student = p.employment_type === 'student'
   return (
     <div className="form-grid">
-      <Field id={idOf('full_name')} label="Full name (as on PAN)" error={errors.full_name}>
+      <Field id={idOf('full_name')} label="Full name (as on PAN)" required error={errors.full_name}>
         <input className="input" {...bind('full_name')} autoComplete="off" />
       </Field>
-      <Field id={idOf('dob')} label="Date of birth" error={errors.dob}>
+      <Field id={idOf('dob')} label="Date of birth" required error={errors.dob}>
         <input className="input" type="date" {...bind('dob')} />
       </Field>
       <Field
         id={idOf('pan')}
         label="PAN"
+        required
         error={errors.pan}
         hint={
           editing
@@ -89,6 +101,7 @@ function Person({ p, set, errors, editing, prefix }) {
       <Field
         id={idOf('aadhaar_last4')}
         label="Aadhaar (last four digits)"
+        required
         error={errors.aadhaar_last4}
       >
         <input
@@ -99,7 +112,7 @@ function Person({ p, set, errors, editing, prefix }) {
           autoComplete="off"
         />
       </Field>
-      <Field id={idOf('phone')} label="Mobile number" error={errors.phone}>
+      <Field id={idOf('phone')} label="Mobile number" required={false} error={errors.phone}>
         <input
           className="input mono"
           {...bind('phone')}
@@ -108,10 +121,15 @@ function Person({ p, set, errors, editing, prefix }) {
           autoComplete="off"
         />
       </Field>
-      <Field id={idOf('address')} label="Address" error={errors.address}>
+      <Field id={idOf('address')} label="Address" required error={errors.address}>
         <input className="input" {...bind('address')} autoComplete="off" />
       </Field>
-      <Field id={idOf('employment_type')} label="Occupation" error={errors.employment_type}>
+      <Field
+        id={idOf('employment_type')}
+        label="Occupation"
+        required
+        error={errors.employment_type}
+      >
         <select className="select" {...bind('employment_type')}>
           <option value="salaried">Salaried</option>
           <option value="self_employed">Self-employed</option>
@@ -123,6 +141,7 @@ function Person({ p, set, errors, editing, prefix }) {
           <Field
             id={idOf('employer_or_business')}
             label="Employer or business"
+            required={false}
             error={errors.employer_or_business}
           >
             <input className="input" {...bind('employer_or_business')} />
@@ -130,6 +149,7 @@ function Person({ p, set, errors, editing, prefix }) {
           <Field
             id={idOf('declared_monthly_income')}
             label="Declared monthly income (INR)"
+            required
             error={errors.declared_monthly_income}
           >
             <input className="input" type="number" min="0" {...bind('declared_monthly_income')} />
@@ -137,6 +157,7 @@ function Person({ p, set, errors, editing, prefix }) {
           <Field
             id={idOf('months_in_current_employment')}
             label="Months in current job or business"
+            required={false}
             error={errors.months_in_current_employment}
           >
             <input
@@ -149,13 +170,14 @@ function Person({ p, set, errors, editing, prefix }) {
           <Field
             id={idOf('total_experience_months')}
             label="Total experience (months)"
+            required={false}
             error={errors.total_experience_months}
           >
             <input className="input" type="number" min="0" {...bind('total_experience_months')} />
           </Field>
         </>
       )}
-      <Field id={idOf('residential_status')} label="Residential status">
+      <Field id={idOf('residential_status')} label="Residential status" required={false}>
         <select className="select" {...bind('residential_status')}>
           <option value="resident">Resident</option>
           <option value="NRI">NRI</option>
@@ -165,6 +187,7 @@ function Person({ p, set, errors, editing, prefix }) {
         <Field
           id={idOf('relationship_to_primary')}
           label="Relationship to applicant"
+          required={false}
           error={errors.relationship_to_primary}
         >
           <input className="input" {...bind('relationship_to_primary')} />
@@ -173,6 +196,9 @@ function Person({ p, set, errors, editing, prefix }) {
     </div>
   )
 }
+
+/** A loan-type field is required unless the server marks it optional (yes/no fields always have a value). */
+const isRequired = (f) => f.kind !== 'boolean' && f.required !== false
 
 function toBody(loanType, meta, s, hasCo) {
   const num = (v) => (v === '' || v == null ? null : Number(v))
@@ -187,7 +213,7 @@ function toBody(loanType, meta, s, hasCo) {
       pan: p.pan.trim().toUpperCase(),
       aadhaar_last4: p.aadhaar_last4.trim(),
       address: p.address.trim(),
-      phone: p.phone.trim(),
+      phone: p.phone.trim() || null,
       employment_type: p.employment_type,
       employer_or_business: student ? null : p.employer_or_business.trim() || null,
       declared_monthly_income: student ? null : num(p.declared_monthly_income),
@@ -228,14 +254,14 @@ function validate(loanType, meta, s, hasCo, editing) {
     if (!PAN.test(pan) && !(editing && PAN_MASKED.test(pan))) e.pan = 'PAN looks like ABCDE1234F.'
     if (!/^[0-9]{4}$/.test(p.aadhaar_last4.trim())) e.aadhaar_last4 = 'Enter four digits.'
     const ph = p.phone.trim()
-    if (!PHONE.test(ph) && !(editing && PHONE_MASKED.test(ph)))
+    if (ph && !PHONE.test(ph) && !(editing && PHONE_MASKED.test(ph)))
       e.phone = 'Enter a 10-digit mobile number.'
     if (p.address.trim().length < 5) e.address = 'Enter the address.'
     if (p.employment_type !== 'student' && p.declared_monthly_income === '')
       e.declared_monthly_income = 'Enter the monthly income.'
   }
   for (const f of meta.fields[loanType]) {
-    if (f.kind !== 'boolean' && (s.details[f.name] ?? '') === '')
+    if (isRequired(f) && (s.details[f.name] ?? '') === '')
       errors.details[f.name] = `Enter ${f.label.toLowerCase()}.`
   }
   const bad =
@@ -293,10 +319,25 @@ export default function ApplicationForm({
   const e = errs || { top: {}, people: { primary: {}, co: {} }, details: {} }
   return (
     <form className="app-form" onSubmit={submit} noValidate>
+      <aside className="form-note" aria-label="How to fill this form">
+        <p>
+          <strong>*</strong> means required. The case cannot be created without it, and you will see
+          a message under the field.
+        </p>
+        <p>
+          <strong>(optional)</strong> can stay empty. Nothing breaks and the score is not changed.
+          If you fill one in, the system compares it with the documents.
+        </p>
+        <p>
+          Everything you type here is the applicant&apos;s claim, and the uploaded documents are
+          tested against it. Phone, PAN and Aadhaar are masked before any AI service sees them. Use
+          synthetic data only. Never enter a real person&apos;s details.
+        </p>
+      </aside>
       <fieldset className="card">
         <legend>Loan</legend>
         <div className="form-grid">
-          <Field id="f-amount" label="Loan amount (INR)" error={e.top.loan_amount}>
+          <Field id="f-amount" label="Loan amount (INR)" required error={e.top.loan_amount}>
             <input
               id="f-amount"
               className="input"
@@ -307,7 +348,7 @@ export default function ApplicationForm({
               aria-invalid={Boolean(e.top.loan_amount)}
             />
           </Field>
-          <Field id="f-tenure" label="Tenure (months)" error={e.top.tenure_months}>
+          <Field id="f-tenure" label="Tenure (months)" required error={e.top.tenure_months}>
             <input
               id="f-tenure"
               className="input"
@@ -318,7 +359,7 @@ export default function ApplicationForm({
               aria-invalid={Boolean(e.top.tenure_months)}
             />
           </Field>
-          <Field id="f-purpose" label="Purpose">
+          <Field id="f-purpose" label="Purpose" required={false}>
             <input
               id="f-purpose"
               className="input"
@@ -326,7 +367,12 @@ export default function ApplicationForm({
               onChange={(ev) => setTop('purpose', ev.target.value)}
             />
           </Field>
-          <Field id="f-date" label="Application date" hint="Leave empty for today.">
+          <Field
+            id="f-date"
+            label="Application date"
+            required={false}
+            hint="Leave empty for today."
+          >
             <input
               id="f-date"
               className="input"
@@ -336,7 +382,13 @@ export default function ApplicationForm({
             />
           </Field>
           {meta.fields[loanType].map((f) => (
-            <Field key={f.name} id={`d-${f.name}`} label={f.label} error={e.details[f.name]}>
+            <Field
+              key={f.name}
+              id={`d-${f.name}`}
+              label={f.label}
+              required={isRequired(f)}
+              error={e.details[f.name]}
+            >
               {f.kind === 'select' ? (
                 <select
                   id={`d-${f.name}`}
