@@ -92,6 +92,12 @@ Spacing: 4-pixel base (4, 8, 12, 16, 24, 32). Radius 8 for cards, 6 for inputs. 
 - Long operations show progress by stage, not a spinner alone.
 - Keyboard accessible; focus visible; dialogs trap focus.
 
+## 6b. Stage 6 build notes
+
+- Plain JavaScript and CSS (one `.css` beside each component; tokens in `frontend/src/styles/tokens.css`). Animation is CSS only (rise, shimmer, chip spin, a slow login glow) and switched off by `prefers-reduced-motion`. Three.js was not used.
+- Built: login, case queue (search, status and loan-type filters), new case (loan type cards, form, co-applicant section), case workspace (checklist, Documents with upload and per-file results, Extracted fields with the document beside it, Report, Audit), confirm and override dialogs, admin precedent queue.
+- Not built yet: admin users page, policy and rule file status, Grafana link (Stages 7 and 8). The Inter font is used if installed; no web font is loaded.
+
 ## 7. Responsive
 
 Desktop first (bank workstation). Tablet works; phone shows read-only queue and report.

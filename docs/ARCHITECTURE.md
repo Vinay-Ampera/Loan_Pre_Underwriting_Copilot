@@ -19,7 +19,7 @@ Companion to `PRD.md`. Diagrams are in `diagrams/` (regenerate with `python3 dia
 
 | Component | Role | Tech |
 |---|---|---|
-| Frontend | Queue, case form, upload, report, confirm/override, admin precedent queue | React, TypeScript, Tailwind |
+| Frontend | Queue, case form, upload, report, confirm/override, admin precedent queue | React, JavaScript, CSS |
 | API | Auth and roles, case, upload and report endpoints, audit writes, starts and resumes runs | FastAPI |
 | Upload checks | Type, size, password-protected rejection, blur and crop score | Python in the API process |
 | Intake and parsers | Text and table extraction, OCR, classification, PII masking, ID validators | PyMuPDF, pdfplumber, OpenCV, PaddleOCR (Tesseract fallback) |
@@ -46,6 +46,16 @@ START → supervisor → extraction → gate_E → kyc → gate_K ─┬─ hard
 - **Pause and resume:** after `decision` the graph pauses at `await_officer` (status `awaiting_confirmation`; a fix-type stop ends with status `stopped` instead). A stopped case resumes from its failed stage after corrections. LangGraph checkpoints live in Postgres.
 - **Co-applicant:** extraction, KYC and risk run once per person with a role tag; decision aggregates.
 - Details per agent: `AGENTS.md`.
+
+## 3b. API and background runs (Stage 6)
+
+- FastAPI under `/api/v1` (`backend/app/api/`: `auth`, `cases`, `admin`, `runner`, `reportpdf`). One process: the API, the graph runner and, if `frontend/dist` exists, the built frontend.
+- **Runs are asyncio tasks** on the API's event loop (`runner.py`), not Celery. `POST /cases/{id}/submit` returns 202 at once; the page polls `GET /cases/{id}/status`, which reads `stage_runs` rows as each stage finishes. A failed run puts the case back to `uploaded` (or `stopped`) and writes `pipeline_failed` to the audit log. On start-up the app continues every case left in `running` from its Postgres checkpoint (`Runner.recover`).
+- **Entry points:** `Pipeline.start` (submit), `Pipeline.resume_after_fix` (`POST /cases/{id}/resume`, with the corrected form and the whole current file list), `Pipeline.officer_action` (`POST /cases/{id}/confirm` and `/override`).
+- **Roles:** every `/cases` route is officer-only and limited to the officer's own cases (another officer's case is a 404); `/admin` routes are admin-only. An admin account therefore cannot create, upload, submit or confirm, and an officer cannot reach the precedent queue. The role is read from the database on every request.
+- **Second click:** `confirm` and `override` return 422 unless the body has `second_click: true`; an override also needs a reason of at least 15 characters and a decision different from the recommendation. The UI sends `second_click` only from the button inside the second dialog.
+- **Uploads:** `check_upload` per file (type by signature, size, password, blur, crop). A rejected file is never written to disk; its row stays with the reason. Accepted files are stored under a generated name in `UPLOAD_DIR/<case id>/`. The document type chosen at upload is a hint for the checklist; Extraction classifies the file itself.
+- **Display:** the API returns PAN as `ABCDE****F`, Aadhaar as `XXXX XXXX 1234`, phone as `******1464`, GSTIN as `08PPIPM****`; a corrected form that leaves a masked value keeps the stored one.
 
 ## 4. Model routing
 

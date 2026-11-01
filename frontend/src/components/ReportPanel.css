@@ -1,0 +1,58 @@
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.report-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.report-block {
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.report-block.reason {
+  border-color: var(--reject);
+}
+.report-block.unverified {
+  border-color: var(--unverified);
+  background: var(--unverified-bg);
+  color: var(--unverified);
+}
+.report-block ul {
+  padding-left: var(--s-4);
+  list-style: disc;
+}
+.stop-note {
+  padding: var(--s-3);
+  border-radius: var(--radius-input);
+  background: var(--stopped-bg);
+  color: var(--stopped);
+}
+.stage-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.by-person + .by-person {
+  margin-top: var(--s-3);
+}
+.by-person h4 {
+  margin-bottom: var(--s-2);
+  color: var(--muted);
+}
+.citations {
+  list-style: none !important;
+  padding-left: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.citations p {
+  color: var(--muted);
+}

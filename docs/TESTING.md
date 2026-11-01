@@ -71,6 +71,12 @@ Live run, models on (Gemini Flash, Groq gpt-oss-20b, Nemotron, with OpenRouter a
 
 Pipeline tests (`backend/tests/test_pipeline.py`, `test_agent_units.py`, `test_llm_fallback.py`) need the generated cases and a database; they use scripted models, so no network or keys.
 
+## 2e. API, frontend and browser tests (Stage 6)
+
+- **API** (`backend/tests/test_api.py`, FastAPI test client, throwaway database, models off, fake embedder, in-memory checkpoints): sign-in, lockout and audit; token and deactivation checks; roles (admin cannot create, upload, submit, resume, confirm or override and gets 403 on `/cases`; officer gets 403 on every `/admin` route and the precedent stays pending; another officer's case is a 404); form rules per loan type; masked identifiers; masked values on a corrected form; per-file upload results (bad type, password-protected, blurry, empty are rejected and never written to disk); the KYC gate on submit; precedent approve (expiry, embedding, reviewer, audit), reject, held; **one full case per loan type over HTTP** (create, upload, submit, wait, report, PDF, confirm needs the second click, audit timeline); override rules (second click, reason, different decision); a fix-type stop resumed through `Pipeline.resume_after_fix` (report version 2).
+- **Frontend unit** (`npm test` in `frontend/`, Vitest + Testing Library): confirm needs a second click; cancel and Escape record nothing; override blocked without a decision and a reason of 15+ characters; the server message is shown on failure; status chips carry text; the report says "Recommended" and shows unverified stages and clause text.
+- **Browser** (`npm run e2e` in `frontend/`, Playwright with the installed Google Chrome): `backend/tests/e2e_server.py` starts the API and the built frontend on a throwaway database with an officer, an admin and one pending precedent. `loan-types.spec.js` takes one case per loan type from new case to a confirmed recommendation (form, per-file uploads, submit, progress, report, extracted fields, PDF download, second-click confirm, audit tab) and one override blocked until a reason is written. `roles.spec.js` checks the admin cannot reach or call case routes, the officer cannot reach the precedent queue, the admin approve dialog, and the plain login error.
+
 ## 3. Metrics
 
 | Metric | Meaning |

@@ -351,7 +351,13 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
                     original=report.recommendation, final=final, reason=answer.get("reason"),
                 )  # fmt: skip
             store.update_case(conn, _case(state), status, report)
-            store.audit(conn, f"officer_{action}", state["case_uuid"], {"final": final})
+            store.audit(
+                conn,
+                f"officer_{action}",
+                state["case_uuid"],
+                {"final": final},
+                actor_id=answer.get("officer_id"),
+            )
         return {"officer": {"action": action, "final_decision": final, "reason": answer.get("reason")},
                 "status": status}  # fmt: skip
 
@@ -434,7 +440,7 @@ class Pipeline:
 
     async def resume_after_fix(
         self, case_uuid: UUID | str, replace_docs: list[DocumentRef] | None = None,
-        application: dict[str, Any] | None = None,
+        application: dict[str, Any] | None = None, documents: list[DocumentRef] | None = None,
     ) -> PipelineState:  # fmt: skip
         """A fix-type stop: the officer corrected the form or replaced files. Everything derived
         from them is stale, so the run re-enters at Extraction with the same case and thread."""
@@ -445,6 +451,10 @@ class Pipeline:
         sub = Submission.model_validate(values["submission"])
         if application:
             sub.application = application
+        if (
+            documents is not None
+        ):  # the API sends the whole current file list (files can be removed)
+            sub.documents = documents
         if replace_docs:
             names = {(d.role, d.name) for d in replace_docs}
             sub.documents = [

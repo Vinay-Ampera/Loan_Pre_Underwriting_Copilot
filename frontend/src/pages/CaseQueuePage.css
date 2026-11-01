@@ -1,0 +1,20 @@
+.queue-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.queue-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.filters {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--s-3);
+}
+@media (max-width: 720px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}

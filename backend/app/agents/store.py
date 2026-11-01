@@ -38,7 +38,7 @@ def ensure_system_user(conn: Connection) -> UUID:
     return UUID(str(row[0]))
 
 
-def _next_case_no(conn: Connection) -> str:
+def next_case_no(conn: Connection) -> str:
     year = conn.execute(text("SELECT extract(year FROM now())::int")).scalar_one()
     n = conn.execute(
         text("SELECT coalesce(max(substring(case_no from 11)::int), 0) + 1 FROM cases "
@@ -57,7 +57,7 @@ def create_case(conn: Connection, sub: Submission, user_id: UUID) -> UUID:
                                    purpose, form_data)
                 VALUES (:no, :lt, 'uploaded', :u, :amt, :ten, :purpose, CAST(:form AS jsonb))
                 RETURNING id"""),
-        {"no": _next_case_no(conn), "lt": sub.loan_type, "u": user_id, "amt": app["loan_amount"],
+        {"no": next_case_no(conn), "lt": sub.loan_type, "u": user_id, "amt": app["loan_amount"],
          "ten": app["tenure_months"], "purpose": app.get("purpose"),
          "form": _j({"external_id": sub.case_id, "loan_details": app.get("loan_details", {}),
                      "application_date": app["application_date"]})},
@@ -199,11 +199,14 @@ def update_case(conn: Connection, case_id: UUID, status: str, report: Report | N
     )  # fmt: skip
 
 
-def audit(conn: Connection, action: str, entity_id: UUID | str, after: dict[str, Any]) -> None:
+def audit(
+    conn: Connection, action: str, entity_id: UUID | str, after: dict[str, Any],
+    actor_id: UUID | str | None = None,
+) -> None:  # fmt: skip
     conn.execute(
-        text("""INSERT INTO audit_log (action, entity, entity_id, after)
-                VALUES (:a, 'case', :e, CAST(:j AS jsonb))"""),
-        {"a": action, "e": str(entity_id), "j": _j(after)},
+        text("""INSERT INTO audit_log (actor_id, action, entity, entity_id, after)
+                VALUES (:u, :a, 'case', :e, CAST(:j AS jsonb))"""),
+        {"u": actor_id, "a": action, "e": str(entity_id), "j": _j(after)},
     )
 
 

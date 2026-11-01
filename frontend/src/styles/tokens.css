@@ -1,0 +1,46 @@
+/* Design tokens from docs/DESIGN_SYSTEM.md section 2. Components use these variables only. */
+:root {
+  --ink: #1f2933;
+  --muted: #52606d;
+  --line: #d9dee3;
+  --surface: #ffffff;
+  --bg: #f6f7f9;
+  --primary: #2f6fde;
+  --primary-ink: #ffffff;
+  --primary-soft: #e8f0fd;
+
+  --approve: #1e7f4f;
+  --approve-bg: #e4f4e8;
+  --refer: #9a6200;
+  --refer-bg: #fff1d6;
+  --reject: #b03a36;
+  --reject-bg: #fde3e1;
+  --stopped: #52606d;
+  --stopped-bg: #eef0f3;
+  --unverified: #6b55b5;
+  --unverified-bg: #eee8fa;
+
+  --font: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --fs-12: 0.75rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-6: 24px;
+  --s-8: 32px;
+
+  --radius-card: 8px;
+  --radius-input: 6px;
+  --shadow: 0 1px 2px rgba(31, 41, 51, 0.06), 0 1px 3px rgba(31, 41, 51, 0.04);
+  --focus: 0 0 0 3px rgba(47, 111, 222, 0.45);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 120ms;
+  --t-med: 220ms;
+}

@@ -1,0 +1,75 @@
+.upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.upload-pickers {
+  display: flex;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.upload-pickers .field {
+  min-width: 200px;
+}
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-6);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  text-align: center;
+  transition:
+    border-color var(--t-fast) var(--ease),
+    background var(--t-fast) var(--ease);
+}
+.dropzone.over {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.dropzone.off {
+  opacity: 0.6;
+}
+label.btn.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.dropzone:focus-within label.btn {
+  box-shadow: var(--focus);
+}
+.upload-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.ur {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-input);
+  animation: rise var(--t-med) var(--ease) both;
+}
+.ur-icon {
+  font-weight: 600;
+  width: 1.2em;
+  text-align: center;
+}
+.ur-label {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  margin-left: var(--s-2);
+}
+.ur-accepted {
+  background: var(--approve-bg);
+  color: var(--approve);
+}
+.ur-warning {
+  background: var(--refer-bg);
+  color: var(--refer);
+}
+.ur-rejected {
+  background: var(--reject-bg);
+  color: var(--reject);
+}

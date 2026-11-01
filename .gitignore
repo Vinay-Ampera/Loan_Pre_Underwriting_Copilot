@@ -13,3 +13,6 @@ node_modules/
 *.egg-info/
 data/uploads/
 data/synthetic/output/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/

@@ -272,7 +272,7 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 
 | Layer | Choice |
 |---|---|
-| Frontend | React, TypeScript, Tailwind |
+| Frontend | React, JavaScript, CSS (Vite) |
 | API | FastAPI |
 | Agents | LangGraph (fixed routing, human-in-the-loop, Postgres checkpoints) |
 | LLM gateway | LiteLLM (fallback, token and cost logging) |

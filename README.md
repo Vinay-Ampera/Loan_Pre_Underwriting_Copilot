@@ -18,4 +18,4 @@ Start with [CLAUDE.md](CLAUDE.md), then see [docs/](docs/):
 
 ## Stack
 
-React + TypeScript, FastAPI, LangGraph, LiteLLM, Postgres with pgvector, Langfuse, Docker Compose.
+React + JavaScript + CSS, FastAPI, LangGraph, LiteLLM, Postgres with pgvector, Langfuse, Docker Compose.

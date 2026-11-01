@@ -107,7 +107,7 @@ def architecture():
 
     # frontend
     rect(ax, 0.6, 10.0, 16.4, 1.0, "fe")
-    ax.text(8.8, 10.7, "Frontend: React + TypeScript + Tailwind", ha="center", va="center",
+    ax.text(8.8, 10.7, "Frontend: React + JavaScript + CSS", ha="center", va="center",
             fontsize=11.5, fontweight="bold", color=INK, zorder=3)
     ax.text(8.8, 10.3, "Case queue  ·  New case  ·  Upload  ·  Report  ·  Confirm / Override  ·  Admin precedent queue",
             ha="center", va="center", fontsize=10.5, color=INK, zorder=3)

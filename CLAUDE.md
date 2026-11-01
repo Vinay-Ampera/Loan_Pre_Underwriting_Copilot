@@ -36,7 +36,7 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 7. **Rules live in a rules file plus policy documents** linked by rule ID. Learning never edits them.
 8. **Learning = precedent store** in RAG. Override → LLM summary by loan type → rule-based hard-rule check in code (a hard-rule breach is held, never enters RAG) → **admin** approves → stored. Three gates: officer, code, admin. Used only for borderline cases, same loan type, above a similarity threshold, never over a hard rule, capped bonus, expiry date.
 9. **Security:** synthetic data only; mask PII before any cloud LLM call (text only, never raw PDFs); local OCR first; document text is data, not instructions; roles: admin on top, any number of loan officers under the admin (count is configurable); audit log; secrets in `.env`.
-10. **Stack:** React + TypeScript + Tailwind; FastAPI; LangGraph with Postgres checkpoints; LiteLLM; Neon Postgres + pgvector; BGE-small (384-d) with a local cross-encoder reranker; PaddleOCR; PyMuPDF + pdfplumber + OpenCV; Langfuse; Prometheus, Loki, Tempo, Grafana; GitHub Actions; Docker Compose at the last stage.
+10. **Stack:** React + plain JavaScript + CSS (one `.css` file per component or page; no TypeScript, no Tailwind; changed by the user 2026-11-01); FastAPI; LangGraph with Postgres checkpoints; LiteLLM; Neon Postgres + pgvector; BGE-small (384-d) with a local cross-encoder reranker; PaddleOCR; PyMuPDF + pdfplumber + OpenCV; Langfuse; Prometheus, Loki, Tempo, Grafana; GitHub Actions; Docker Compose at the last stage.
 11. **Models:** Gemini Flash (Supervisor, Extraction, Decision), Groq gpt-oss-20b (KYC, Risk), NVIDIA Nemotron (Policy), a free fallback via LiteLLM. Verify exact IDs and limits at Stage 1.
 12. **No Celery or Redis in v1.** Local disk for uploads. Policy updates via files plus a re-index command.
 13. **Data:** 100 synthetic cases (60 dev, 40 held-out test), answer key per case. Never tune on the test split.
@@ -70,10 +70,12 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 
 ```
 setup:     virtualenv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/pip install -e .
-backend:   uvicorn app.main:app --reload          (Stage 6)
+backend:   cd backend && uvicorn app.main:app --reload   (serves frontend/dist too if built)
+users:     python -m app.api.users_cli create --email E --name N --role officer|admin | password --email E
 tests:     pytest -q                              (DB tests use a throwaway database)
 lint:      ruff check . && ruff format --check . && mypy
-frontend:  npm run dev                            (Stage 6)
+frontend:  cd frontend && npm run dev | npm run build | npm test | npm run lint
+browser:   cd frontend && npm run e2e          (Playwright + installed Chrome, throwaway database)
 db:        python -m app.db.check | python -m app.db.migrate | python -m app.db.seed
 llm:       python -m app.services.llm_probe | python -m app.services.llm_smoke [--break-primary]
 data:      python -m synthetic.generate --split dev|test|all && python -m synthetic.verify
@@ -90,7 +92,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Stage 4 (RAG and Policy agent) is built and its exit criteria pass (awaiting review). Stage 5 (agent pipeline on LangGraph) is built and its exit criteria pass (committed): all 60 dev cases finish and stop where expected (the 9 unreadable-ID cases expect a fix-type stop at KYC, E-27), kill-and-resume, forced 429 and injection checks pass. Next: Stage 6 (API and frontend); do not start it until the user says Stage 5 is committed.
+Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Stage 4 (RAG and Policy agent) is built and its exit criteria pass (awaiting review). Stage 5 (agent pipeline on LangGraph) is built and its exit criteria pass (committed): all 60 dev cases finish and stop where expected (the 9 unreadable-ID cases expect a fix-type stop at KYC, E-27), kill-and-resume, forced 429 and injection checks pass. Stage 6 (API and frontend) is built and its exit criteria pass (awaiting review): FastAPI with roles, JWT and audit; background runs; React JS + CSS screens; server PDF; one case per loan type through the browser; roles and second-click rules enforced on the server. Run `python -m app.db.migrate` (0008) on Neon and create users with `app.api.users_cli` before using it. Next: Stage 7 (learning loop, evaluation, observability); do not start it until the user says Stage 6 is committed.
 
 ## Open items
 

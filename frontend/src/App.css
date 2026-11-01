@@ -1,0 +1,11 @@
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--s-6);
+  animation: rise var(--t-med) var(--ease) both;
+}
+@media (max-width: 600px) {
+  .page {
+    padding: var(--s-4);
+  }
+}

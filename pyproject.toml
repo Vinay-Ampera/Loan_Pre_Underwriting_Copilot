@@ -32,6 +32,8 @@ select = ["E", "F", "I", "B", "UP", "SIM", "N"]
 "backend/app/intake/*" = ["E501"]
 # agents: long prompt-feedback strings and SQL
 "backend/app/agents/*" = ["E501"]
+# api: SQL strings and response dicts
+"backend/app/api/*" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -50,6 +52,9 @@ markers = [
     "db: needs a live DATABASE_URL (skipped when it is not set)",
     "llm: calls a real LLM provider (skipped unless --run-llm)",
 ]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.File", "fastapi.Form"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "synthetic"]

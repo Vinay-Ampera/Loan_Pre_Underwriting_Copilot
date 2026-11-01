@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     max_upload_mb: int = 10  # per file
     max_case_upload_mb: int = 60  # per case
 
+    # API (Stage 6)
+    llm_enabled: bool = True  # False = no model calls; code writes the report text (browser tests)
+    access_token_minutes: int = 60
+    login_max_failures: int = 5
+    login_lock_minutes: int = 15
+    cors_origins: str = ""  # comma separated; empty = same origin (dev server proxies /api)
+
     def sqlalchemy_url(self) -> str:
         """DATABASE_URL rewritten for SQLAlchemy's psycopg (v3) driver."""
         if self.database_url is None:

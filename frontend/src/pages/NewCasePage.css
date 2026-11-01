@@ -1,0 +1,11 @@
+.new-case {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  max-width: 960px;
+}
+.new-case section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}

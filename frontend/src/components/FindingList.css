@@ -1,0 +1,88 @@
+.finding-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.finding {
+  display: flex;
+  gap: var(--s-3);
+}
+.finding-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+.sev-hard .finding-icon {
+  background: var(--reject-bg);
+  color: var(--reject);
+}
+.sev-cap .finding-icon {
+  background: var(--refer-bg);
+  color: var(--refer);
+}
+.sev-points .finding-icon {
+  background: var(--refer-bg);
+  color: var(--refer);
+}
+.sev-note .finding-icon {
+  background: var(--stopped-bg);
+  color: var(--stopped);
+}
+.finding-sev {
+  font-weight: 600;
+}
+.finding-role {
+  margin-left: var(--s-2);
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--stopped-bg);
+  color: var(--muted);
+  font-size: var(--fs-12);
+}
+.finding-ids {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.clause-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--primary);
+  text-decoration: underline;
+}
+.clause-text {
+  margin: var(--s-2) 0 0;
+  padding: var(--s-2) var(--s-3);
+  border-left: 3px solid var(--primary);
+  background: var(--primary-soft);
+  border-radius: 0 var(--radius-input) var(--radius-input) 0;
+  animation: rise var(--t-med) var(--ease) both;
+}
+.evidence {
+  margin-top: var(--s-1);
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+.evidence summary {
+  cursor: pointer;
+}
+.evidence dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--s-1) var(--s-4);
+  margin-top: var(--s-2);
+}
+.evidence dt {
+  text-transform: capitalize;
+}
+.evidence dd {
+  color: var(--ink);
+  font-family: var(--mono);
+}

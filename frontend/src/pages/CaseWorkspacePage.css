@@ -1,0 +1,131 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.ws-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.ws-grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 280px;
+  gap: var(--s-4);
+  align-items: start;
+}
+.ws-left {
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  position: sticky;
+  top: 72px;
+}
+.ws-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+.ws-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  position: sticky;
+  top: 72px;
+}
+.recommended {
+  font-weight: 600;
+}
+.running-card,
+.edit-card {
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  animation: rise var(--t-med) var(--ease) both;
+}
+.tabs {
+  display: flex;
+  gap: var(--s-1);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+.tab {
+  border: 0;
+  background: none;
+  padding: var(--s-2) var(--s-4);
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+.tab-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  animation: rise var(--t-med) var(--ease) both;
+}
+.doc-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.doc-list li:last-child {
+  border-bottom: 0;
+}
+.doc-actions {
+  display: flex;
+  gap: var(--s-2);
+}
+.doc-pick {
+  max-width: 360px;
+}
+.audit-card {
+  padding: var(--s-4);
+}
+.ws-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.stopped-note {
+  padding: var(--s-3);
+  border-radius: var(--radius-input);
+  background: var(--stopped-bg);
+  color: var(--stopped);
+  font-weight: 600;
+}
+.decision {
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+@media (max-width: 1000px) {
+  .ws-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ws-left,
+  .ws-right {
+    position: static;
+  }
+  .ws-right {
+    order: -1;
+  }
+}

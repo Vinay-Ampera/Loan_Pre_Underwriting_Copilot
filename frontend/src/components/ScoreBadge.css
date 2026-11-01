@@ -1,0 +1,34 @@
+.score-badge {
+  border-radius: var(--radius-card);
+  padding: var(--s-4);
+  text-align: center;
+  background: var(--stopped-bg);
+  color: var(--stopped);
+}
+.score-approve {
+  background: var(--approve-bg);
+  color: var(--approve);
+}
+.score-refer {
+  background: var(--refer-bg);
+  color: var(--refer);
+}
+.score-reject {
+  background: var(--reject-bg);
+  color: var(--reject);
+}
+.score-num {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.score-of {
+  font-size: var(--fs-14);
+  font-weight: 400;
+}
+.score-band {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-top: var(--s-1);
+}

@@ -30,7 +30,7 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 - **D. Roles:** loan officer (cases, upload, confirm; any number of officers), admin (approve precedents, approve hard-rule changes, users, policy and rule files, re-index).
 - Server-side checks on every endpoint; the UI hides what a role cannot use, but never relies on that.
 - Passwords hashed (argon2 or bcrypt); short-lived JWTs; lockout after repeated failures.
-- Officers see only their cases unless granted otherwise.
+- Officers see only their cases unless granted otherwise (built in Stage 6: another officer's case is a 404). The admin role has no access to case endpoints at all (no case files, no fields); it sees precedents only. Passwords use argon2; the JWT lasts 60 minutes (`ACCESS_TOKEN_MINUTES`) and is kept in `sessionStorage`; five failures lock the account for 15 minutes (`LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`). The app refuses to start outside `dev` if `JWT_SECRET` is still the placeholder.
 - Database roles per `DATABASE.md` section 7. Fairness attributes are isolated from the pipeline.
 
 ## 5. Secrets and logging

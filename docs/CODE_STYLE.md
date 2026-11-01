@@ -22,7 +22,8 @@ loan-copilot/
     prompts/             one markdown file per agent, versioned
   frontend/
     src/
-      pages/ components/ api/ hooks/ styles/
+      pages/ components/ api/ hooks/ styles/   (each .jsx has its .css beside it)
+    e2e/                 Playwright browser tests
   data/
     policy/              sample policy documents
     rules/               rules files
@@ -44,13 +45,13 @@ loan-copilot/
 - Never log raw document text or identifiers; use the masker's `safe()` helper.
 - Async for I/O (FastAPI, DB, LLM calls); CPU-bound parsing runs in a worker pool.
 
-## 3. TypeScript and React
+## 3. JavaScript and React
 
-- Strict TypeScript; no `any` without a comment.
-- ESLint + Prettier. Tailwind for styling; design tokens from `DESIGN_SYSTEM.md`.
-- API types generated from the FastAPI OpenAPI schema; do not hand-write them.
-- Server state with TanStack Query; local state kept minimal.
-- Components small and typed; no business rules in the UI (it displays what the backend decides).
+- Plain JavaScript (ES modules), React function components. No TypeScript, no Tailwind.
+- Styling is plain CSS: one `.css` file next to each component or page (`Foo.jsx` + `Foo.css`); shared tokens, reset and base styles in `frontend/src/styles/`. Colours, spacing and type come from the tokens in `DESIGN_SYSTEM.md` (CSS variables), never hard-coded.
+- Animation is CSS first (transitions, keyframes, `prefers-reduced-motion` respected). Three.js only if lazy-loaded and it does not slow page load.
+- ESLint + Prettier. One thin `api/client.js` wraps `fetch` (adds the JWT, turns errors into one error shape); response shapes are documented with JSDoc where they are not obvious.
+- Local state in components and small hooks (`hooks/`); no business rules in the UI (it displays what the backend decides).
 
 ## 4. Naming
 

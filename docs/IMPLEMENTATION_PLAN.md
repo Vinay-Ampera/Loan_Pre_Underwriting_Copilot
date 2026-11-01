@@ -241,3 +241,17 @@ Tests written and passing, docs updated if behaviour changed, no real PII, secre
 - **Decisions taken:** E-18 is left as measured (see `EDGE_CASES.md`); `CM-DOC-11` and `CM-KYC-13` tiers are unchanged. A weak hint counts once per kind, so a round salary on every payslip is one hint (E-28).
 - **Not done here (later stages):** Langfuse traces and Prometheus metrics (Stage 7), RAGAS faithfulness for the Policy agent and the offline judge run (Stage 7), the HTTP API and the confirm/override screens (Stage 6; `Pipeline.officer_action` and `officer_actions` rows exist), Neon `migrate` and `reindex` (Neon was unreachable again; see Stage 4 notes).
 
+---
+
+## Stage 6 build notes (2026-11-01)
+
+- **Decision changed by the user:** the frontend is React, plain JavaScript and CSS (no TypeScript, no Tailwind). CLAUDE.md decision 10, CODE_STYLE section 3, ARCHITECTURE, PRD and the diagram script were updated first.
+- **Backend:** `app/api/` (`main`, `auth`, `cases`, `admin`, `deps`, `runner`, `security`, `schemas`, `display`, `reportpdf`, `users_cli`) and `app/main.py`. Migration 0008 (lockout columns). New dependencies: fastapi, uvicorn, python-multipart, pyjwt, argon2-cffi. Settings added: `LLM_ENABLED`, `ACCESS_TOKEN_MINUTES`, `LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`, `CORS_ORIGINS`. Small changes in Stage 5 code: `Pipeline.resume_after_fix` takes the whole current file list (`documents=`) so removed files go away; `store.audit` records the actor; `next_case_no` is public. See ARCHITECTURE section 3b.
+- **Frontend:** `frontend/` (Vite, React 18, react-router). See DESIGN_SYSTEM section 6b.
+- **PDF:** reportlab on the server (`GET /cases/{id}/report.pdf`); no identifiers are printed.
+- **Decisions taken:** admin has no case access at all (least privilege); the document type picked at upload is only a checklist hint; the checklist counts a bank statement as one file; application date defaults to today and can be set (the synthetic cases use 2026-10-20).
+- **Scope boundary:** creating a precedent from an override (LLM summary, code hard-rule check, `pending`/`held` rows) is Stage 7 task 1. Stage 6 builds the queue: list, approve (expiry date, embedding, reviewer) and reject, with roles enforced. Tests insert `pending` rows directly.
+- **Browser tests:** Playwright 1.64 with the installed Chrome (1.49 hung on Node 24). The user approved the install on 2026-11-01.
+- **Not done here:** admin users page and policy/rule status, Grafana link; `Runner.recover` (continue `running` cases at start-up) has no dedicated test; the migration and user creation on Neon are for the user to run (below).
+- **Run it:** `cd backend && ../.venv/bin/python -m app.db.migrate`, then `python -m app.api.users_cli create --email ... --name ... --role officer|admin`, then `uvicorn app.main:app --reload` and `npm run dev` in `frontend/` (proxy to port 8000), or `npm run build` and open the API's port to get both from one process.
+

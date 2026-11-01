@@ -1,0 +1,57 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border-radius: 999px;
+  font-size: var(--fs-12);
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.chip-icon {
+  font-size: 0.85em;
+  width: 1em;
+  text-align: center;
+}
+.chip-approve {
+  color: var(--approve);
+  background: var(--approve-bg);
+}
+.chip-refer {
+  color: var(--refer);
+  background: var(--refer-bg);
+}
+.chip-reject {
+  color: var(--reject);
+  background: var(--reject-bg);
+}
+.chip-stopped {
+  color: var(--stopped);
+  background: var(--stopped-bg);
+}
+.chip-unverified {
+  color: var(--unverified);
+  background: var(--unverified-bg);
+}
+.chip-neutral {
+  color: var(--muted);
+  background: var(--stopped-bg);
+}
+.chip-info {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.chip-done {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+.spin {
+  display: inline-block;
+  animation: chip-spin 1.4s linear infinite;
+}
+@keyframes chip-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

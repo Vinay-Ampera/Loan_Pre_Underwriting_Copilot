@@ -17,8 +17,10 @@ SCHEMA = "langgraph"
 
 
 def libpq_url(url: str) -> str:
-    """The SQLAlchemy form (postgresql+psycopg://) rewritten for psycopg itself."""
-    return url.replace("postgresql+psycopg://", "postgresql://", 1)
+    """The SQLAlchemy form (postgresql+psycopg://) rewritten for psycopg itself. A Neon pooled host
+    (`-pooler`) is swapped for the direct one: the saver relies on `SET search_path`, which a
+    transaction pooler does not keep between statements."""
+    return url.replace("postgresql+psycopg://", "postgresql://", 1).replace("-pooler.", ".", 1)
 
 
 @asynccontextmanager

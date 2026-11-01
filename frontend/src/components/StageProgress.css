@@ -1,0 +1,27 @@
+.progress {
+  display: flex;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.progress li {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+  color: var(--muted);
+}
+.progress .done {
+  color: var(--approve);
+}
+.progress .active {
+  color: var(--primary);
+  font-weight: 600;
+}
+.progress .active .pg-mark {
+  display: inline-block;
+  animation: pg-spin 1.4s linear infinite;
+}
+@keyframes pg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

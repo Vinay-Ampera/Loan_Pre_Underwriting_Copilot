@@ -1,0 +1,9 @@
+.confirm-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.confirm-note {
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
