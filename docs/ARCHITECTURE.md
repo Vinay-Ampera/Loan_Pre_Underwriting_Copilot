@@ -57,6 +57,10 @@ START → supervisor → extraction → gate_E → kyc → gate_K ─┬─ hard
 - **Uploads:** `check_upload` per file (type by signature, size, password, blur, crop). A rejected file is never written to disk; its row stays with the reason. Accepted files are stored under a generated name in `UPLOAD_DIR/<case id>/`. The document type chosen at upload is a hint for the checklist; Extraction classifies the file itself.
 - **Display:** the API returns PAN as `ABCDE****F`, Aadhaar as `XXXX XXXX 1234`, phone as `******1464`, GSTIN as `08PPIPM****`; a corrected form that leaves a masked value keeps the stored one.
 
+## 3c. Customer notifications (Stage 9, planned)
+
+A small `notifications` module on the API side, outside the agent graph and never an input to scoring. Parts: templates in code, a content checker, a `Sender` interface with the console sender as the only v1 implementation, outbox rows, and routes to draft, check, send and list. Flow: the officer opens a draft after confirm, override or a stopped run; the server runs the content check; a second confirmation sends; the console sender prints the message in the backend terminal; the outbox row and audit log record it. No model is called, so masking does not apply to the message text, and the message never contains case data by design. See `SECURITY.md` section 4b.
+
 ## 4. Model routing
 
 | Agent | Primary | Why |
@@ -118,7 +122,7 @@ All via `.env` and the rules file; nothing secret in git.
 ## 9. Deployment
 
 - **Development:** run API, frontend and worker directly on the laptop; Neon is hosted.
-- **Final stage:** Docker Compose with frontend, API (graph runner inside), optional local Langfuse, Prometheus, Loki, Tempo, Grafana. Optional local Postgres service for offline use.
+- **Final stage (Stage 10):** Docker Compose with frontend, API (graph runner inside), optional local Langfuse, Prometheus, Loki, Tempo, Grafana. Optional local Postgres service for offline use.
 - **Later:** hosted file storage, Celery plus Redis if concurrency demands it, real API integrations behind the mock interfaces.
 
 ## 10. Failure behaviour

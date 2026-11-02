@@ -1,13 +1,18 @@
 # Implementation Plan
 
-Eight stages. Each stage ends with something runnable and a test gate. Do not start a stage until the previous exit criteria pass. No dates yet (deadline not fixed); effort is S (≈1 day), M (2-3 days), L (4-6 days) for a solo developer.
+Ten stages. Each stage ends with something runnable and a test gate. Do not start a stage until the previous exit criteria pass. No dates yet (deadline not fixed); effort is S (≈1 day), M (2-3 days), L (4-6 days) for a solo developer.
 
 Trainer approval of the documents comes first. Nothing below starts before that.
 
 ```
 1 Foundation   2 Intake & parsers   3 Rules & scoring   4 RAG & Policy
-5 Agent pipeline   6 API & frontend   7 Learning, eval, observability   8 Hardening & Docker
+5 Agent pipeline   6 API & frontend   7 Learning, eval, observability
+8 UI revamp (Pramaan)   9 Customer notifications   10 Hardening & Docker
 ```
+
+Stages 8 and 9 were added on 2026-11-02 (the old Stage 8 is now Stage 10). Which of 8 and 9 is built first is decided at the end. After both, there is a **review window**: the user collects additions and corrections, and they are done before Stage 10 starts. Docker is always last.
+
+**Where progress is recorded:** this file says what each stage builds and when it is done. Status, build notes, measured results and decisions live in `PROGRESS.md`. Do not add build notes here.
 
 ---
 
@@ -164,16 +169,74 @@ Exit criteria
 
 ---
 
-## Stage 8: Hardening, Docker and demo (M)
+## Stage 8: UI revamp, "Pramaan" (L)
+
+**Goal:** a polished, bank-grade interface that shows the underwriting flow, with the Ampera colour and fonts, light and dark themes, and an admin Users screen. Scoring, rules, agents and the second-click rules do not change.
+
+Tasks
+1. **Design tokens and fonts:** Ampera purple brand (`#7C70AF` accents, a darker purple for buttons and links that passes AA), lavender tint surfaces, Outfit headings and Inter body through `@fontsource` packages (bundled, no runtime Google request). Status colours stay; the "unverified" colour moves off purple so it is not confused with the brand. Tokens for both themes in `frontend/src/styles/tokens.css`.
+2. **Theme toggle:** system, dark, light as a three-way pill in the sidebar. System is the default; the choice is kept in the browser. All colours come from tokens; no per-theme stylesheet.
+3. **Login as the landing page:** split layout with a brand panel (the 5-stage journey, the score bar, "a human confirms every case", a "Pramaan is a sample bank, synthetic data only" note) and the sign-in form. No signup and no public page.
+4. **App shell:** a sidebar (Home, Cases, New case; admin: Home, Precedents, Users) replacing the thin top bar, with user, role and the theme toggle.
+5. **Home screens:** officer home with summary tiles (awaiting confirmation, referred, stopped, in progress) and recent cases; admin home with pending precedents and user counts.
+6. **Case workspace:** a 5-stage stepper (intake and screening, verification and documents, risk and ratios, decisioning and conditions, officer sign-off) showing where the case is and where it stopped.
+7. **Report:** score ring and band, a Credit / Capacity / Collateral strip (display only; Collateral reads "not scored in v1"), a separate Conditions list for missing items, and the existing stage cards. The recommendation wording rules stay.
+8. **Admin Users screen:** list, create, disable, reset password; backed by new admin endpoints that reuse the `users_cli` rules and write to the audit log. Admin still has no access to case endpoints.
+9. **Motion:** light entrance and progress animation, a one-time typing effect on the report summary, all off under `prefers-reduced-motion`.
+10. **Brand name:** replace the display name "Sample Bank" with "Pramaan" in the UI and docs (policy and rules identifiers unchanged).
+11. Update `DESIGN_SYSTEM.md` and the other affected docs in the same change.
+
+Deliverables: the revamped frontend, the Users endpoints, updated tests and docs.
+
+Exit criteria
+- Every screen works in light, dark and system modes; text contrast passes WCAG AA in both.
+- Browser tests pass for officer and admin, including the admin Users flow and one case per loan type.
+- Reduced-motion is respected (checked in a browser test or a CSS test).
+- Roles are enforced on the new endpoints; creating, disabling and resetting a user are audit-logged.
+- No change to scoring, bands or the confirm/override rules.
+
+Risks: scope creep in visuals. Mitigation: tokens first, then the shell, then screens in the order above; cut motion before cutting contrast or tests.
+
+---
+
+## Stage 9: Customer notifications (M)
+
+**Goal:** after a case is assessed or stopped, the officer can send the customer a short, safe contact request, and every message is recorded in a Sent Items list.
+
+Tasks
+1. **Data:** migration for an outbox table and for the contact fields (customer email on the applicant, a phone number on each user); see `DATABASE.md`. Customer email is a new optional form field (synthetic values only).
+2. **Templates in code:** one neutral subject for every message; a short generic body; a fixed fraud footer that cannot be removed; the officer's name, email and phone; an optional case reference. No outcome hint of any kind. Templates differ only in tone (for example "please contact us" versus "please visit the branch"). A **blank** option lets the officer write their own text.
+3. **Content check in code:** before a send, scan the subject and body for forbidden content (PAN and Aadhaar patterns, account and phone numbers, scores and rule IDs, the words approved, rejected, eligible, a request for an OTP, PIN or password) and a missing footer. A hit **blocks** the send and says why.
+4. **Flow:** the draft appears in the case workspace after confirm, override or a stopped run. The officer edits, clicks Send, then confirms in a second dialog. A send writes an outbox row, prints the message in the backend terminal through the console sender, and marks it sent. A failed send is shown as failed; the officer can retry.
+5. **Sent Items screen:** the officer's own sent and failed messages with date, case reference, template and status. No access to another officer's items; admin sees counts only.
+6. **Sender interface:** a small `Sender` interface with the console sender as the only v1 implementation, so a real mail or SMS service can be swapped in by config later.
+7. **Audit:** draft created, edited, sent, blocked and failed are written to the audit log.
+8. Update `PRD.md`, `DATABASE.md`, `SECURITY.md`, `ARCHITECTURE.md`, `TESTING.md` and `DESIGN_SYSTEM.md`.
+
+Deliverables: migration, notification module and API routes, officer screens (draft dialog, Sent Items), tests, docs.
+
+Exit criteria
+- Each template and the blank option produce a message that passes the content check.
+- A message with forbidden content is blocked (tests for every pattern in task 3).
+- Nothing is sent without the second confirmation.
+- No name, score, status, missing item or reason appears in any message (test).
+- The fraud footer is always present and cannot be edited out.
+- Sent Items lists each message with its status; another officer's items return 404.
+
+Risks: the blank option lets the officer type a leak. Mitigation: the code check blocks it and the second confirmation shows the final text.
+
+---
+
+## Stage 10: Hardening, Docker and demo (M)
 
 **Goal:** a reproducible package and a smooth demo.
 
 Tasks
 1. Security pass against `SECURITY.md`: secrets, retention job, audit coverage, PII leak scan on logs and traces.
-2. Docker Compose: frontend, API (with graph runner), local Langfuse if used, Prometheus, Loki, Tempo, Grafana. Postgres stays on Neon, with an optional local Postgres service for offline use.
+2. Docker Compose: frontend, API (with graph runner), local Langfuse if used, Prometheus, Loki, Tempo, Grafana. The Stage 9 sender stays the console sender; a real mail or SMS service is not part of v1. Postgres stays on Neon, with an optional local Postgres service for offline use.
 3. Grafana dashboards: applications per day, time to decision, override-rate trend, tokens and cost per case, latency per agent.
 4. Model versions and policy versions tagged on releases.
-5. Run the 40 test cases once, record final results.
+5. Run the 40 test cases once, record final results. Fold in the additions and corrections from the review window.
 6. Demo script, a short README, and a clean `.env.example`.
 7. Update all docs to match what was built.
 
@@ -186,72 +249,8 @@ Exit criteria
 
 ## Order of risk
 
-Highest risks first so we meet them early: synthetic data realism (Stage 1), OCR on photos and statement tables (Stage 2), free-tier rate limits (Stage 5), evaluation noise from small data (Stage 7). Where a risk bites, cut scope in this order: scanned statement styles, education case count, Grafana dashboards. Never cut the human confirmation, hard rules or masking.
+Highest risks first so we meet them early: synthetic data realism (Stage 1), OCR on photos and statement tables (Stage 2), free-tier rate limits (Stage 5), evaluation noise from small data (Stage 7), visual scope creep (Stage 8). Where a risk bites, cut scope in this order: scanned statement styles, education case count, Grafana dashboards, UI motion. Never cut the human confirmation, hard rules or masking.
 
 ## Definition of done (every stage)
 
 Tests written and passing, docs updated if behaviour changed, no real PII, secrets only in `.env`, PR reviewed against `CODE_STYLE.md`, CI green.
-
----
-
-## Stage 2 build notes (2026-10-31)
-
-- **OCR engine:** RapidOCR (the PaddleOCR PP-OCR detection and recognition models run through onnxruntime) is the primary engine. The `paddlepaddle`/`paddlex` wheels pin PyYAML 6.0.2 and `opencv-contrib-python`, which clash with LiteLLM and the headless OpenCV already in the venv. `app/intake/ocr.py` still tries PaddleOCR, then Tesseract, if either is installed. Same models, same local-only guarantee. Needs the user's OK to keep (CLAUDE.md decision 10 says "PaddleOCR").
-- **Measured on the dev split (607 documents):** upload accepted 100%; classifier 98.7%; field accuracy 100% on digital PDFs, 99% on good and mild photos, 100% on scanned statements, 30% on `poor` photos (the officer sees `missing_required_fields` and a quality score near 57); zero raw PAN/Aadhaar/GSTIN/email after masking; every tamper case has at least one hint; 0.8% of clean documents get the weak `ROUND_SALARY` hint.
-- **Calibrated quality score** (feeds CM-DOC-11 / CM-KYC-13): digital 95, good photo 94, mild photo 80, poor photo 57. Scanned statements measure about 90 because the generated scans are sharp; the design targets (72 and 55) were for degraded images.
-- Blur reject below 10, warn below 60 (variance of the Laplacian at 1000 px width). Cropped = page aspect ratio outside 1.30 to 1.55. Images under 500 px on the short side are treated as ID photographs and get no blur or crop verdict.
-- Cross-document tamper hints (`salary_credit_hint`, `odd_credit_hints`) are functions in `tamper.py`; the Risk agent calls them in Stage 5.
-
----
-
-## Stage 3 build notes (2026-10-31)
-
-- **Module `app/scoring/`:** `rules.py` (loader, schema, checksum), `evaluate.py` (reference evaluator, now with a public `evaluate_rule` and "unverified = fail/0 points"), `finance.py` (EMI, age, FOIR, DTI, LTV: the only place these are computed), `matching.py` (names, PAN, DOB, address), `analytics.py` (bank-statement analytics), `facts.py` (derive the facts the rules read, with co-applicant aggregation), `engine.py` (`score_case`: stage groups, early stop, caps, precedent-bonus stub), `models.py` (inputs and the `ScoreReport`), `replay.py` (dev-split replay).
-- **Rules file additions** (`rules_version` 2026.10.31-2): `pricing` (rate per loan type for sizing the new instalment) and `params` (existing-loan cut-off, bands, disallowed purposes, education margin/collateral limits, tamper hint rules, statement detection). No threshold or parameter lives in code.
-- **Early stop:** groups run extraction, KYC, risk (income and credit), policy. A hard `stop` failure ends the run after its group; later groups never derive facts. Fix-type gives `fix_required` with no score; eligibility-type gives `recommend_reject` with an indicative score capped at 59.
-- **Where values come from:** FOIR = (bureau EMIs with more than 12 instalments left + new EMI at the pricing rate) / combined verified income. Education sizes the new EMI over the repayment period, not the moratorium. Income is the documented figure held down to what the bank statement supports. Details and decided edge cases: `docs/EDGE_CASES.md` E-13 to E-18.
-- **Replay result (dev):** band 60 of 60, stop stage and class 60 of 60, score and failed rules 59 of 60. Agreed minimums: band 95%, exact 90%. The test split was not run (final evaluation only).
-- **Precedent bonus:** `apply_precedent_bonus` is a stub (0 until Stage 4 and 7). It is capped by `precedent.bonus_max`, only touches a refer-band case that no cap rule holds, and never overrides a hard rule.
-
----
-
-## Stage 4 build notes (2026-10-31)
-
-- **Modules:** `app/rag/` (`policy_loader`, `embedder`, `index`, `reindex`, `retrieve`, `precedents`, `grounding`, `schemas`, `config`, `evaluate`) and `app/agents/policy.py`; prompt `backend/prompts/policy.md` (v1). Settings in `data/rag/config.yaml`; migration 0007 adds `checksum` and `indexed_at` to `policy_documents`.
-- **Index:** BGE-small (384-d, normalised) and the MiniLM cross-encoder run locally from the venv (`sentence-transformers` on CPU `torch`; models load from the local cache first). `python -m app.rag.reindex` parses the policy files, re-embeds only new or changed clauses, handles new versions (one active per loan type) and removed clauses, reloads the rules file, and writes an `audit_log` row. It refuses to run if a rule cites a clause that is not in `data/policy`.
-- **Retrieval:** top 12 by cosine, rerank, keep 5 per query; filters are the active version and `common` + the case's loan type. The agent also fetches the clauses that rule results point at (`via="rule"`, relevance 1.0), so every rule-based finding has its clause available.
-- **Precedents:** `find_precedents` returns approved, unexpired, same-loan-type precedents at or above `precedent.similarity_min`, only for a refer-band case with no hard stop. Nothing writes precedents yet (Stage 7); `precedent_text()` defines the text that Stage 7 must embed so both sides match. The score bonus stays 0.
-- **Measured (50 dev queries, local Postgres 17 + pgvector):** vector only: hit@1 0.80, recall@5 0.99, MRR 0.888; with rerank: hit@1 0.84, recall@5 1.00, MRR 0.903; citation validity 1.00. Targets are recorded in `data/rag/baseline.json` (recall@5 0.95, hit@3 0.95, hit@1 0.80, MRR 0.88, validity 1.0). The 12 test queries were not run.
-- **Live check:** one synthetic personal case through the real Nemotron model gave grounded findings on the first try; another run failed the quote check twice and fell back to code-written findings, which is the designed behaviour. Model wording varies between runs.
-- **Environment:** the Neon database was unreachable during this stage (the hostname lookup hung), so the migration, seed, index and tests ran on a private throwaway Postgres 17 cluster with `DATABASE_URL` overridden in the shell. Neon still needs `python -m app.db.migrate` and `python -m app.rag.reindex` before the next stage.
-- **Not done here (later stages):** RAGAS faithfulness on the Policy agent and the online judge (Stage 7); wiring into LangGraph gates (Stage 5).
-
----
-
-## Stage 5 build notes (2026-10-31)
-
-- **Modules:** `app/agents/` (see `AGENTS.md`, "How the pipeline runs"). Prompts `backend/prompts/{supervisor,kyc,risk,decision}.md` (v1). New dependency: `langgraph`, `langgraph-checkpoint-postgres`.
-- **Scoring runs once.** The rules engine is called at the end of Extraction; KYC, Risk, Policy and Decision read its result. Models explain and write; every model reply is schema-checked, guardrail-checked (decision words, protected attributes, invented numbers, unknown ids), retried once, then replaced by code-written text and marked `unverified`.
-- **Extraction path:** upload checks, intake, duplicate check, masked LLM fill for missing fields only, then the `CaseInput` is built from the form, the mock identity, bureau and GST lookups and the bank-statement analytics. Bank statements and GST returns now carry their month counts (`units`). Cross-document tamper hints are applied here once.
-- **Checkpoints:** Postgres schema `langgraph`; `python -m app.agents.run --resume CASE` continues a killed run. `--crash-before STAGE` kills the process as a stage starts, for the resume check. `Pipeline.resume_after_fix` and `Pipeline.officer_action` are the entry points the Stage 6 API will call.
-- **Models off:** `--no-llm` skips every model call. Used for the 60-case runs, CI and offline work; the live run is the same code with the router on.
-- **Exit criteria** (measured in `docs/TESTING.md` section 2d, dev split, models off): all 60 cases finish and **stop at the expected stage (60 of 60)**; band matches the key for 58 of 60. The 9 cases with an unreadable `poor` ID photograph are expected to stop at KYC (E-27, decided). Kill and resume gives the same result (tests plus a real `exit 137`); a forced 429 on every primary completes through the fallbacks (real Router, mocked providers; a live forced 429 is too slow on the free tiers); injected instructions change nothing (obedient scripted model plus a poisoned payslip).
-- **Models on:** tried live on 5 cases; max output tokens were raised (Gemini 3.x and gpt-oss spend part of the limit on reasoning, and 300 to 900 truncated the JSON).
-- **Intake changes made here:** an accepted passport-style photograph gets the "good photo" quality (94) instead of a score read from OCR noise (it pulled `kyc_doc_quality` down to 55 to 63 for clean cases); `ExtractedDocument.meta` carries `units`.
-- **Decisions taken:** E-18 is left as measured (see `EDGE_CASES.md`); `CM-DOC-11` and `CM-KYC-13` tiers are unchanged. A weak hint counts once per kind, so a round salary on every payslip is one hint (E-28).
-- **Not done here (later stages):** Langfuse traces and Prometheus metrics (Stage 7), RAGAS faithfulness for the Policy agent and the offline judge run (Stage 7), the HTTP API and the confirm/override screens (Stage 6; `Pipeline.officer_action` and `officer_actions` rows exist), Neon `migrate` and `reindex` (Neon was unreachable again; see Stage 4 notes).
-
----
-
-## Stage 6 build notes (2026-11-01)
-
-- **Decision changed by the user:** the frontend is React, plain JavaScript and CSS (no TypeScript, no Tailwind). CLAUDE.md decision 10, CODE_STYLE section 3, ARCHITECTURE, PRD and the diagram script were updated first.
-- **Backend:** `app/api/` (`main`, `auth`, `cases`, `admin`, `deps`, `runner`, `security`, `schemas`, `display`, `reportpdf`, `users_cli`) and `app/main.py`. Migration 0008 (lockout columns). New dependencies: fastapi, uvicorn, python-multipart, pyjwt, argon2-cffi. Settings added: `LLM_ENABLED`, `ACCESS_TOKEN_MINUTES`, `LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`, `CORS_ORIGINS`. Small changes in Stage 5 code: `Pipeline.resume_after_fix` takes the whole current file list (`documents=`) so removed files go away; `store.audit` records the actor; `next_case_no` is public. See ARCHITECTURE section 3b.
-- **Frontend:** `frontend/` (Vite, React 18, react-router). See DESIGN_SYSTEM section 6b.
-- **PDF:** reportlab on the server (`GET /cases/{id}/report.pdf`); no identifiers are printed.
-- **Decisions taken:** admin has no case access at all (least privilege); the document type picked at upload is only a checklist hint; the checklist counts a bank statement as one file; application date defaults to today and can be set (the synthetic cases use 2026-10-20).
-- **Scope boundary:** creating a precedent from an override (LLM summary, code hard-rule check, `pending`/`held` rows) is Stage 7 task 1. Stage 6 builds the queue: list, approve (expiry date, embedding, reviewer) and reject, with roles enforced. Tests insert `pending` rows directly.
-- **Browser tests:** Playwright 1.64 with the installed Chrome (1.49 hung on Node 24). The user approved the install on 2026-11-01.
-- **Not done here:** admin users page and policy/rule status, Grafana link; `Runner.recover` (continue `running` cases at start-up) has no dedicated test; the migration and user creation on Neon are for the user to run (below).
-- **Run it:** `cd backend && ../.venv/bin/python -m app.db.migrate`, then `python -m app.api.users_cli create --email ... --name ... --role officer|admin`, then `uvicorn app.main:app --reload` and `npm run dev` in `frontend/` (proxy to port 8000), or `npm run build` and open the API's port to get both from one process.
-

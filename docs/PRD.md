@@ -29,7 +29,7 @@ The users are **bank staff**, not applicants. Applicants never log in.
 | Role | What they do |
 |---|---|
 | Loan officer | Creates a case, picks the loan type, fills the application form, uploads documents (all at once or one by one), clicks "Submit for assessment", reads the report, confirms or overrides (with a reason) |
-| Admin | Sits above the loan officers. Manages users (any number of officers), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits policy and rule files, triggers re-indexing |
+| Admin | Sits above the loan officers. Manages users (any number of officers) in a Users screen (create, disable, reset password; Stage 8), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits policy and rule files, triggers re-indexing |
 
 (Earlier we discussed a separate underwriter and a reviewer. For v1 the loan officer plays the underwriter, and the admin plays the reviewer. Two roles only: admin and loan officer.)
 
@@ -38,14 +38,16 @@ The users are **bank staff**, not applicants. Applicants never log in.
 **In v1**
 
 - Five loan types: personal, home, education, business, vehicle.
-- Indian norms based on public SBI, HDFC and ICICI criteria plus RBI rules, merged into one "Sample Bank" policy.
+- Indian norms based on public SBI, HDFC and ICICI criteria plus RBI rules, merged into one blended policy. The fictional bank and the product are named **Pramaan**; policy and rules files keep their `Sample Bank` identifiers.
 - Primary applicant plus optional co-applicant (mandatory for education loans).
 - Documents as digital PDFs, scanned PDFs and photos (JPG/PNG). English only.
 - Multi-agent pipeline on LangGraph with fixed routing and gates.
 - Human confirmation on every case, whatever the score.
 - Learning through a precedent store inside RAG.
 - Evaluation, guardrails, observability, token and cost tracking.
-- Synthetic data only. Docker Compose at the final stage.
+- A refreshed UI (Stage 8): Pramaan brand, light, dark and system themes, the 5-stage underwriting stepper, a Credit / Capacity / Collateral display strip, admin Users screen.
+- Customer contact messages (Stage 9): the officer sends a short no-reply message with no confidential data; v1 logs it in the terminal and a Sent Items screen.
+- Synthetic data only. Docker Compose at the final stage (Stage 10).
 
 **Out of v1**
 
@@ -53,7 +55,8 @@ The users are **bank staff**, not applicants. Applicants never log in.
 - Real UIDAI, NSDL, GST, Udyam or CIBIL calls (mocked with synthetic records, replaceable later).
 - Automatic approval or rejection without a human.
 - NRI applicants, non-English documents.
-- Applicant-facing portal.
+- Applicant-facing portal (customer messages in Stage 9 are one-way and carry no case data).
+- Real email or SMS delivery (v1 prints to the terminal and keeps Sent Items; a real sender can be added behind the `Sender` interface later).
 - Training any model or hosting any local LLM. DPO, TRL, Colab and a tuned Qwen model are **removed** (user decision, 2026-10-31). LLMs are used only through APIs. Local embeddings, reranker and OCR (from the pip venv) are not LLMs and stay.
 - Celery and Redis (not needed for v1; can be added later).
 - Hosted file storage (local disk in v1).
@@ -71,6 +74,8 @@ The users are **bank staff**, not applicants. Applicants never log in.
 8. For an override, the system creates a **proposed precedent**: officer reason plus an LLM summary of the report.
 9. A code check tests the proposal against the hard rules. A proposal that breaches a hard rule is **held** and never enters the knowledge base. Otherwise the admin approves or rejects it; approved precedents enter the knowledge base.
 10. Everything is written to the audit log.
+11. (Stage 9) After confirm, override or a stopped run, the officer may send the customer a short contact request (section 9.7).
+
 
 A stopped case can be resumed from the failed stage after the officer corrects data or re-uploads, under the same case ID. Stopped is **not** a final reject.
 
@@ -166,6 +171,7 @@ Entered by the officer at case creation. The system checks documents against the
 - **Vehicle:** make, model, new or used, on-road price, dealer.
 - **Co-applicant:** same identity and income fields plus relationship.
 - **Required and optional (changed 2026-11-01):** the form marks required fields with `*` and optional ones with "(optional)", and opens with a short note saying what each means. Optional fields: mobile number, employer or business, months in current job, total experience, residential status (defaults to resident), purpose, application date, relationship (co-applicant); home: property address, seller or builder, owner name; education: institution, course duration; business: Udyam number. No scoring rule reads the loan-type ones. An empty optional field is simply skipped; a filled one is compared with the documents like any other. Everything else is required.
+- **Customer email (Stage 9):** optional field on the primary applicant, used only as the recipient of a contact message. Synthetic values only; masked in lists and in any model input.
 - **Also collected (added in Stage 1, needed by the rules):** residential status; months in current employment (stability rules); total work experience in months (personal loan only); collateral offered and margin amount (education).
 
 ## 8. Agents and pipeline (summary)
@@ -227,7 +233,15 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 
 - FR-20 v1: edit policy and rule files, run a re-index command. Policy and rule versions are recorded on each report. An admin upload screen comes later.
 
-### 9.6 Guardrails
+### 9.6 Customer contact messages (Stage 9, planned)
+
+- FR-21 After a case is confirmed, overridden or stopped, the officer can draft a message to the customer. Templates plus a **blank** option. The officer reviews, clicks Send and confirms in a second dialog.
+- FR-22 A message carries **no confidential data and no outcome hint**: no name, score, status, missing item or reason. It has one neutral subject, a short generic body, an optional case reference, the officer's name, email and phone, and a fixed fraud warning (bank staff never ask for an OTP, PIN or password). It is a no-reply message.
+- FR-23 A code check blocks a send that contains forbidden content (PAN or Aadhaar patterns, account or phone numbers, scores, rule IDs, outcome words such as approved or rejected, a request for an OTP, PIN or password) or lacks the footer. The block shows the reason.
+- FR-24 v1 delivery is a terminal log and a Sent Items list (sent, failed, blocked) per officer. Failed sends can be retried. Every draft, edit, send, block and failure is in the audit log.
+- FR-25 The fraud footer is added by code and cannot be edited out.
+
+### 9.7 Guardrails
 
 - Input: upload checks, prompt-injection scan (document text is data, never instructions), PII masking with regex rules (PAN, Aadhaar, phone, account numbers, email).
 - Output: strict JSON schema (Pydantic), citations required, banned terms and protected attributes blocked, "recommend" wording enforced.
@@ -314,4 +328,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stage 1 (foundation and synthetic data) is built and its exit criteria pass; it is awaiting the user's review. Later stages are not started. Next step: Stage 2 of `IMPLEMENTATION_PLAN.md`.
+Stages 1 to 7 are built. Stages 8 (UI revamp), 9 (customer notifications) and 10 (hardening, Docker, demo) are planned and approved on 2026-11-02 and not started. Status is tracked in `PROGRESS.md`.

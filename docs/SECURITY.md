@@ -33,6 +33,17 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 - Officers see only their cases unless granted otherwise (built in Stage 6: another officer's case is a 404). The admin role has no access to case endpoints at all (no case files, no fields); it sees precedents only. Passwords use argon2; the JWT lasts 60 minutes (`ACCESS_TOKEN_MINUTES`) and is kept in `sessionStorage`; five failures lock the account for 15 minutes (`LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`). The app refuses to start outside `dev` if `JWT_SECRET` is still the placeholder.
 - Database roles per `DATABASE.md` section 7. Fairness attributes are isolated from the pipeline.
 
+- **E. Customer messages (Stage 9, planned):** officers read only their own outbox rows (another officer's is a 404); the admin sees counts only. The send endpoint runs the content check on the server, so the UI cannot skip it. The fraud footer is added server-side.
+
+## 4b. Customer contact messages (Stage 9, planned)
+
+- A message holds **no confidential data and no outcome hint**: no name, score, status, missing item, reason, PAN, Aadhaar, account or phone number. Only an optional case reference, the officer's contact lines and the fixed fraud warning.
+- The warning always says bank staff never ask for an OTP, PIN or password, and the content check blocks any draft that asks for one, so the channel cannot be used for phishing.
+- Blank messages go through the same check; a hit blocks the send. The officer sends with a second confirming click that shows the final text.
+- No-reply: the message asks the customer to contact the officer; nothing is read back from a reply.
+- Delivery in v1 is the terminal log and Sent Items. If a real mail or SMS sender is added later, it needs a new review: the recipient is customer data, so use consented, test or synthetic addresses only.
+- Customer email is masked in lists, logs and any model input. Sent text is stored in the outbox and audited (draft, edit, send, block, fail).
+
 ## 5. Secrets and logging
 
 - **E. API keys and secrets in `.env`, never in git.** `.env.example` has placeholders only. Pre-commit secret scanning.
@@ -81,6 +92,8 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | Bad precedent poisons future cases | Hard-rule check in code, admin approval, expiry, hard rules cannot be overridden |
 | Credential leak | `.env`, secret scanning, key rotation |
 | Malicious upload | Type and signature checks, size limits, no execution |
+| Customer message leaks data or enables phishing (Stage 9) | No-data templates, server-side content check on every message including blank, fixed fraud footer, second confirmation, audit |
+| Officer reads another officer's messages (Stage 9) | Per-officer outbox access, 404 on others, admin counts only |
 
 ## 11. Review checklist (before each release)
 
@@ -91,3 +104,4 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 - [ ] Audit log covers all actions
 - [ ] Secrets not in git history
 - [ ] Retention job runs
+- [ ] Customer message check blocks every forbidden pattern (Stage 9)

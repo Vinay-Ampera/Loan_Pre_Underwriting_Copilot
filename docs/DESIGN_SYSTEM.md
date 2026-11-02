@@ -1,6 +1,6 @@
 # DESIGN_SYSTEM
 
-Calm, readable, trustworthy. Built for bank staff who review many cases a day. The UI shows what the backend decides; it never computes scores.
+Calm, readable, trustworthy. Built for bank staff who review many cases a day. The UI shows what the backend decides; it never computes scores. Brand: **Pramaan** (bank and product). Stage 8 (planned, not built) restyles everything below; section 8 holds the new design and overrides sections 2 and 6b where they differ. Until Stage 8 lands, the built UI still uses the section 2 tokens and Inter.
 
 ## 1. Principles
 
@@ -96,8 +96,87 @@ Spacing: 4-pixel base (4, 8, 12, 16, 24, 32). Radius 8 for cards, 6 for inputs. 
 
 - Plain JavaScript and CSS (one `.css` beside each component; tokens in `frontend/src/styles/tokens.css`). Animation is CSS only (rise, shimmer, chip spin, a slow login glow) and switched off by `prefers-reduced-motion`. Three.js was not used.
 - Built: login, case queue (search, status and loan-type filters), new case (loan type cards, form, co-applicant section), case workspace (checklist, Documents with upload and per-file results, Extracted fields with the document beside it, Report, Audit), confirm and override dialogs, admin precedent queue.
-- Not built yet: admin users page, policy and rule file status, Grafana link (Stages 7 and 8). The Inter font is used if installed; no web font is loaded.
+- Not built yet: the admin users page (Stage 8), policy and rule file status, Grafana link. The Inter font is used if installed; no web font is loaded (Stage 8 bundles Outfit and Inter, section 8).
 
 ## 7. Responsive
 
 Desktop first (bank workstation). Tablet works; phone shows read-only queue and report.
+
+## 8. Stage 8 design: Pramaan (planned 2026-11-02, not built)
+
+Built in Stage 8 of `IMPLEMENTATION_PLAN.md`. Inspired by the colour feel and fonts of amperadei.com (the training company); no images, copy or policy from that site are used. The section 2 status colours and the "never colour alone" rule stay.
+
+### 8.1 Tokens
+
+Colours are tokens for light and dark; components use variables only. Values below are starting points; contrast must pass WCAG AA in both themes (checked in tests).
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--brand` | `#7C70AF` | `#9A8FCB` | Accents, icons, focus ring tint, charts |
+| `--brand-strong` | `#5E4FA0` | `#B3A9DD` | Buttons, links (text on it must pass AA) |
+| `--brand-soft` | `#E4E1EE` | `#2A2540` | Soft surfaces, selected rows, sidebar highlight |
+| `--bg` | `#F7F6FA` | `#141220` | Page background |
+| `--surface` | `#FFFFFF` | `#1E1B2E` | Cards |
+| `--ink` | `#1F2933` | `#ECEAF4` | Body text |
+| `--muted` | `#5A6472` | `#A9A6BD` | Secondary text |
+| `--line` | `#DDDAE8` | `#35314A` | Borders |
+
+Status colours keep their meaning (approve green, refer amber, reject red, stopped grey) with dark-theme variants. **Unverified** moves off purple (for example to teal) so it is not confused with the brand.
+
+### 8.2 Typography
+
+Outfit for headings (500, 600) and Inter for body and tables (400, 600), bundled with the `@fontsource` npm packages (no runtime request to Google Fonts). Sizes 12, 14 (body), 16, 20, 24, 32 (landing headline). Monospace stays for IDs and rule IDs. A fallback of `system-ui` keeps text readable while fonts load.
+
+### 8.3 Theme
+
+A three-way pill in the sidebar: **system** (default), **dark**, **light**, shown as monitor, moon and sun icons with the active one ringed. The choice is stored in the browser (`localStorage`, with a safe fallback) and set on `<html data-theme>`. Without a stored choice the theme follows `prefers-color-scheme`. No flash on load: the theme is set before first paint.
+
+### 8.4 Screens
+
+1. **Login (the landing page).** No public page and no signup; staff accounts are created by the admin. Split layout: a brand panel on the left (the 5-stage journey, the 20/15/30/25/10 score bar with the three bands, "A human confirms every case", a "Pramaan is a sample bank; synthetic data only" note) and the sign-in form on the right. The panel stacks above the form on small screens.
+2. **App shell.** Sidebar with the Pramaan mark, navigation (officer: Home, Cases, New case, Sent items; admin: Home, Precedents, Users), the signed-in user and role, sign out, and the theme toggle. It collapses to icons on tablet widths.
+3. **Home (officer).** Summary tiles (awaiting confirmation, referred, stopped, in progress) and recent cases. Tiles filter the case list.
+4. **Case workspace.** The 5-stage stepper (8.5) above the existing tabs.
+5. **Report.** Score ring with band and "Recommended: ..." wording; the 3C strip (8.6); Conditions (missing or unverified items to fix or ask for); existing stage cards with rule IDs and clause links; confirm bar. The summary text appears with a one-time typing effect.
+6. **Admin Home.** Pending precedents, active officers and disabled accounts.
+7. **Admin Users.** Table of users with role and status; create officer, disable or enable, reset password (shown once, never logged). Admin still has no access to case data.
+8. **Sent items and notification draft** (Stage 9, see section 9).
+
+### 8.5 The 5 underwriting stages in the UI
+
+Shown as a stepper on the case workspace and as the journey strip on the login page. Labels use plain banking terms; agent names appear only as small detail text.
+
+| Banking stage | What the pipeline does | Score points |
+|---|---|---|
+| 1 Application intake and screening | Upload checks, extraction, duplicate check | none |
+| 2 Verification and documents | KYC, document checks | KYC 20, Documents 15 |
+| 3 Risk and ratios | Income and FOIR (code), credit and behaviour | Income and FOIR 30, Credit 25 |
+| 4 Decisioning and conditions | Policy fit, recommendation, conditions list | Policy fit 10 |
+| 5 Officer sign-off | Human confirms or overrides | none |
+
+A stopped case shows the stepper stopped at the failing stage with the plain-language reason. Stage 5 is always the human; the stepper never shows it as done by the system.
+
+### 8.6 Credit, Capacity and Collateral strip
+
+A display-only regrouping on the report, computed from existing stage scores by the backend (the UI does not add numbers):
+
+- **Credit:** the Credit and behaviour stage score.
+- **Capacity:** the Income and FOIR stage score.
+- **Collateral:** not scored in v1. Shown as "Not scored in v1" for every loan type; for home, vehicle and education the existing collateral and margin facts may be listed as notes, with no points.
+
+Scoring weights, bands and hard rules do not change.
+
+### 8.7 Motion
+
+CSS only. Entrance fade and rise, score ring fill, stepper advance, skeleton shimmer, button press, and a one-time typing effect on the report summary (the full text is in the DOM for screen readers and copy). Everything is off under `prefers-reduced-motion`, and no animation carries meaning that is not also in text.
+
+### 8.8 Accessibility
+
+WCAG AA contrast in both themes; visible focus; dialogs trap focus; icons come with text; the theme toggle has labels for screen readers; keyboard operable throughout.
+
+## 9. Stage 9 design: customer notifications (planned 2026-11-02, not built)
+
+- **Draft dialog** on the case workspace after confirm, override or a stopped run: a template picker (a few short templates plus **Blank**), the recipient (customer email, masked in lists), the subject (fixed), the body (editable), the fixed fraud footer (shown, locked), and the officer's contact lines. A **Send** button opens a second confirmation that shows the final text. A blocked send shows the exact reason (for example "Contains a number that looks like an account number").
+- **Sent items screen:** the officer's own messages with date, case reference, template, status (sent, failed, blocked) and a retry action for failed ones. Open one to read it.
+- **Wording rule:** messages never state a score, status, missing item or reason; they only ask the customer to contact the officer, and always carry the fraud warning. The UI never says "approved" or "rejected" to the customer.
+

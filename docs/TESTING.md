@@ -127,10 +127,17 @@ On release: full dev run plus one run on the held-out test split; results attach
 - Changing a prompt bumps its version and reruns the golden set.
 - Record baselines in `docs/baselines/` (JSON) so changes are visible.
 
-## 8. Demo checks (Stage 8)
+## 7b. Stage 8 and 9 tests (planned)
+
+- **UI (Stage 8):** every screen renders in light, dark and system themes; contrast checked for text and controls in both; theme choice persists and falls back safely without storage; reduced-motion switches animation off; admin Users flow (create, disable, reset, audit rows); roles enforced on the new endpoints; one case per loan type still completes in the browser; confirm and override second clicks unchanged.
+- **Notifications (Stage 9):** each template and the blank option pass the content check; a test per forbidden pattern (PAN, Aadhaar, account number, phone, score, rule ID, outcome words, OTP/PIN/password request, missing footer) blocks the send; a case with an applicant name, score and missing items produces a message containing none of them; no send without the second confirmation; the footer cannot be removed through the API; failed sends show as failed and can be retried; another officer's items return 404; audit rows exist for draft, edit, send, block and fail.
+
+## 8. Demo checks (Stage 10)
 
 - Clean case per loan type completes with report.
 - Hard-fail case stops at the right stage with a short report.
 - Password-protected upload rejected.
 - Override, admin approval, similar case re-run shows the precedent.
 - Forced model failure triggers fallback; case still completes.
+- Login, theme toggle, 5-stage stepper and admin Users screen shown (Stage 8).
+- A customer contact message is drafted, checked, sent and appears in Sent Items and the terminal (Stage 9).

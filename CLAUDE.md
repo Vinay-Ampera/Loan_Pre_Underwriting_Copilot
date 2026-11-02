@@ -6,14 +6,15 @@ Read this file first. It tells you what the project is, which document to open f
 
 A copilot for banks and NBFCs. A loan officer uploads an applicant's documents; a LangGraph multi-agent pipeline checks them stage by stage, scores the case **in code**, and writes a report with a recommendation and policy citations. **A human confirms every case.** Overrides become admin-approved "precedents" stored in the knowledge base. No model is trained. Capstone project; **synthetic data only**; solo developer; trainer approves the docs before any implementation.
 
-Loan types: personal, home, education, business, vehicle. One blended "Sample Bank" policy based on public SBI, HDFC, ICICI criteria and RBI rules.
+Loan types: personal, home, education, business, vehicle. One blended policy based on public SBI, HDFC, ICICI criteria and RBI rules. The fictional bank and the product are both named **Pramaan** (display name from Stage 8; policy and rules files keep their `Sample Bank` identifiers).
 
 ## Document map
 
 | Question | Open |
 |---|---|
 | What are we building, for whom, which rules and scores, which data? | `docs/PRD.md` (long, the source of truth) |
-| In what order do we build it, and when is a stage done? | `docs/IMPLEMENTATION_PLAN.md` (long) |
+| In what order do we build it, and when is a stage done? | `docs/IMPLEMENTATION_PLAN.md` (what each stage builds, exit criteria) |
+| Where does the project stand? Build notes, measured results, decisions log | `docs/PROGRESS.md` |
 | How do the pieces fit? Diagrams | `docs/ARCHITECTURE.md`, `docs/diagrams/` |
 | What does each agent do, with which model, with which checks? | `docs/AGENTS.md` |
 | Tables and columns | `docs/DATABASE.md` |
@@ -23,7 +24,7 @@ Loan types: personal, home, education, business, vehicle. One blended "Sample Ba
 | Screens, components, wording, tokens | `docs/DESIGN_SYSTEM.md` |
 | Tricky cases already decided (check before building anything that looks like a repeat) | `docs/EDGE_CASES.md` |
 
-Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.md` → `docs/AGENTS.md` → the stage you are working on in `docs/IMPLEMENTATION_PLAN.md` → the relevant topic doc.
+Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.md` → `docs/AGENTS.md` → `docs/PROGRESS.md` (status) → the stage you are working on in `docs/IMPLEMENTATION_PLAN.md` → the relevant topic doc.
 
 ## Locked decisions (do not change without asking the user)
 
@@ -42,6 +43,9 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 13. **Data:** 100 synthetic cases (60 dev, 40 held-out test), answer key per case. Never tune on the test split.
 14. **Fairness** attributes are monitoring-only, in a separate table the pipeline cannot read.
 15. **Nothing is dropped without the user's permission.** DPO, TRL, Colab and the tuned Qwen model are **removed** (user decision, 2026-10-31): no model training and no local LLM. Only LLM calls go through APIs; embeddings, reranker and OCR still run locally from the pip venv.
+16. **UI (Stage 8, decided 2026-11-02):** brand and bank name **Pramaan**; Ampera purple with a darker purple for buttons (AA contrast); fonts Outfit (headings) and Inter (body) bundled via `@fontsource`; light, dark and system themes with a three-way toggle; login is the landing page (no public page, no signup); admin has a Users screen. Only colour feel and fonts are taken from amperadei.com, never its images, copy or policy. The 5-stage underwriting stepper and a display-only Credit / Capacity / Collateral strip are added; scoring and weights do not change.
+17. **Customer notifications (Stage 9, decided 2026-11-02):** the officer sends the customer a short, no-reply contact request. It carries **no confidential data and no outcome hint** (no name, score, status, missing items or reason), only an optional case reference, the officer's contact details and a fixed fraud warning (bank staff never ask for an OTP, PIN or password). Templates plus a blank option; a code check blocks forbidden content; the officer sends with a second confirming click. v1 delivery is a terminal log plus a Sent Items screen; no real email or SMS.
+18. **Stage order (2026-11-02):** Stage 8 UI, Stage 9 notifications, then a review window for additions, then Stage 10 hardening and Docker (the old Stage 8). Docker is always last.
 
 ## Hard constraints for any code you write
 
@@ -86,13 +90,13 @@ intake:    python -m app.intake.cli FILE [--llm] | python -m app.intake.evaluate
 scoring:   python -m app.scoring.replay --split dev [--case ID] [--verbose]
 pipeline:  python -m app.agents.run --split dev [--case ID] [--no-llm] [--force-429] [--cache] | --resume ID | --crash-before STAGE
 eval:      python -m app.eval.run --split dev
-stack:     docker compose up   (Stage 8)
+stack:     docker compose up   (Stage 10)
 diagrams:  python3 docs/diagrams/make_diagrams.py
 ```
 
 ## Current status
 
-Planning approved by trainer. Stage 1 (foundation and synthetic data) is built and its exit criteria pass: migrations 0001-0006 applied on Neon, rules and policy files, mock services, 100 synthetic cases with answer keys. Awaiting the user's review. Stage 2 (intake and parsers) is built and its exit criteria pass (awaiting review). Stage 3 (rules engine and scoring) is built and its exit criteria pass (awaiting review): dev replay reproduces 60/60 bands. Stage 4 (RAG and Policy agent) is built and its exit criteria pass (awaiting review). Stage 5 (agent pipeline on LangGraph) is built and its exit criteria pass (committed): all 60 dev cases finish and stop where expected (the 9 unreadable-ID cases expect a fix-type stop at KYC, E-27), kill-and-resume, forced 429 and injection checks pass. Stage 6 (API and frontend) is built and its exit criteria pass (awaiting review): FastAPI with roles, JWT and audit; background runs; React JS + CSS screens; server PDF; one case per loan type through the browser; roles and second-click rules enforced on the server. Run `python -m app.db.migrate` (0008) on Neon and create users with `app.api.users_cli` before using it. Stage 7 (learning loop, evaluation, observability) is built and committed (`babe29b`). Open items updated 2026-11-02: OI-1, OI-2, OI-5, OI-6 resolved; OI-3 values, OI-4 live Langfuse check and OI-7 targets wait for the real-model baseline run. Next: Stage 8 (Docker Compose); do not start it until the user says so.
+Stages 1 to 7 are built (Stage 7 committed as `babe29b`). Stages 8 (UI revamp, Pramaan), 9 (customer notifications) and 10 (hardening, Docker, demo) are planned and approved in the docs (2026-11-02) but **not started**; do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
 
 ## Open items
 

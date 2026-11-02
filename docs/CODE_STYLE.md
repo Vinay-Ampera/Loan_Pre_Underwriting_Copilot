@@ -75,7 +75,7 @@ loan-copilot/
 
 ## 7. Documentation rules
 
-- Keep each doc focused and short; `PRD.md` and `IMPLEMENTATION_PLAN.md` are the only long ones.
+- Keep each doc focused and short; `PRD.md` is the only long plan doc. Build notes and status go in `PROGRESS.md`, never in `IMPLEMENTATION_PLAN.md`.
 - If code and docs disagree, fix whichever is wrong in the same PR.
 - Decisions that change locked behaviour go into `PRD.md` section 15 first.
 
