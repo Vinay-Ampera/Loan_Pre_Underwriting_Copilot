@@ -12,11 +12,14 @@ const bodyBg = (page) => page.evaluate(() => getComputedStyle(document.body).bac
 const noSideScroll = (page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
 
-test('login is the landing page: brand panel, journey, score bar, no signup', async ({ page }) => {
+test('login is the landing page: brand panel, journey, no score bar, no signup', async ({
+  page,
+}) => {
   await page.goto('/')
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole('list', { name: 'The five underwriting stages' })).toBeVisible()
-  await expect(page.getByLabel('Score weights')).toContainText('Income and FOIR')
+  await expect(page.getByLabel('Score weights')).toHaveCount(0)
+  await expect(page.getByText(/recommend approve/)).toHaveCount(0)
   await expect(page.getByText('A human confirms every case.')).toBeVisible()
   await expect(page.getByText('Pramaan is a sample bank. Synthetic data only.')).toBeVisible()
   await expect(page.getByRole('link', { name: /sign ?up|register/i })).toHaveCount(0)

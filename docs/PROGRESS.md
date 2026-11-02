@@ -36,6 +36,15 @@ Next: the user commits Stage 8, then starts Stage 9 (customer notifications) in 
 - **Customer notifications:** the officer sends a short contact request to the customer. It carries **no confidential data and no outcome hint**: no name, score, status, missing items or reason; only an optional case reference, the officer's contact details, and a fixed fraud warning (bank staff never ask for an OTP, PIN or password). It is a no-reply message. Delivery in v1 is **terminal log plus a Sent Items screen**; no real email or SMS. Templates plus a blank option; a content check in code blocks a send that contains forbidden content; the officer reviews, clicks Send and confirms in a second dialog.
 - **Order:** Stages 8 and 9 come before Stage 10 (Docker). Which of 8 and 9 goes first is decided at the end. A review window for additions and corrections sits between Stage 9 and Stage 10.
 
+### 2026-11-02: Stage 8 follow-ups agreed (after the Stage 8 build, before commit)
+
+The user reviewed the built Stage 8 and agreed these changes. **Built 2026-11-02 (see the tracking line below); the docs first stated an admin email and phone on the login page, corrected the same day to the plain sentence only.**
+
+- **Login page content:** keep a few lines of "About Pramaan" and the five stages. **Move the score weights and bands off the login page** (they would be confidential for a real bank) to the Help page behind sign-in. The login page gets **no footer**. It gets a plain line, **"Can't sign in? Contact your admin."**, and **nothing else**: no email, no phone, no settings values, no request form, no new endpoint. No self-service forgot-password, no open request form (nothing unauthenticated can write; no real email in v1). Lockout still lifts itself; the admin resets a password in the Users screen. The person uses their own channel (phone or internal mail), not the website.
+- **Footer inside the app (not on login):** slim, on every signed-in page: "Pramaan, sample bank, synthetic data only", a Help link and the app version.
+- **Help page behind sign-in, by role:** a guide for new or forgetful users. Officer: create a case, upload, read the stepper and report, confirm or override, what each stage and agent does in plain words, what "unverified" means, the score weights and bands. Admin: Users, resetting passwords, the precedent queue. Static content, no database or API change.
+- **Issue reports to the admin (confirmed by the user 2026-11-02: built with Stage 9):** an officer files an issue, the admin reads it in an inbox. Recommended to build with Stage 9 because it shares the outbox-style table and migration, the content check and the audit rows, but as a separate task so decision 17 (customer notifications) is not changed. Only a case reference, a category and short text; a warning not to paste personal data; the same code check blocks PAN, Aadhaar, phone and account numbers; an officer sees only their own issues; the admin sees all issues but no case data.
+
 ### Stage 8 and 9 questions to ask before coding
 
 Ask the user these at the start of the Stage 8 session (and the Stage 9 ones at the start of Stage 9) if the answer is not already in the docs:
@@ -51,6 +60,7 @@ Ask the user these at the start of the Stage 8 session (and the Stage 9 ones at 
 Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 
 - [x] Stage 8 UI revamp (2026-11-02)
+- [x] Stage 8 follow-ups: login page trim and contact-admin sentence, in-app footer, Help page `/help` (built 2026-11-02; frontend only, no migration, no backend change; tests added; not committed)
 - [ ] Stage 9 Customer notifications
 - [ ] Review window: additions and corrections collected by the user before Stage 10
 - [ ] Stage 10 Hardening, Docker and demo

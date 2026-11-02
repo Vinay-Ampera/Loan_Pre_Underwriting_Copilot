@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { clearSession, loadSession, saveSession } from './api/session'
 import Sidebar from './components/Sidebar'
+import AppFooter from './components/AppFooter'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import CaseQueuePage from './pages/CaseQueuePage'
@@ -10,21 +11,26 @@ import CaseWorkspacePage from './pages/CaseWorkspacePage'
 import AdminHomePage from './pages/AdminHomePage'
 import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import HelpPage from './pages/HelpPage'
 import './App.css'
 
 const SessionContext = createContext(null)
 export const useSession = () => useContext(SessionContext)
 
+// role is 'officer', 'admin' or 'any' (both roles, e.g. Help)
 function Shell({ role, children }) {
   const { session, signOut } = useSession()
   if (!session) return <Navigate to="/login" replace />
-  if (session.user.role !== role) {
+  if (role !== 'any' && session.user.role !== role) {
     return <Navigate to="/" replace />
   }
   return (
     <div className="shell">
       <Sidebar user={session.user} onSignOut={signOut} />
-      <main className="page">{children}</main>
+      <div className="page-col">
+        <main className="page">{children}</main>
+        <AppFooter />
+      </div>
     </div>
   )
 }
@@ -85,6 +91,14 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminUsersPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/help"
+        element={
+          <Shell role="any">
+            <HelpPage />
           </Shell>
         }
       />

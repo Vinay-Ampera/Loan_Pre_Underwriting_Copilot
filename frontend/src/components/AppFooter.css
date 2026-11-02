@@ -1,0 +1,24 @@
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-6);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+.app-footer a {
+  color: var(--ink);
+  font-weight: 600;
+}
+.app-footer-end {
+  display: flex;
+  gap: var(--s-4);
+}
+@media (max-width: 720px) {
+  .app-footer {
+    padding: var(--s-3) var(--s-4);
+  }
+}

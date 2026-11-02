@@ -6,16 +6,6 @@ import ThemeToggle from '../components/ThemeToggle'
 import { JOURNEY } from '../lib/journey'
 import './LoginPage.css'
 
-// The scoring weights and bands, shown as facts. They come from the locked scoring decision
-// (rules file); nothing is computed here.
-const WEIGHTS = [
-  ['KYC', 20],
-  ['Documents', 15],
-  ['Income and FOIR', 30],
-  ['Credit', 25],
-  ['Policy fit', 10],
-]
-
 function BrandPanel() {
   return (
     <section className="login-panel" aria-label="About Pramaan">
@@ -24,6 +14,10 @@ function BrandPanel() {
       <p className="login-lead">
         Pramaan checks a loan file stage by stage, scores it in code and cites the policy. The loan
         officer decides.
+      </p>
+      <p className="login-about">
+        Documents are read on this machine first, personal details are masked before any model sees
+        the text, and every finding points to a rule.
       </p>
       <ol className="journey" aria-label="The five underwriting stages">
         {JOURNEY.map((s, i) => (
@@ -38,20 +32,6 @@ function BrandPanel() {
           </li>
         ))}
       </ol>
-      <div className="scorebar-wrap">
-        <p className="scorebar-title">The score: 100 points</p>
-        <ul className="scorebar" aria-label="Score weights">
-          {WEIGHTS.map(([name, pts]) => (
-            <li key={name} style={{ flexGrow: pts }}>
-              <span className="seg-pts">{pts}</span>
-              <span className="seg-name">{name}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="bands">
-          85 and above: recommend approve · 60 to 84: refer · below 60: recommend reject
-        </p>
-      </div>
       <p className="login-human">A human confirms every case.</p>
       <p className="login-note">Pramaan is a sample bank. Synthetic data only.</p>
     </section>
@@ -123,6 +103,7 @@ export default function LoginPage() {
           <p className="small muted">
             Synthetic data only. Do not enter real customer information.
           </p>
+          <p className="small muted login-help">Can&apos;t sign in? Contact your admin.</p>
         </form>
       </main>
     </div>

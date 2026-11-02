@@ -11,7 +11,12 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
-      globals: { ...globals.browser, ...globals.node, ...globals.vitest },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.vitest,
+        __APP_VERSION__: 'readonly',
+      },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     plugins: { react, 'react-hooks': reactHooks },

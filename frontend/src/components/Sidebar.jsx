@@ -9,11 +9,13 @@ const NAV = {
     ['/', 'Home', 'home', true],
     ['/cases', 'Cases', 'cases', true],
     ['/cases/new', 'New case', 'plus', true],
+    ['/help', 'Help', 'help', false],
   ],
   admin: [
     ['/', 'Home', 'home', true],
     ['/admin/precedents', 'Precedents', 'precedent', false],
     ['/admin/users', 'Users', 'users', false],
+    ['/help', 'Help', 'help', false],
   ],
 }
 

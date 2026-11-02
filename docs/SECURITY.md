@@ -33,6 +33,7 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 - Officers see only their cases unless granted otherwise (built in Stage 6: another officer's case is a 404). The admin role has no access to case endpoints at all (no case files, no fields); it sees precedents only. Passwords use argon2; the JWT lasts 60 minutes (`ACCESS_TOKEN_MINUTES`) and is kept in `sessionStorage`; five failures lock the account for 15 minutes (`LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`). The app refuses to start outside `dev` if `JWT_SECRET` is still the placeholder.
 - Database roles per `DATABASE.md` section 7. Fairness attributes are isolated from the pipeline.
 
+- **D2. Login help (Stage 8 follow-up):** the login page has no request form, no password-recovery email and no contact details. It shows only the sentence "Can't sign in? Contact your admin.", so nothing unauthenticated can write to the system or be read from it, and the sign-in message cannot be used to learn which accounts exist. The score weights and bands are shown only after sign-in, on the Help page.
 - **E. Customer messages (Stage 9, planned):** officers read only their own outbox rows (another officer's is a 404); the admin sees counts only. The send endpoint runs the content check on the server, so the UI cannot skip it. The fraud footer is added server-side.
 
 ## 4b. Customer contact messages (Stage 9, planned)

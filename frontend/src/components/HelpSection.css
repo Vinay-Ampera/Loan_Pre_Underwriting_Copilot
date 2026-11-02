@@ -1,0 +1,90 @@
+.help-section {
+  padding: var(--s-6);
+  scroll-margin-top: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.help-section header {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.help-section h2 {
+  font-size: var(--fs-20);
+}
+.help-section-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--primary);
+}
+.help-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.help-section-body ul {
+  padding-left: var(--s-6);
+  list-style: disc;
+}
+.help-section-body li + li {
+  margin-top: var(--s-1);
+}
+/* numbered steps with a round badge, like the login journey */
+.help-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  counter-reset: hstep;
+  padding-left: 0;
+  list-style: none;
+}
+.help-section-body .help-steps li {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  margin: 0;
+}
+.help-steps li::before {
+  counter-increment: hstep;
+  content: counter(hstep);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+/* horizontal flow, for short sequences such as the three gates */
+.help-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: stretch;
+  padding-left: 0;
+  list-style: none;
+}
+.help-section-body .help-flow li {
+  flex: 1 1 160px;
+  margin: 0;
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--bg);
+  position: relative;
+}
+.help-flow strong {
+  display: block;
+  font-family: var(--font-head);
+}
+.help-flow .muted {
+  font-size: var(--fs-14);
+}

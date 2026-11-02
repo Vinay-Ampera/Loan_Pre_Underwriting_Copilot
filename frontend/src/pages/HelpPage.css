@@ -1,0 +1,112 @@
+.help-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.help-hero {
+  display: flex;
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-6);
+  background: linear-gradient(120deg, var(--brand-soft), var(--surface));
+}
+.help-hero-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+.help-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+.help-hero-text .muted {
+  font-weight: 600;
+}
+.help-quick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s-3);
+}
+.help-quick-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--ink);
+  transition:
+    transform var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
+}
+.help-quick-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+}
+.help-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: var(--s-6);
+  align-items: start;
+}
+.help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+.help-toc {
+  position: sticky;
+  top: var(--s-6);
+  font-size: var(--fs-14);
+}
+.help-toc-title {
+  margin-bottom: var(--s-2);
+  font-family: var(--font-head);
+  font-weight: 600;
+}
+.help-toc ul {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--line);
+}
+.help-toc a {
+  display: block;
+  padding: var(--s-1) var(--s-3);
+  margin-left: -2px;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  text-decoration: none;
+}
+.help-toc a:hover {
+  color: var(--ink);
+}
+.help-toc a.active {
+  border-left-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s-3);
+}
+@media (max-width: 1100px) {
+  .help-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .help-toc {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .help-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

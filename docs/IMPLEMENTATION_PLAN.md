@@ -185,6 +185,7 @@ Tasks
 9. **Motion:** light entrance and progress animation, a one-time typing effect on the report summary, all off under `prefers-reduced-motion`.
 10. **Brand name:** replace the display name "Sample Bank" with "Pramaan" in the UI and docs (policy and rules identifiers unchanged).
 11. Update `DESIGN_SYSTEM.md` and the other affected docs in the same change.
+12. **Follow-ups agreed 2026-11-02 (after the first build):** trim the login page (stages and a short About only; the score weights and bands move behind sign-in, to Help); add the plain sentence "Can't sign in? Contact your admin." under the form (no email, no phone, no settings values, no request form, no new endpoint); no footer on the login page; a slim footer on every signed-in page (name, sample-bank note, Help link, app version); a role-based **Help** page behind sign-in (officer guide and admin guide). Static content, no migration, no backend change. Tests: the login page shows no weights, the contact sentence shows, the footer is on signed-in pages only, Help shows the right guide per role.
 
 Deliverables: the revamped frontend, the Users endpoints, updated tests and docs.
 
@@ -212,6 +213,7 @@ Tasks
 6. **Sender interface:** a small `Sender` interface with the console sender as the only v1 implementation, so a real mail or SMS service can be swapped in by config later.
 7. **Audit:** draft created, edited, sent, blocked and failed are written to the audit log.
 8. Update `PRD.md`, `DATABASE.md`, `SECURITY.md`, `ARCHITECTURE.md`, `TESTING.md` and `DESIGN_SYSTEM.md`.
+9. **Issue reports to the admin (confirmed by the user 2026-11-02).** An officer files an issue (case reference, category, short text, a warning not to paste personal data); the admin reads all issues in an inbox; an officer sees only their own. Same migration style, the same content check as task 3 (PAN, Aadhaar, phone and account patterns blocked), audit rows for filed, read and closed. Separate from the customer message feature; decision 17 is not changed.
 
 Deliverables: migration, notification module and API routes, officer screens (draft dialog, Sent Items), tests, docs.
 
