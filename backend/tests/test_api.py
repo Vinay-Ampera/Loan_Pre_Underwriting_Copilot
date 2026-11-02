@@ -439,6 +439,147 @@ def test_reject_and_held_precedents(client: TestClient, engine: Engine) -> None:
     assert len(client.get("/api/v1/admin/precedents?status=all", headers=admin).json()) == 2
 
 
+# --------------------------------------------------------------------------- admin users
+def audit_rows(engine: Engine, action: str) -> list[Any]:
+    with engine.connect() as c:
+        return list(c.execute(
+            text("SELECT actor_id, entity_id, before, after FROM audit_log WHERE action = :a"),
+            {"a": action},
+        ))  # fmt: skip
+
+
+def test_user_endpoints_are_for_admins_only(client: TestClient) -> None:
+    officer = login(client, "asha")
+    someone = "00000000-0000-0000-0000-000000000000"
+    assert client.get("/api/v1/admin/users", headers=officer).status_code == 403
+    assert client.get("/api/v1/admin/summary", headers=officer).status_code == 403
+    body = {"name": "X", "email": "x@example.test", "role": "admin"}
+    assert client.post("/api/v1/admin/users", json=body, headers=officer).status_code == 403
+    for action in ("disable", "enable", "reset-password"):
+        r = client.post(f"/api/v1/admin/users/{someone}/{action}", headers=officer)
+        assert r.status_code == 403
+    assert client.get("/api/v1/admin/users").status_code == 401
+
+
+def test_admin_creates_a_user_who_can_sign_in_with_the_temporary_password(
+    client: TestClient, engine: Engine
+) -> None:
+    admin = login(client, "ada")
+    made = client.post(
+        "/api/v1/admin/users",
+        json={"name": "Chandra Officer", "email": "Chandra@Example.test", "role": "officer"},
+        headers=admin,
+    )
+    assert made.status_code == 201
+    data = made.json()
+    assert data["email"] == "chandra@example.test" and data["role"] == "officer" and data["active"]
+    temp = data["temporary_password"]
+    assert len(temp) >= 10
+    assert "password_hash" not in data
+    signed = client.post(
+        "/api/v1/auth/login", json={"email": "chandra@example.test", "password": temp}
+    )
+    assert signed.status_code == 200 and signed.json()["user"]["role"] == "officer"
+    dup = client.post(
+        "/api/v1/admin/users",
+        json={"name": "Again", "email": "chandra@example.test", "role": "officer"},
+        headers=admin,
+    )
+    assert dup.status_code == 409
+    bad = client.post(
+        "/api/v1/admin/users", json={"name": "N", "email": "not-an-email"}, headers=admin
+    )
+    assert bad.status_code == 422
+    (row,) = audit_rows(engine, "user_created")
+    assert str(row.entity_id) == data["id"] and temp not in json.dumps(row.after)
+
+
+def test_disable_enable_and_reset_are_audited_and_never_log_a_password(
+    client: TestClient, engine: Engine
+) -> None:
+    admin = login(client, "ada")
+    users = {u["email"]: u for u in client.get("/api/v1/admin/users", headers=admin).json()}
+    ben = users["ben@example.test"]
+    assert "temporary_password" not in ben and "password_hash" not in ben
+
+    ben_token = login(client, "ben")
+    off = client.post(f"/api/v1/admin/users/{ben['id']}/disable", headers=admin)
+    assert off.status_code == 200 and off.json()["active"] is False
+    refused = client.post(
+        "/api/v1/auth/login", json={"email": "ben@example.test", "password": PASSWORD}
+    )
+    assert refused.status_code == 401
+    assert client.get("/api/v1/auth/me", headers=ben_token).status_code == 401  # token dies at once
+    on = client.post(f"/api/v1/admin/users/{ben['id']}/enable", headers=admin)
+    assert on.status_code == 200 and on.json()["active"] is True
+
+    reset = client.post(f"/api/v1/admin/users/{ben['id']}/reset-password", headers=admin)
+    temp = reset.json()["temporary_password"]
+    assert (
+        client.post(
+            "/api/v1/auth/login", json={"email": "ben@example.test", "password": PASSWORD}
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/login", json={"email": "ben@example.test", "password": temp}
+        ).status_code
+        == 200
+    )
+    for action in ("user_disabled", "user_enabled", "user_password_reset"):
+        (row,) = audit_rows(engine, action)
+        assert str(row.entity_id) == ben["id"]
+        assert temp not in json.dumps([row.before, row.after])
+    missing = client.post(
+        "/api/v1/admin/users/00000000-0000-0000-0000-000000000000/disable", headers=admin
+    )
+    assert missing.status_code == 404
+
+
+def test_an_admin_cannot_lock_the_system_out(client: TestClient) -> None:
+    admin = login(client, "ada")
+    me = client.get("/api/v1/auth/me", headers=admin).json()
+    assert client.post(f"/api/v1/admin/users/{me['id']}/disable", headers=admin).status_code == 409
+    second = client.post(
+        "/api/v1/admin/users",
+        json={"name": "Second Admin", "email": "second@example.test", "role": "admin"},
+        headers=admin,
+    ).json()
+    # with two admins one may disable the other, but not the last active one
+    assert (
+        client.post(f"/api/v1/admin/users/{second['id']}/disable", headers=admin).status_code == 200
+    )
+    third = client.post(
+        "/api/v1/admin/users",
+        json={"name": "Third Admin", "email": "third@example.test", "role": "admin"},
+        headers=admin,
+    ).json()
+    token = client.post(
+        "/api/v1/auth/login",
+        json={"email": "third@example.test", "password": third["temporary_password"]},
+    ).json()["access_token"]
+    other = {"Authorization": f"Bearer {token}"}
+    assert client.post(f"/api/v1/admin/users/{me['id']}/disable", headers=other).status_code == 200
+    # Ada is now disabled; the third admin is the last one and cannot disable themselves
+    assert (
+        client.post(f"/api/v1/admin/users/{third['id']}/disable", headers=other).status_code == 409
+    )
+
+
+def test_admin_summary_counts(client: TestClient, engine: Engine) -> None:
+    admin = login(client, "ada")
+    add_precedent(engine)
+    first = client.get("/api/v1/admin/summary", headers=admin).json()
+    assert first == {"pending_precedents": 1, "active_officers": 2, "active_admins": 1,
+                     "disabled_accounts": 0}  # fmt: skip
+    ben = next(u for u in client.get("/api/v1/admin/users", headers=admin).json()
+               if u["email"] == "ben@example.test")  # fmt: skip
+    client.post(f"/api/v1/admin/users/{ben['id']}/disable", headers=admin)
+    second = client.get("/api/v1/admin/summary", headers=admin).json()
+    assert second["active_officers"] == 1 and second["disabled_accounts"] == 1
+
+
 # --------------------------------------------------------------------------- whole cases
 def upload_all(client: TestClient, h: dict[str, str], case_id: str, case: str) -> None:
     detail = client.get(f"/api/v1/cases/{case_id}", headers=h).json()

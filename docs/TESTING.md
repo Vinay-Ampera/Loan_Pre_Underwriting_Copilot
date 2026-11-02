@@ -127,10 +127,16 @@ On release: full dev run plus one run on the held-out test split; results attach
 - Changing a prompt bumps its version and reruns the golden set.
 - Record baselines in `docs/baselines/` (JSON) so changes are visible.
 
-## 7b. Stage 8 and 9 tests (planned)
+## 7b. Stage 8 and 9 tests
 
-- **UI (Stage 8):** every screen renders in light, dark and system themes; contrast checked for text and controls in both; theme choice persists and falls back safely without storage; reduced-motion switches animation off; admin Users flow (create, disable, reset, audit rows); roles enforced on the new endpoints; one case per loan type still completes in the browser; confirm and override second clicks unchanged.
+- **UI (Stage 8, built; see 7c):** every screen renders in light, dark and system themes; contrast checked for text and controls in both; theme choice persists and falls back safely without storage; reduced-motion switches animation off; admin Users flow (create, disable, reset, audit rows); roles enforced on the new endpoints; one case per loan type still completes in the browser; confirm and override second clicks unchanged.
 - **Notifications (Stage 9):** each template and the blank option pass the content check; a test per forbidden pattern (PAN, Aadhaar, account number, phone, score, rule ID, outcome words, OTP/PIN/password request, missing footer) blocks the send; a case with an applicant name, score and missing items produces a message containing none of them; no send without the second confirmation; the footer cannot be removed through the API; failed sends show as failed and can be retried; another officer's items return 404; audit rows exist for draft, edit, send, block and fail.
+
+## 7c. Stage 8 results (UI revamp)
+
+- **Backend** (`test_api.py`): the user routes and `/admin/summary` are admin-only (officer 403, no token 401); create returns a temporary password once, lowercases the email, refuses a duplicate (409) and a bad email (422), and the new user can sign in; disable, enable and reset are audited with no password in the audit row; a disabled user's token dies at once; an admin cannot disable their own account or the last active admin; summary counts.
+- **Frontend unit** (`npm test`): contrast of every text pairing for both themes against WCAG AA 4.5:1 (parsed from `tokens.css`), the system-dark block equals the dark block, unverified is not the brand purple, white panel text passes on the whole login gradient; theme read, apply, save and blocked storage; the three-way toggle; the stepper for draft, running, awaiting, confirmed and stopped (sign-off is never "done" by the system); tile counts; conditions and the 3C regrouping (no numbers added); the typing effect (full text always in the DOM, instant under reduced motion, once per view); the reduced-motion override in `base.css`; the Users screen (list, own account locked, password shown once, second click to disable, server message shown).
+- **Browser** (`npm run e2e`): one case per loan type to a confirmed recommendation; roles (admin has no case routes, officer has no admin routes, including Users and summary); admin Users flow (create, duplicate refused, reset needs a second click and the new password works while the old one does not, disable blocks sign-in, enable restores it); login is the landing page with no signup; system, dark and light follow the OS and override it, the choice persists, no flash; every officer and admin screen in light and dark at desktop, tablet and phone widths with no side scrolling; tablet sidebar shows icons only; reduced motion turns animation off; tiles open the filtered list.
 
 ## 8. Demo checks (Stage 10)
 

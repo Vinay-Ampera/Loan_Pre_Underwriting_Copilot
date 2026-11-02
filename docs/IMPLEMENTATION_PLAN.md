@@ -10,7 +10,7 @@ Trainer approval of the documents comes first. Nothing below starts before that.
 8 UI revamp (Pramaan)   9 Customer notifications   10 Hardening & Docker
 ```
 
-Stages 8 and 9 were added on 2026-11-02 (the old Stage 8 is now Stage 10). Which of 8 and 9 is built first is decided at the end. After both, there is a **review window**: the user collects additions and corrections, and they are done before Stage 10 starts. Docker is always last.
+Stages 8 and 9 were added on 2026-11-02 (the old Stage 8 is now Stage 10). Stage 8 was built first (2026-11-02). After both, there is a **review window**: the user collects additions and corrections, and they are done before Stage 10 starts. Docker is always last.
 
 **Where progress is recorded:** this file says what each stage builds and when it is done. Status, build notes, measured results and decisions live in `PROGRESS.md`. Do not add build notes here.
 

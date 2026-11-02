@@ -17,11 +17,11 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 5 Agent pipeline on LangGraph | Built, committed | All 60 dev cases finish and stop where expected (the 9 unreadable-ID cases stop at KYC, E-27); kill-and-resume, forced 429 and injection checks pass |
 | 6 API and frontend | Built, exit criteria pass | FastAPI with roles, JWT and audit; background runs; React JS + CSS screens; server PDF. Run `python -m app.db.migrate` (0008) on Neon and create users with `app.api.users_cli` before using it |
 | 7 Learning loop, evaluation, observability | Built, committed (`babe29b`) | Open items updated 2026-11-02: OI-1, OI-2, OI-5, OI-6 resolved; OI-3 values, OI-4 live Langfuse check and OI-7 targets wait for the real-model baseline run |
-| 8 UI revamp (Pramaan) | **Planned, not started** | Approved 2026-11-02. Do not start until the user says so |
+| 8 UI revamp (Pramaan) | **Built, exit criteria pass (not committed)** | 2026-11-02. Tokens and bundled fonts, light/dark/system, login landing, sidebar shell, Home screens, stepper, score ring, 3C strip, Conditions, admin Users (new endpoints, audited). See "Stage 8 build notes". No migration, no scoring change |
 | 9 Customer notifications | **Planned, not started** | Approved 2026-11-02. Build order of 8 and 9 is decided at the end |
 | 10 Hardening, Docker and demo | **Planned, not started** | Was Stage 8; renumbered 2026-11-02. Starts only after Stages 8 and 9 and the review window (see the plan) |
 
-Next: the user starts Stage 8 in a new session. Read `docs/DESIGN_SYSTEM.md` and the Stage 8 section of `IMPLEMENTATION_PLAN.md` first, then ask the questions listed under "Stage 8 and 9 questions to ask before coding" below.
+Next: the user commits Stage 8, then starts Stage 9 (customer notifications) in a new session. Ask the Stage 9 questions under "Stage 8 and 9 questions to ask before coding" first.
 
 ---
 
@@ -50,10 +50,23 @@ Ask the user these at the start of the Stage 8 session (and the Stage 9 ones at 
 
 Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 
-- [ ] Stage 8 UI revamp
+- [x] Stage 8 UI revamp (2026-11-02)
 - [ ] Stage 9 Customer notifications
 - [ ] Review window: additions and corrections collected by the user before Stage 10
 - [ ] Stage 10 Hardening, Docker and demo
+
+---
+
+## Stage 8 build notes (2026-11-02)
+
+- **Questions answered before coding (2026-11-02):** Stage 8 goes first and the Stage 9 outbox table and the new `users.phone` and customer email fields wait for Stage 9, so **Stage 8 adds no migration**. Button purple `#5E4FA0` confirmed. The sidebar collapses to icons on tablet widths. The typing effect on the report summary is wanted.
+- **Backend:** `app/api/users.py` (new): `GET /admin/users`, `GET /admin/summary`, `POST /admin/users`, `POST /admin/users/{id}/disable|enable|reset-password`. Temporary passwords are generated on the server (`secrets`), returned once, argon2-hashed, never logged. Audit actions `user_created`, `user_disabled`, `user_enabled`, `user_password_reset`. An admin cannot disable their own account or the last active admin. `UserCreateIn` added to `schemas.py`. Scoring, rules, agents and the confirm/override rules are untouched. The PDF author is now Pramaan.
+- **Frontend:** new shell (`Sidebar`, `BrandMark`, `ThemeToggle`, `Icons`), pages `HomePage`, `AdminHomePage`, `AdminUsersPage`, restyled `LoginPage`, `CaseStepper`, score ring (`ScoreBadge`), `CreditStrip`, Conditions block and `TypedText` in the report. `TopBar` was removed. Routes: `/` is Home for both roles; officers get `/cases`; admins get `/admin/precedents` and `/admin/users`. Details in `DESIGN_SYSTEM.md` 8.9.
+- **Contrast:** the unit test found two Stage 6 status colours below AA on their tinted backgrounds (approve and refer). They were darkened (`#19703f`, `#8a5700`). All text pairings now pass 4.5:1 in both themes.
+- **Fonts:** `@fontsource/inter` and `@fontsource/outfit` are exact-pinned in `frontend/package.json`; no runtime request to Google.
+- **Measured:** results are in `TESTING.md` section 7c.
+- **Decisions taken:** the 3C strip and Conditions are built in the browser from the report's existing stage scores and document findings (no backend change, no numbers added). Home tiles filter in the browser (`/cases?view=...`) because the list endpoint filters by status only. "Referred" means awaiting confirmation with band refer. The Sent items link is not shown until Stage 9. Admin creation of another admin is allowed (the CLI allowed it too).
+- **Not done here:** nothing from the Stage 8 task list. Policy and rule file status and the Grafana link (listed as not built in Stage 6) are not in the Stage 8 plan and remain open for the review window.
 
 ---
 

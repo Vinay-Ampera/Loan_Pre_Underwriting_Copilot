@@ -24,6 +24,9 @@
   background: var(--unverified-bg);
   color: var(--unverified);
 }
+.conditions {
+  border-left: 4px solid var(--brand);
+}
 .report-block ul {
   padding-left: var(--s-4);
   list-style: disc;

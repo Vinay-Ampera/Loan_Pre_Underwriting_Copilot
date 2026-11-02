@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: var(--s-4);
-  background: rgba(31, 41, 51, 0.45);
+  background: var(--overlay);
   animation: fade var(--t-med) var(--ease) both;
 }
 .dialog {

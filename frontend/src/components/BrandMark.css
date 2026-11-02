@@ -1,0 +1,21 @@
+.brand-lockup {
+  --glyph-tick: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--brand);
+}
+.brand-lockup.inverse {
+  color: #ffffff;
+  --glyph-tick: #5e4fa0;
+}
+.brand-name {
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: var(--fs-20);
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.brand-lockup.inverse .brand-name {
+  color: #ffffff;
+}

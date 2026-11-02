@@ -15,7 +15,7 @@ for (const [prefix, label] of LOANS) {
   test(`${label}: from new case to a confirmed recommendation`, async ({ page }) => {
     const caseId = cleanCase(prefix)
     await signIn(page, 'officer')
-    await expect(page.getByRole('heading', { name: 'Cases' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible()
     await createCase(page, caseId, label)
 
     // submit is blocked until the KYC documents are in

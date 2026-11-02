@@ -1,12 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { clearSession, loadSession, saveSession } from './api/session'
-import TopBar from './components/TopBar'
+import Sidebar from './components/Sidebar'
 import LoginPage from './pages/LoginPage'
+import HomePage from './pages/HomePage'
 import CaseQueuePage from './pages/CaseQueuePage'
 import NewCasePage from './pages/NewCasePage'
 import CaseWorkspacePage from './pages/CaseWorkspacePage'
+import AdminHomePage from './pages/AdminHomePage'
 import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
+import AdminUsersPage from './pages/AdminUsersPage'
 import './App.css'
 
 const SessionContext = createContext(null)
@@ -16,13 +19,13 @@ function Shell({ role, children }) {
   const { session, signOut } = useSession()
   if (!session) return <Navigate to="/login" replace />
   if (session.user.role !== role) {
-    return <Navigate to={session.user.role === 'admin' ? '/admin/precedents' : '/'} replace />
+    return <Navigate to="/" replace />
   }
   return (
-    <>
-      <TopBar user={session.user} onSignOut={signOut} />
+    <div className="shell">
+      <Sidebar user={session.user} onSignOut={signOut} />
       <main className="page">{children}</main>
-    </>
+    </div>
   )
 }
 
@@ -35,12 +38,22 @@ function Routing() {
         path="/"
         element={
           session?.user.role === 'admin' ? (
-            <Navigate to="/admin/precedents" replace />
+            <Shell role="admin">
+              <AdminHomePage />
+            </Shell>
           ) : (
             <Shell role="officer">
-              <CaseQueuePage />
+              <HomePage />
             </Shell>
           )
+        }
+      />
+      <Route
+        path="/cases"
+        element={
+          <Shell role="officer">
+            <CaseQueuePage />
+          </Shell>
         }
       />
       <Route
@@ -64,6 +77,14 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminPrecedentsPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <Shell role="admin">
+            <AdminUsersPage />
           </Shell>
         }
       />

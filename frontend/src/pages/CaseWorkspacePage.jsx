@@ -5,6 +5,7 @@ import { useAsync } from '../hooks/useAsync'
 import { usePolling } from '../hooks/usePolling'
 import ApplicationForm, { stateFromCase } from '../components/ApplicationForm'
 import AuditTimeline from '../components/AuditTimeline'
+import CaseStepper from '../components/CaseStepper'
 import ConfirmBar from '../components/ConfirmBar'
 import DocumentChecklist from '../components/DocumentChecklist'
 import DocumentViewer from '../components/DocumentViewer'
@@ -150,6 +151,11 @@ export default function CaseWorkspacePage() {
         </div>
         <CaseStatusChip status={c.status} band={c.band} />
       </header>
+
+      <CaseStepper
+        caseData={{ ...c, stages: live.length ? live : c.stages }}
+        stopText={report?.stop_text}
+      />
 
       <div className="ws-grid">
         <aside className="ws-left card">

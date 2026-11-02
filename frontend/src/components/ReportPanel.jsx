@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import StageCard from './StageCard'
 import FindingList from './FindingList'
+import CreditStrip from './CreditStrip'
+import TypedText from './TypedText'
+import { conditionsFrom } from '../lib/conditions'
 import './ReportPanel.css'
 
 const SECTION = { primary: 'Applicant', co: 'Co-applicant', case: 'Case-level' }
@@ -24,6 +27,7 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction }) {
   const other = report.findings.filter((f) => !known.has(f.stage))
   const multi = report.sections.co.length > 0
   const unverifiedStages = new Set(report.unverified.map((u) => u.stage))
+  const conditions = conditionsFrom(report)
 
   return (
     <div className="report">
@@ -55,12 +59,34 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction }) {
 
       <section className="card report-block">
         <h3>Summary</h3>
-        <p>{report.summary}</p>
+        <p>
+          <TypedText id={`${caseId}:${report.summary}`} text={report.summary} />
+        </p>
         <p className="small muted">
           {report.summary_source === 'model'
             ? 'Wording written by a model from the rules engine results; every number comes from code.'
             : 'Wording written by code from the rules engine results.'}
         </p>
+      </section>
+
+      {report.status !== 'stopped' && <CreditStrip report={report} />}
+
+      <section className="card report-block conditions">
+        <h3>Conditions</h3>
+        {conditions.length === 0 ? (
+          <p className="muted">No missing items. Nothing is waiting on the applicant.</p>
+        ) : (
+          <>
+            <p className="muted">Items to obtain or fix before relying on this case:</p>
+            <ul>
+              {conditions.map((f, i) => (
+                <li key={i}>
+                  {f.message} <code>{f.rule_id}</code>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </section>
 
       {report.rejection_reason && (

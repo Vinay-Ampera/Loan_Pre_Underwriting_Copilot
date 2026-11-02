@@ -6,6 +6,11 @@ body {
   color: var(--ink);
   background: var(--bg);
 }
+h1,
+h2,
+h3 {
+  font-family: var(--font-head);
+}
 h1 {
   font-size: var(--fs-24);
   font-weight: 600;
@@ -82,15 +87,15 @@ code,
   color: var(--primary-ink);
 }
 .btn-primary:hover:not(:disabled) {
-  background: #2560c4;
+  background: var(--primary-hover);
 }
 .btn-danger {
-  background: var(--reject);
-  border-color: var(--reject);
-  color: #fff;
+  background: var(--danger-bg);
+  border-color: var(--danger-bg);
+  color: var(--danger-ink);
 }
 .btn-danger:hover:not(:disabled) {
-  background: #962f2c;
+  background: var(--danger-hover);
 }
 .btn-ghost {
   border-color: transparent;

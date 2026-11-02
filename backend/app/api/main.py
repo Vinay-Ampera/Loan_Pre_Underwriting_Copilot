@@ -22,7 +22,7 @@ from sqlalchemy import Engine, create_engine
 from app.agents.checkpoint import postgres_saver
 from app.agents.graph import Pipeline
 from app.agents.runtime import AgentContext, Services
-from app.api import admin, auth, cases
+from app.api import admin, auth, cases, users
 from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
@@ -86,7 +86,7 @@ def create_app(
     if origins:
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"],
                            allow_headers=["Authorization", "Content-Type"])  # fmt: skip
-    for r in (auth.router, cases.router, admin.router):
+    for r in (auth.router, cases.router, admin.router, users.router):
         app.include_router(r, prefix="/api/v1")
 
     @app.get("/metrics", include_in_schema=False)

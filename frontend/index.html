@@ -3,8 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light" />
-    <title>Loan Pre-Underwriting Copilot</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Pramaan</title>
+    <script>
+      // set the theme before first paint so there is no flash (same rule as src/lib/theme.js)
+      try {
+        var t = localStorage.getItem('lc.theme')
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t)
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

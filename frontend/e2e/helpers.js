@@ -25,12 +25,14 @@ export function cleanCase(prefix) {
   throw new Error(`no clean dev case for ${prefix}`)
 }
 
-export async function signIn(page, who) {
+export async function signInAs(page, email, password) {
   await page.goto('/login')
-  await page.getByLabel('Email').fill(`${who}@example.test`)
-  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
 }
+
+export const signIn = (page, who) => signInAs(page, `${who}@example.test`, PASSWORD)
 
 async function fillPerson(page, prefix, a) {
   const set = (name, value) =>

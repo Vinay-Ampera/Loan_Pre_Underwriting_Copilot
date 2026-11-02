@@ -1,17 +1,124 @@
 .login {
   min-height: 100vh;
   display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+.login-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  padding: var(--s-8) clamp(var(--s-6), 5vw, 72px);
+  background: var(--panel-bg);
+  color: #ffffff;
+  justify-content: center;
+}
+.login-headline {
+  font-size: clamp(1.75rem, 3.2vw, var(--fs-32));
+  font-weight: 600;
+  line-height: 1.15;
+  color: #ffffff;
+  animation: rise var(--t-med) var(--ease) both;
+}
+.login-lead {
+  max-width: 46ch;
+  color: #ece9f8;
+}
+.journey {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.journey li {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  animation: rise var(--t-med) var(--ease) both;
+  animation-delay: calc(var(--i) * 70ms);
+}
+.journey-n {
+  flex: none;
+  display: grid;
   place-items: center;
-  padding: var(--s-4);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+.journey strong {
+  display: block;
+  font-weight: 600;
+}
+.journey-detail {
+  display: block;
+  font-size: var(--fs-12);
+  color: #ddd8f2;
+}
+.scorebar-title,
+.bands {
+  font-size: var(--fs-12);
+  color: #ece9f8;
+}
+.scorebar {
+  display: flex;
+  gap: 3px;
+  margin: var(--s-2) 0;
+}
+.scorebar li {
+  flex-basis: 0;
+  min-width: 0;
+  padding: var(--s-2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  display: flex;
+  flex-direction: column;
+  transform-origin: left;
+  animation: grow 700ms var(--ease) both;
+}
+.seg-pts {
+  font-family: var(--font-head);
+  font-weight: 600;
+}
+.seg-name {
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+}
+.login-human {
+  font-family: var(--font-head);
+  font-weight: 600;
+  font-size: var(--fs-16);
+}
+.login-note {
+  font-size: var(--fs-12);
+  color: #ddd8f2;
+}
+.login-side {
   position: relative;
+  display: grid;
+  place-items: center;
+  padding: var(--s-6);
   overflow: hidden;
+}
+.login-theme {
+  position: absolute;
+  top: var(--s-4);
+  right: var(--s-4);
+  z-index: 1;
 }
 /* a slow drifting glow: CSS only, off for reduced motion */
 .login-glow {
   position: absolute;
   inset: -20%;
-  background: radial-gradient(40% 40% at 25% 30%, rgba(47, 111, 222, 0.16), transparent 70%),
-    radial-gradient(35% 35% at 75% 65%, rgba(30, 127, 79, 0.12), transparent 70%);
+  background: radial-gradient(40% 40% at 25% 30%, var(--glow-a), transparent 70%),
+    radial-gradient(35% 35% at 75% 65%, var(--glow-b), transparent 70%);
   animation: drift 18s ease-in-out infinite alternate;
 }
 @keyframes drift {
@@ -21,10 +128,21 @@
 }
 .login-card {
   position: relative;
-  width: min(420px, 100%);
+  width: min(400px, 100%);
   padding: var(--s-8);
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
   animation: rise var(--t-med) var(--ease) both;
+}
+@media (max-width: 900px) {
+  .login {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .login-panel {
+    padding: var(--s-6) var(--s-4);
+  }
+  .journey-detail {
+    display: none;
+  }
 }

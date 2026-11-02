@@ -17,7 +17,12 @@
 }
 .skeleton {
   border-radius: var(--radius-input);
-  background: linear-gradient(90deg, var(--stopped-bg) 25%, #f7f8fa 50%, var(--stopped-bg) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--stopped-bg) 25%,
+    var(--shimmer) 50%,
+    var(--stopped-bg) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.3s linear infinite;
 }

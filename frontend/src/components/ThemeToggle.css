@@ -1,0 +1,29 @@
+.theme-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+}
+.theme-toggle button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  transition:
+    background var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+.theme-toggle button:hover {
+  color: var(--ink);
+}
+.theme-toggle button.on {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 0 0 2px var(--brand);
+}

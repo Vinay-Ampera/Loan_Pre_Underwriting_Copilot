@@ -1,34 +1,76 @@
 .score-badge {
+  --tone: var(--stopped);
+  --tone-bg: var(--stopped-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
   border-radius: var(--radius-card);
   padding: var(--s-4);
   text-align: center;
-  background: var(--stopped-bg);
-  color: var(--stopped);
+  background: var(--tone-bg);
+  color: var(--tone);
 }
 .score-approve {
-  background: var(--approve-bg);
-  color: var(--approve);
+  --tone: var(--approve);
+  --tone-bg: var(--approve-bg);
 }
 .score-refer {
-  background: var(--refer-bg);
-  color: var(--refer);
+  --tone: var(--refer);
+  --tone-bg: var(--refer-bg);
 }
 .score-reject {
-  background: var(--reject-bg);
-  color: var(--reject);
+  --tone: var(--reject);
+  --tone-bg: var(--reject-bg);
+}
+.score-ring {
+  position: relative;
+  width: 132px;
+  height: 132px;
+}
+.score-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.ring-track {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.2;
+  stroke-width: 9;
+}
+.ring-fill {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 9;
+  stroke-linecap: round;
+  animation: ring-fill 900ms var(--ease) both;
+}
+@keyframes ring-fill {
+  from {
+    stroke-dashoffset: var(--ring-from);
+  }
 }
 .score-num {
-  font-size: 2rem;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-head);
+  font-size: var(--fs-32);
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1;
 }
 .score-of {
-  font-size: var(--fs-14);
+  margin-top: 2px;
+  font-family: var(--font);
+  font-size: var(--fs-12);
   font-weight: 400;
 }
 .score-band {
   font-size: var(--fs-12);
   font-weight: 600;
   letter-spacing: 0.08em;
-  margin-top: var(--s-1);
 }

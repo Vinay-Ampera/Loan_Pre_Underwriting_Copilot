@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: var(--s-3);
   position: sticky;
-  top: 72px;
+  top: var(--s-6);
 }
 .ws-main {
   display: flex;
@@ -35,7 +35,7 @@
   flex-direction: column;
   gap: var(--s-3);
   position: sticky;
-  top: 72px;
+  top: var(--s-6);
 }
 .recommended {
   font-weight: 600;

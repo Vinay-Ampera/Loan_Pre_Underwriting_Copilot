@@ -75,7 +75,7 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 ```
 setup:     virtualenv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/pip install -e .
 backend:   cd backend && uvicorn app.main:app --reload   (serves frontend/dist too if built)
-users:     python -m app.api.users_cli create --email E --name N --role officer|admin | password --email E
+users:     python -m app.api.users_cli create --email E --name N --role officer|admin | password --email E   (or the admin Users screen)
 tests:     pytest -q                              (DB tests use a throwaway database)
 lint:      ruff check . && ruff format --check . && mypy
 frontend:  cd frontend && npm run dev | npm run build | npm test | npm run lint
@@ -96,7 +96,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Stages 1 to 7 are built (Stage 7 committed as `babe29b`). Stages 8 (UI revamp, Pramaan), 9 (customer notifications) and 10 (hardening, Docker, demo) are planned and approved in the docs (2026-11-02) but **not started**; do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
+Stages 1 to 7 are built and committed (Stage 7 as `babe29b`). Stage 8 (UI revamp, Pramaan) is built (2026-11-02), awaiting the user's commit. Stages 9 (customer notifications) and 10 (hardening, Docker, demo) are planned and approved in the docs but **not started**; do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
 
 ## Open items
 

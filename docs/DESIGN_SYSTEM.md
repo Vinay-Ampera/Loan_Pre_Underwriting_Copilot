@@ -1,6 +1,6 @@
 # DESIGN_SYSTEM
 
-Calm, readable, trustworthy. Built for bank staff who review many cases a day. The UI shows what the backend decides; it never computes scores. Brand: **Pramaan** (bank and product). Stage 8 (planned, not built) restyles everything below; section 8 holds the new design and overrides sections 2 and 6b where they differ. Until Stage 8 lands, the built UI still uses the section 2 tokens and Inter.
+Calm, readable, trustworthy. Built for bank staff who review many cases a day. The UI shows what the backend decides; it never computes scores. Brand: **Pramaan** (bank and product). Stage 8 (built 2026-11-02) restyles everything below; section 8 holds the design as built and overrides sections 2 and 6b where they differ. The section 2 table is the Stage 6 palette and is kept for history; the live values are in `frontend/src/styles/tokens.css` and section 8.1.
 
 ## 1. Principles
 
@@ -96,19 +96,19 @@ Spacing: 4-pixel base (4, 8, 12, 16, 24, 32). Radius 8 for cards, 6 for inputs. 
 
 - Plain JavaScript and CSS (one `.css` beside each component; tokens in `frontend/src/styles/tokens.css`). Animation is CSS only (rise, shimmer, chip spin, a slow login glow) and switched off by `prefers-reduced-motion`. Three.js was not used.
 - Built: login, case queue (search, status and loan-type filters), new case (loan type cards, form, co-applicant section), case workspace (checklist, Documents with upload and per-file results, Extracted fields with the document beside it, Report, Audit), confirm and override dialogs, admin precedent queue.
-- Not built yet: the admin users page (Stage 8), policy and rule file status, Grafana link. The Inter font is used if installed; no web font is loaded (Stage 8 bundles Outfit and Inter, section 8).
+- Not built in Stage 6: the admin users page (built in Stage 8), policy and rule file status, Grafana link. The Stage 6 UI used Inter only if installed; Stage 8 bundles Outfit and Inter (section 8).
 
 ## 7. Responsive
 
 Desktop first (bank workstation). Tablet works; phone shows read-only queue and report.
 
-## 8. Stage 8 design: Pramaan (planned 2026-11-02, not built)
+## 8. Stage 8 design: Pramaan (built 2026-11-02)
 
 Built in Stage 8 of `IMPLEMENTATION_PLAN.md`. Inspired by the colour feel and fonts of amperadei.com (the training company); no images, copy or policy from that site are used. The section 2 status colours and the "never colour alone" rule stay.
 
 ### 8.1 Tokens
 
-Colours are tokens for light and dark; components use variables only. Values below are starting points; contrast must pass WCAG AA in both themes (checked in tests).
+Colours are tokens for light and dark; components use variables only. Contrast passes WCAG AA (4.5:1) for every text pairing in both themes; `frontend/src/styles/tokens.test.js` checks it from the CSS file. Buttons use `#5E4FA0` (confirmed 2026-11-02) with white text in light, and `#B3A9DD` with dark text in dark.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -121,7 +121,7 @@ Colours are tokens for light and dark; components use variables only. Values bel
 | `--muted` | `#5A6472` | `#A9A6BD` | Secondary text |
 | `--line` | `#DDDAE8` | `#35314A` | Borders |
 
-Status colours keep their meaning (approve green, refer amber, reject red, stopped grey) with dark-theme variants. **Unverified** moves off purple (for example to teal) so it is not confused with the brand.
+Status colours keep their meaning (approve green, refer amber, reject red, stopped grey) with dark-theme variants. Two light values were darkened to pass AA: approve `#19703f` (was `#1E7F4F`) and refer `#8A5700` (was `#9A6200`). **Unverified** is teal (`#0B6A72` on `#DDF3F4` light, `#6FD6DB` on `#0F3336` dark), off the brand purple. Danger buttons use their own tokens (`--danger-bg`, `--danger-ink`) because the dark-theme red is light and needs dark text. Extra tokens: `--primary` (= `--brand-strong`), `--primary-hover`, `--primary-ink`, `--overlay`, `--shimmer`, `--glow-a/b`, `--panel-bg`, `--font-head`.
 
 ### 8.2 Typography
 
@@ -134,10 +134,10 @@ A three-way pill in the sidebar: **system** (default), **dark**, **light**, show
 ### 8.4 Screens
 
 1. **Login (the landing page).** No public page and no signup; staff accounts are created by the admin. Split layout: a brand panel on the left (the 5-stage journey, the 20/15/30/25/10 score bar with the three bands, "A human confirms every case", a "Pramaan is a sample bank; synthetic data only" note) and the sign-in form on the right. The panel stacks above the form on small screens.
-2. **App shell.** Sidebar with the Pramaan mark, navigation (officer: Home, Cases, New case, Sent items; admin: Home, Precedents, Users), the signed-in user and role, sign out, and the theme toggle. It collapses to icons on tablet widths.
+2. **App shell.** Sidebar with the Pramaan mark, navigation (officer: Home, Cases, New case, Sent items; admin: Home, Precedents, Users), the signed-in user and role, sign out, and the theme toggle. It collapses to icons on tablet widths (up to 1024 px, confirmed 2026-11-02; the names stay for screen readers) and becomes a bar across the top on phones. Stage 8 shows no Sent items link; it arrives with Stage 9.
 3. **Home (officer).** Summary tiles (awaiting confirmation, referred, stopped, in progress) and recent cases. Tiles filter the case list.
 4. **Case workspace.** The 5-stage stepper (8.5) above the existing tabs.
-5. **Report.** Score ring with band and "Recommended: ..." wording; the 3C strip (8.6); Conditions (missing or unverified items to fix or ask for); existing stage cards with rule IDs and clause links; confirm bar. The summary text appears with a one-time typing effect.
+5. **Report.** Score ring with band and "Recommended: ..." wording; the 3C strip (8.6); Conditions (missing or unverified items to fix or ask for); existing stage cards with rule IDs and clause links; confirm bar. The summary text appears with a one-time typing effect (confirmed 2026-11-02).
 6. **Admin Home.** Pending precedents, active officers and disabled accounts.
 7. **Admin Users.** Table of users with role and status; create officer, disable or enable, reset password (shown once, never logged). Admin still has no access to case data.
 8. **Sent items and notification draft** (Stage 9, see section 9).
@@ -180,3 +180,12 @@ WCAG AA contrast in both themes; visible focus; dialogs trap focus; icons come w
 - **Sent items screen:** the officer's own messages with date, case reference, template, status (sent, failed, blocked) and a retry action for failed ones. Open one to read it.
 - **Wording rule:** messages never state a score, status, missing item or reason; they only ask the customer to contact the officer, and always carry the fraud warning. The UI never says "approved" or "rejected" to the customer.
 
+### 8.9 Build notes (Stage 8)
+
+- **Files:** tokens in `styles/tokens.css` (light default; dark under `:root[data-theme='dark']` and, with no stored choice, `@media (prefers-color-scheme: dark)`; the two dark blocks are kept identical by a test). Fonts in `styles/fonts.css` (`@fontsource/inter` 400 and 600, `@fontsource/outfit` 500 and 600, Latin subset). Theme logic in `lib/theme.js`; `index.html` sets `data-theme` before first paint. The stored key is `lc.theme` in `localStorage` (`system` stores nothing).
+- **Routes:** `/` is Home (officer tiles and recent cases, or admin summary), `/cases` the list (a tile opens `/cases?view=awaiting|referred|stopped|progress`, filtered in the browser), `/cases/new`, `/cases/:id`, `/admin/precedents`, `/admin/users`. The old top bar is gone.
+- **Stepper (`lib/journey.js`):** derived from the case status, the `stage_runs` rows and `report.stopped_stage`. Officer sign-off is "in progress" while the case awaits confirmation and "done" only after an officer confirms or overrides.
+- **3C strip and Conditions (`lib/conditions.js`):** Credit shows the Credit and behaviour stage score and Capacity the Income and FOIR stage score exactly as the report holds them; Collateral reads "Not scored in v1". Conditions lists the document-stage findings that are not plain notes. No backend change and no numbers added.
+- **Users screen:** create (name, email, role), disable and reset each behind a second dialog, enable directly. The temporary password is shown once in a dialog.
+- **Login:** brand panel (headline, the five stages, the 20/15/30/25/10 bar, bands, "A human confirms every case", sample-bank note) beside the sign-in form; the theme toggle sits top right. The panel stacks above the form under 900 px.
+- **Motion:** rise, ring fill, stepper pulse, score-bar grow, drifting login glow, typing effect. The global `prefers-reduced-motion` override in `base.css` zeroes every animation and transition; the typing effect also checks the media query.

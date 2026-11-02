@@ -27,7 +27,7 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 
 ## 4. Access control
 
-- **D. Roles:** loan officer (cases, upload, confirm; any number of officers), admin (approve precedents, approve hard-rule changes, users, policy and rule files, re-index).
+- **D. Roles:** loan officer (cases, upload, confirm; any number of officers), admin (approve precedents, approve hard-rule changes, users, policy and rule files, re-index). From Stage 8 the admin manages users in the Users screen: create, disable or enable, reset password. The temporary password is generated on the server, returned once, hashed with argon2 and never logged or written to the audit log; the audit log records who did what to which account. An admin cannot disable their own account or the last active admin.
 - Server-side checks on every endpoint; the UI hides what a role cannot use, but never relies on that.
 - Passwords hashed (argon2 or bcrypt); short-lived JWTs; lockout after repeated failures.
 - Officers see only their cases unless granted otherwise (built in Stage 6: another officer's case is a 404). The admin role has no access to case endpoints at all (no case files, no fields); it sees precedents only. Passwords use argon2; the JWT lasts 60 minutes (`ACCESS_TOKEN_MINUTES`) and is kept in `sessionStorage`; five failures lock the account for 15 minutes (`LOGIN_MAX_FAILURES`, `LOGIN_LOCK_MINUTES`). The app refuses to start outside `dev` if `JWT_SECRET` is still the placeholder.

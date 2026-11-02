@@ -44,7 +44,7 @@ def build_report_pdf(case_no: str, report: dict[str, Any], officer: dict[str, An
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm,
                             topMargin=16 * mm, bottomMargin=16 * mm,
-                            title=f"{case_no} pre-underwriting report", author="Loan Pre-Underwriting Copilot")  # fmt: skip
+                            title=f"{case_no} pre-underwriting report", author="Pramaan")  # fmt: skip
     out: list[Any] = [_p(f"{case_no} - {report['loan_type'].capitalize()} loan", h1)]
     out.append(
         _p(

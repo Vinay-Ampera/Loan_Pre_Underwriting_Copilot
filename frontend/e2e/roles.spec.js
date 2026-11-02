@@ -5,10 +5,12 @@ test('an admin has no way to create or upload, and an officer has no precedent q
   page,
 }) => {
   await signIn(page, 'admin')
-  await expect(page).toHaveURL(/\/admin\/precedents/)
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'New case' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Cases', exact: true })).toHaveCount(0)
   await page.goto('/cases/new') // typing the address does not help: the route is for officers
-  await expect(page).toHaveURL(/\/admin\/precedents/)
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible()
 
   // and the server refuses even when the UI is bypassed
   const token = await page.evaluate(() => JSON.parse(sessionStorage.getItem('lc.session')).token)
@@ -29,13 +31,18 @@ test('an admin has no way to create or upload, and an officer has no precedent q
 
 test('an officer cannot open or call the precedent queue', async ({ page }) => {
   await signIn(page, 'officer')
-  await expect(page.getByRole('heading', { name: 'Cases' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Precedent queue' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Precedents' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Users' })).toHaveCount(0)
   await page.goto('/admin/precedents')
+  await expect(page).not.toHaveURL(/admin/)
+  await page.goto('/admin/users')
   await expect(page).not.toHaveURL(/admin/)
   const token = await page.evaluate(() => JSON.parse(sessionStorage.getItem('lc.session')).token)
   const headers = { Authorization: `Bearer ${token}` }
   expect((await page.request.get('/api/v1/admin/precedents', { headers })).status()).toBe(403)
+  expect((await page.request.get('/api/v1/admin/users', { headers })).status()).toBe(403)
+  expect((await page.request.get('/api/v1/admin/summary', { headers })).status()).toBe(403)
   const id = '00000000-0000-0000-0000-000000000000'
   expect(
     (
@@ -48,6 +55,7 @@ test('the admin reviews a precedent: approve needs a dialog and an expiry date',
   page,
 }) => {
   await signIn(page, 'admin')
+  await page.getByRole('link', { name: 'Precedents' }).click()
   const card = page.locator('article', { hasText: 'CASE-2026-9001' })
   await expect(card).toContainText('Stable employer for ten years')
   await card.getByRole('button', { name: 'Approve…' }).click()

@@ -1,4 +1,4 @@
-# Loan Pre-Underwriting Copilot
+# Pramaan: Loan Pre-Underwriting Copilot
 
 A copilot for banks and NBFCs. A loan officer uploads an applicant's documents. A LangGraph multi-agent pipeline checks them stage by stage, scores the case in code, and writes a report with a recommendation and policy citations. A human confirms every case.
 
@@ -6,7 +6,7 @@ Capstone project. Synthetic data only. No real personal data.
 
 ## Status
 
-Stage 1 (foundation and synthetic data) built; awaiting review. Next: Stage 2 (intake and parsers).
+Stages 1 to 8 are built (Stage 8 is the Pramaan UI revamp). See `docs/PROGRESS.md` for the current status.
 
 ## Documents
 

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import CaseQueueTable from '../components/CaseQueueTable'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { LOAN_TYPES } from '../components/LoanTypePicker'
+import { VIEWS, matchesView } from '../lib/views'
 import './CaseQueuePage.css'
 
 const STATUSES = [
@@ -19,6 +20,8 @@ const STATUSES = [
 ]
 
 export default function CaseQueuePage() {
+  const [params, setParams] = useSearchParams()
+  const view = VIEWS[params.get('view')] ? params.get('view') : ''
   const [status, setStatus] = useState('')
   const [loan, setLoan] = useState('')
   const [q, setQ] = useState('')
@@ -30,6 +33,7 @@ export default function CaseQueuePage() {
     return api.get(`/cases?${p}`)
   }, [status, loan, q])
 
+  const shown = data ? data.filter((c) => matchesView(c, view)) : null
   return (
     <div className="queue-page">
       <div className="queue-head">
@@ -76,9 +80,17 @@ export default function CaseQueuePage() {
           </select>
         </div>
       </div>
+      {view && (
+        <p className="view-note">
+          Showing: <strong>{VIEWS[view].label}</strong>{' '}
+          <button type="button" className="btn btn-ghost" onClick={() => setParams({})}>
+            Show all cases
+          </button>
+        </p>
+      )}
       {loading && <Skeleton lines={5} height={36} />}
       {error && <ErrorState error={error} onRetry={reload} />}
-      {data && data.length === 0 && (
+      {shown && shown.length === 0 && (
         <EmptyState
           title="No cases yet"
           action={
@@ -90,7 +102,7 @@ export default function CaseQueuePage() {
           Cases you create appear here.
         </EmptyState>
       )}
-      {data && data.length > 0 && <CaseQueueTable cases={data} />}
+      {shown && shown.length > 0 && <CaseQueueTable cases={shown} />}
     </div>
   )
 }

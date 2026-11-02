@@ -1,32 +1,55 @@
-/* Design tokens from docs/DESIGN_SYSTEM.md section 2. Components use these variables only. */
+/* Design tokens from docs/DESIGN_SYSTEM.md section 8. Components use these variables only.
+   Light is the default. Dark applies when <html data-theme="dark"> or, with no choice stored,
+   when the system prefers dark. The two dark blocks must stay identical (a test checks it). */
 :root {
-  --ink: #1f2933;
-  --muted: #52606d;
-  --line: #d9dee3;
-  --surface: #ffffff;
-  --bg: #f6f7f9;
-  --primary: #2f6fde;
-  --primary-ink: #ffffff;
-  --primary-soft: #e8f0fd;
+  color-scheme: light;
 
-  --approve: #1e7f4f;
+  --brand: #7c70af;
+  --brand-strong: #5e4fa0;
+  --brand-soft: #e4e1ee;
+  --bg: #f7f6fa;
+  --surface: #ffffff;
+  --ink: #1f2933;
+  --muted: #5a6472;
+  --line: #ddd9e8;
+
+  --primary: var(--brand-strong);
+  --primary-hover: #4d3f8a;
+  --primary-ink: #ffffff;
+  --primary-soft: var(--brand-soft);
+
+  --approve: #19703f;
   --approve-bg: #e4f4e8;
-  --refer: #9a6200;
+  --refer: #8a5700;
   --refer-bg: #fff1d6;
   --reject: #b03a36;
   --reject-bg: #fde3e1;
   --stopped: #52606d;
-  --stopped-bg: #eef0f3;
-  --unverified: #6b55b5;
-  --unverified-bg: #eee8fa;
+  --stopped-bg: #eeeff3;
+  --unverified: #0b6a72;
+  --unverified-bg: #ddf3f4;
+
+  --danger-bg: #b03a36;
+  --danger-hover: #962f2c;
+  --danger-ink: #ffffff;
+
+  --shimmer: #f6f5fa;
+  --overlay: rgba(31, 25, 51, 0.5);
+  --shadow: 0 1px 2px rgba(48, 36, 92, 0.07), 0 1px 3px rgba(48, 36, 92, 0.05);
+  --focus: 0 0 0 3px rgba(94, 79, 160, 0.5);
+  --glow-a: rgba(124, 112, 175, 0.22);
+  --glow-b: rgba(11, 106, 114, 0.1);
+  --panel-bg: linear-gradient(160deg, #3b3070 0%, #4a3d8a 55%, #5e4fa0 100%);
 
   --font: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-head: Outfit, Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --fs-12: 0.75rem;
   --fs-14: 0.875rem;
   --fs-16: 1rem;
   --fs-20: 1.25rem;
   --fs-24: 1.5rem;
+  --fs-32: 2rem;
 
   --s-1: 4px;
   --s-2: 8px;
@@ -37,10 +60,89 @@
 
   --radius-card: 8px;
   --radius-input: 6px;
-  --shadow: 0 1px 2px rgba(31, 41, 51, 0.06), 0 1px 3px rgba(31, 41, 51, 0.04);
-  --focus: 0 0 0 3px rgba(47, 111, 222, 0.45);
+  --sidebar-w: 232px;
 
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --t-fast: 120ms;
   --t-med: 220ms;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --brand: #9a8fcb;
+  --brand-strong: #b3a9dd;
+  --brand-soft: #2a2540;
+  --bg: #141220;
+  --surface: #1e1b2e;
+  --ink: #eceaf4;
+  --muted: #a9a6bd;
+  --line: #35314a;
+
+  --primary-hover: #c6bde8;
+  --primary-ink: #141220;
+
+  --approve: #7bdca8;
+  --approve-bg: #123524;
+  --refer: #f2c068;
+  --refer-bg: #3a2c10;
+  --reject: #ff9c97;
+  --reject-bg: #3f1b1e;
+  --stopped: #b5b2c8;
+  --stopped-bg: #2a273b;
+  --unverified: #6fd6db;
+  --unverified-bg: #0f3336;
+
+  --danger-bg: #ff9c97;
+  --danger-hover: #ffb3af;
+  --danger-ink: #2b0b0d;
+
+  --shimmer: #2f2b44;
+  --overlay: rgba(6, 4, 14, 0.65);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --focus: 0 0 0 3px rgba(179, 169, 221, 0.6);
+  --glow-a: rgba(154, 143, 203, 0.18);
+  --glow-b: rgba(111, 214, 219, 0.08);
+  --panel-bg: linear-gradient(160deg, #1e1a38 0%, #2c2552 55%, #3b3169 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
+    --brand: #9a8fcb;
+    --brand-strong: #b3a9dd;
+    --brand-soft: #2a2540;
+    --bg: #141220;
+    --surface: #1e1b2e;
+    --ink: #eceaf4;
+    --muted: #a9a6bd;
+    --line: #35314a;
+
+    --primary-hover: #c6bde8;
+    --primary-ink: #141220;
+
+    --approve: #7bdca8;
+    --approve-bg: #123524;
+    --refer: #f2c068;
+    --refer-bg: #3a2c10;
+    --reject: #ff9c97;
+    --reject-bg: #3f1b1e;
+    --stopped: #b5b2c8;
+    --stopped-bg: #2a273b;
+    --unverified: #6fd6db;
+    --unverified-bg: #0f3336;
+
+    --danger-bg: #ff9c97;
+    --danger-hover: #ffb3af;
+    --danger-ink: #2b0b0d;
+
+    --shimmer: #2f2b44;
+    --overlay: rgba(6, 4, 14, 0.65);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --focus: 0 0 0 3px rgba(179, 169, 221, 0.6);
+    --glow-a: rgba(154, 143, 203, 0.18);
+    --glow-b: rgba(111, 214, 219, 0.08);
+    --panel-bg: linear-gradient(160deg, #1e1a38 0%, #2c2552 55%, #3b3169 100%);
+  }
 }

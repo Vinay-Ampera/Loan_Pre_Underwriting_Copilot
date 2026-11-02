@@ -1,0 +1,30 @@
+.credit-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.c-cell {
+  padding: var(--s-3) var(--s-4);
+}
+.c-cell + .c-cell {
+  border-left: 1px solid var(--line);
+}
+.c-cell h3 {
+  color: var(--muted);
+  font-size: var(--fs-12);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.c-value {
+  font-family: var(--font-head);
+  font-size: var(--fs-20);
+  font-weight: 600;
+}
+@media (max-width: 560px) {
+  .credit-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .c-cell + .c-cell {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}
