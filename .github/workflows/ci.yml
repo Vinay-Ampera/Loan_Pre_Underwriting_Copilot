@@ -52,8 +52,26 @@ jobs:
         run: pytest -q
       - name: Evaluation gate (dev split, code-side metrics)
         run: python -m app.eval.run --split dev
+      # filelock 3.32.7 has 13 advisories fixed only in 4.x, but the newest litellm requires
+      # filelock<4.0, so they cannot be installed together. filelock only locks local cache files
+      # (Hugging Face, torch) and no request data reaches it. Drop these ignores when litellm
+      # lifts the cap (docs/EDGE_CASES.md E-41).
       - name: Dependency audit
-        run: pip-audit -r requirements.txt --progress-spinner off
+        run: |
+          pip-audit -r requirements.txt --progress-spinner off \
+            --ignore-vuln CVE-2026-112940 \
+            --ignore-vuln CVE-2026-112913 \
+            --ignore-vuln CVE-2026-112907 \
+            --ignore-vuln CVE-2026-112938 \
+            --ignore-vuln CVE-2026-112936 \
+            --ignore-vuln CVE-2026-112910 \
+            --ignore-vuln CVE-2026-112909 \
+            --ignore-vuln CVE-2026-112911 \
+            --ignore-vuln CVE-2026-112939 \
+            --ignore-vuln CVE-2026-112915 \
+            --ignore-vuln CVE-2026-112935 \
+            --ignore-vuln CVE-2026-112912 \
+            --ignore-vuln CVE-2026-112908
 
   frontend:
     runs-on: ubuntu-24.04
