@@ -232,7 +232,7 @@ async def extract(ctx: AgentContext, sub: Submission) -> Extracted:
     inp = CaseInput(
         case_id=sub.case_id, loan_type=app["loan_type"], application_date=app_date,
         loan_amount=app["loan_amount"], tenure_months=app["tenure_months"],
-        purpose=app.get("purpose", ""), persons=persons, documents=docs,
+        purpose=app.get("purpose") or "", persons=persons, documents=docs,
         details=app.get("loan_details", {}),
         gst=GstInput(gstin=gst_rec.gstin, pan=gst_rec.pan, turnover_12m=gst_rec.turnover_12m)
         if gst_rec else None,

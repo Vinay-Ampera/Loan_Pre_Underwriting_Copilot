@@ -178,6 +178,21 @@ def _officer_action(conn: Connection, case_id: UUID) -> dict[str, Any] | None:
     }  # fmt: skip
 
 
+def _last_failure(conn: Connection, case_id: UUID, status: str) -> dict[str, Any] | None:
+    """The run's error type when the latest run of an unfinished case failed, else None. A failed
+    run puts the case back to `uploaded` (or `stopped`), so the officer needs to be told why."""
+    if status not in ("uploaded", "stopped"):
+        return None
+    r = conn.execute(
+        text("""SELECT action, at, after FROM audit_log
+                WHERE entity = 'case' AND entity_id = :i
+                  AND action IN ('pipeline_failed', 'case_submitted', 'case_resumed_after_fix')
+                ORDER BY at DESC, id DESC LIMIT 1"""), {"i": str(case_id)}).first()  # fmt: skip
+    if r is None or r.action != "pipeline_failed":
+        return None
+    return {"error": (r.after or {}).get("error", "Error"), "at": r.at}
+
+
 def _summary(row: Any) -> dict[str, Any]:
     return {
         "id": row.id, "case_no": row.case_no, "loan_type": row.loan_type, "status": row.status,
@@ -341,6 +356,7 @@ def read_case(
         "report_version": report[0] if report else None,
         "report": report[1] if report else None,
         "officer_action": _officer_action(conn, case_id),
+        "last_failure": _last_failure(conn, case_id, row.status),
         "loan_fields": LOAN_FIELDS[row.loan_type],
     }  # fmt: skip
 

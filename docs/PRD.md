@@ -304,13 +304,13 @@ Detail is in `ARCHITECTURE.md`.
 
 | ID | Item | Current handling |
 |---|---|---|
-| OI-1 | "No applicant above 55": confirmed as a cap for every applicant and co-applicant. The exact meaning (age at application or at maturity) was not stated. | Treated as age at maturity ≤55, configurable. For education loans this shortens parent co-applicant tenure; confirm this is intended. |
+| OI-1 | "No applicant above 55": confirmed as a cap for every applicant and co-applicant. The exact meaning (age at application or at maturity) was not stated. | **Resolved 2026-11-02:** user confirmed age at maturity ≤55, including the education parent co-applicant (shorter tenure is intended, see E-35). Value stays configurable in the rules file. |
 | OI-2 | DPO, TRL, Colab and tuned Qwen from the original idea | **Resolved 2026-10-31:** removed. No training, no local LLM, API only. Learning is precedent-based with admin approval. |
-| OI-3 | Size of the precedent bonus and similarity threshold | Placeholders in the rules file; tune on dev data. |
-| OI-4 | Langfuse cloud versus self-hosted | Cloud if quick, else local. |
+| OI-3 | Size of the precedent bonus and similarity threshold | Design settled 2026-11-02: the Policy agent only finds matches; code turns them into capped bonus points (see E-36). The values (`bonus_max` 5, `similarity_min` 0.80) are still placeholders; tune on dev data after the real-model baseline, then lock (Stage 7 plan step 6). |
+| OI-4 | Langfuse cloud versus self-hosted | Cloud. User added the keys to `.env` on 2026-11-02. Still to do: run one case and confirm the trace appears in Langfuse cloud, then close. |
 | OI-5 | Exact free model names and rate limits | **Resolved 2026-10-31** (verified live, see `docs/AGENTS.md` section 7 and `backend/app/services/llm_models.yaml`). Gemini Flash is `gemini-3.6-flash` (2.5 Flash is closed to new users); Groq `openai/gpt-oss-20b` allows 1,000 requests/day but only **8,000 tokens/minute**; NVIDIA `nvidia/nemotron-3-ultra-550b-a55b` at about 40 requests/minute shared across models; fallback OpenRouter free (20 requests/minute, 50/day). |
-| OI-6 | Fairness groups | Gender, age band, city tier, for monitoring only. |
-| OI-7 | Targets for evaluation metrics | Set after the first baseline run. |
+| OI-6 | Fairness groups | **Resolved 2026-11-02:** gender, age band, city tier, logged in `fairness_attributes` for monitoring only. Never an input to scoring, agents or RAG; a flagged gap is a prompt to review, not proof of bias (see E-37). |
+| OI-7 | Targets for evaluation metrics | Deferred by user decision (2026-11-02): no hard accuracy or latency targets until the first real-model baseline run; then lock thresholds. Fixed from day one: citation validity 100%, hard-rule integrity 100%, zero raw PII in LLM inputs (see E-38). |
 
 ## 16. Not done yet (by design)
 

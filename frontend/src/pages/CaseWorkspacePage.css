@@ -111,6 +111,15 @@
   color: var(--stopped);
   font-weight: 600;
 }
+.failed-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  border-radius: var(--radius-input);
+  background: var(--reject-bg);
+  color: var(--reject);
+}
 .decision {
   padding: var(--s-4);
   display: flex;

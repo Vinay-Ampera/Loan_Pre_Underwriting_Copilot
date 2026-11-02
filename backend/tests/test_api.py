@@ -20,6 +20,7 @@ from PIL import Image
 from pydantic import SecretStr
 from sqlalchemy import Engine, create_engine, text
 
+from app.api.deps import write_audit
 from app.api.main import create_app
 from app.api.security import hash_password
 from app.core.config import REPO_ROOT, Settings
@@ -489,6 +490,32 @@ def first_clean_dev_case(prefix: str) -> str:
         ):
             return str(c["case_id"])
     raise LookupError(prefix)
+
+
+@needs_cases
+def test_a_case_without_a_purpose_runs_and_a_failed_run_is_shown_to_the_officer(
+    client: TestClient, engine: Engine
+) -> None:
+    """Purpose is optional on the form and arrives as None (EDGE_CASES E-40)."""
+    case = first_clean_dev_case("PL")
+    h = login(client, "asha")
+    body = {**application(case), "purpose": None}
+    case_id = create(client, h, body)
+    upload_all(client, h, case_id, case)
+    assert client.post(f"/api/v1/cases/{case_id}/submit", headers=h).status_code == 202
+    wait_for(client, h, case_id, {"awaiting_confirmation"})
+    detail = client.get(f"/api/v1/cases/{case_id}", headers=h).json()
+    assert detail["purpose"] is None and detail["last_failure"] is None
+
+    # a run that fails puts the case back and the case view says what failed
+    with engine.begin() as c:
+        failed = c.execute(
+            text("SELECT id FROM cases WHERE case_no = :n"), {"n": detail["case_no"]}
+        ).scalar_one()
+        c.execute(text("UPDATE cases SET status = 'uploaded' WHERE id = :i"), {"i": failed})
+        write_audit(c, None, "pipeline_failed", "case", failed, after={"error": "ValidationError"})
+    again = client.get(f"/api/v1/cases/{case_id}", headers=h).json()
+    assert again["last_failure"]["error"] == "ValidationError"
 
 
 @needs_cases

@@ -340,6 +340,16 @@ export default function CaseWorkspacePage() {
             </p>
           )}
 
+          {c.last_failure && !running && (
+            <div className="failed-note" role="alert">
+              <strong>The assessment failed.</strong> Please try again, or contact an admin if it
+              keeps failing.
+              <span className="small muted">
+                Error type: {c.last_failure.error} · {new Date(c.last_failure.at).toLocaleString()}
+              </span>
+            </div>
+          )}
+
           {['draft', 'uploaded'].includes(c.status) && (
             <div className="ws-actions">
               <button
