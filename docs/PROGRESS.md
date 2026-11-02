@@ -17,11 +17,11 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 5 Agent pipeline on LangGraph | Built, committed | All 60 dev cases finish and stop where expected (the 9 unreadable-ID cases stop at KYC, E-27); kill-and-resume, forced 429 and injection checks pass |
 | 6 API and frontend | Built, exit criteria pass | FastAPI with roles, JWT and audit; background runs; React JS + CSS screens; server PDF. Run `python -m app.db.migrate` (0008) on Neon and create users with `app.api.users_cli` before using it |
 | 7 Learning loop, evaluation, observability | Built, committed (`babe29b`) | Open items updated 2026-11-02: OI-1, OI-2, OI-5, OI-6 resolved; OI-3 values, OI-4 live Langfuse check and OI-7 targets wait for the real-model baseline run |
-| 8 UI revamp (Pramaan) | **Built, exit criteria pass (not committed)** | 2026-11-02. Tokens and bundled fonts, light/dark/system, login landing, sidebar shell, Home screens, stepper, score ring, 3C strip, Conditions, admin Users (new endpoints, audited). See "Stage 8 build notes". No migration, no scoring change |
-| 9 Customer notifications | **Planned, not started** | Approved 2026-11-02. Build order of 8 and 9 is decided at the end |
+| 8 UI revamp (Pramaan) | Built, committed (`25e6ad6`, `ff177fa`) | 2026-11-02. Tokens and bundled fonts, light/dark/system, login landing, sidebar shell, Home screens, stepper, score ring, 3C strip, Conditions, admin Users (new endpoints, audited). See "Stage 8 build notes". No migration, no scoring change |
+| 9 Customer notifications and issue reports | **Built, exit criteria pass (not committed)** | 2026-11-02. Migration 0010 (outbox, issue_reports, `users.phone`, `applicants.email`), `app/notifications/`, message and issue routes, Sent items, draft dialog, Report a problem, admin Issues. See "Stage 9 build notes". Run `python -m app.db.migrate` first |
 | 10 Hardening, Docker and demo | **Planned, not started** | Was Stage 8; renumbered 2026-11-02. Starts only after Stages 8 and 9 and the review window (see the plan) |
 
-Next: the user commits Stage 8, then starts Stage 9 (customer notifications) in a new session. Ask the Stage 9 questions under "Stage 8 and 9 questions to ask before coding" first.
+Next: the user commits Stage 9 and applies migration 0010 on Neon, then the review window (additions and corrections), then Stage 10. Do not start Stage 10 until the user says so.
 
 ---
 
@@ -61,11 +61,21 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 
 - [x] Stage 8 UI revamp (2026-11-02)
 - [x] Stage 8 follow-ups: login page trim and contact-admin sentence, in-app footer, Help page `/help` (built 2026-11-02; frontend only, no migration, no backend change; tests added; not committed)
-- [ ] Stage 9 Customer notifications
+- [x] Stage 9 Customer notifications and issue reports (2026-11-02; migration 0010; not committed)
 - [ ] Review window: additions and corrections collected by the user before Stage 10
 - [ ] Stage 10 Hardening, Docker and demo
 
 ---
+
+## Stage 9 build notes (2026-11-02)
+
+- **Questions:** none blocked the build. Defaults taken (change on request): the branch contact lines are optional (`BRANCH_CONTACT_EMAIL`, `BRANCH_CONTACT_PHONE` in `.env.example`, empty = omitted); the **template wording is mine and awaits the user's review** (`app/notifications/templates.py`: three templates, general contact, contact soon, visit the branch, plus blank); only the officer who owns a message can edit, send or retry it; one migration holds the outbox, issue reports and the two contact fields.
+- **Data (migration 0010):** `outbox`, `issue_reports`, `users.phone`, `applicants.email`. The customer email lives only in `applicants.email`, so it is never in `cases.form_data` and never reaches the pipeline or a model. Grants for `app_rw` and `migrator` are given when those roles exist.
+- **Backend:** `app/notifications/` (`templates.py` fixed subject, footer and `compose`; `check.py` the content check and the issue check; `sender.py` the `Sender` protocol, `ConsoleSender`, `build_sender`), `app/api/messages.py` (templates, officer phone, draft, edit, send/retry, list, read), `app/api/issues.py` (file, own list, admin inbox, read, close). `create_app` takes an optional `sender`. `/admin/summary` also counts open issues and messages sent and failed (counts only). The case view returns the customer email masked; a corrected form that leaves it masked keeps the stored one.
+- **Behaviour worth knowing:** the draft is created after confirm, override or stop (409 otherwise); the server composes the text (body, optional case reference, contact lines, fixed footer) and checks it on create, edit and send; a blocked or failed send is returned (422 or 502) with its status and audit row committed; sending needs `second_click: true`; a sent message is final. The check also blocks the customer's name, amounts, links and other email addresses, which the plan did not list (a phishing and leak guard). Audit rows never hold message text.
+- **Frontend:** `MessageDialog` (two steps, the second shows the exact text), `CustomerContact` card on the case page, `SentItemsPage`, `IssuesPage`, `AdminIssuesPage`, sidebar links, an Open issues tile on admin Home, a customer email field on the application form, and new Help sections. Details in `DESIGN_SYSTEM.md` 9.1.
+- **Measured:** results are in `TESTING.md` section 7d.
+- **Not done / left for the review window:** real email or SMS (out of scope for v1); a browser (Playwright) test of the message flow, which is listed in the Stage 10 demo checks; the template wording review.
 
 ## Stage 8 build notes (2026-11-02)
 
@@ -75,7 +85,7 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 - **Contrast:** the unit test found two Stage 6 status colours below AA on their tinted backgrounds (approve and refer). They were darkened (`#19703f`, `#8a5700`). All text pairings now pass 4.5:1 in both themes.
 - **Fonts:** `@fontsource/inter` and `@fontsource/outfit` are exact-pinned in `frontend/package.json`; no runtime request to Google.
 - **Measured:** results are in `TESTING.md` section 7c.
-- **Decisions taken:** the 3C strip and Conditions are built in the browser from the report's existing stage scores and document findings (no backend change, no numbers added). Home tiles filter in the browser (`/cases?view=...`) because the list endpoint filters by status only. "Referred" means awaiting confirmation with band refer. The Sent items link is not shown until Stage 9. Admin creation of another admin is allowed (the CLI allowed it too).
+- **Decisions taken:** the 3C strip and Conditions are built in the browser from the report's existing stage scores and document findings (no backend change, no numbers added). Home tiles filter in the browser (`/cases?view=...`) because the list endpoint filters by status only. "Referred" means awaiting confirmation with band refer. The Sent items link arrived with Stage 9. Admin creation of another admin is allowed (the CLI allowed it too).
 - **Not done here:** nothing from the Stage 8 task list. Policy and rule file status and the Grafana link (listed as not built in Stage 6) are not in the Stage 8 plan and remain open for the review window.
 
 ---

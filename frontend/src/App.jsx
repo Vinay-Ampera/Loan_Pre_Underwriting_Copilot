@@ -12,6 +12,9 @@ import AdminHomePage from './pages/AdminHomePage'
 import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import HelpPage from './pages/HelpPage'
+import SentItemsPage from './pages/SentItemsPage'
+import IssuesPage from './pages/IssuesPage'
+import AdminIssuesPage from './pages/AdminIssuesPage'
 import './App.css'
 
 const SessionContext = createContext(null)
@@ -91,6 +94,30 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminUsersPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/messages"
+        element={
+          <Shell role="officer">
+            <SentItemsPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/problems"
+        element={
+          <Shell role="officer">
+            <IssuesPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/issues"
+        element={
+          <Shell role="admin">
+            <AdminIssuesPage />
           </Shell>
         }
       />

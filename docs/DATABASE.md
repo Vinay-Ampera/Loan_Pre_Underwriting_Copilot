@@ -7,14 +7,14 @@ Conventions: `id` is UUID primary key; `created_at` and `updated_at` are `timest
 ## 1. Core case data
 
 **users**
-`id, name, email (unique), phone (nullable; Stage 9), password_hash (argon2), role (officer|admin), active, failed_logins, locked_until, created_at, updated_at`
+`id, name, email (unique), phone (nullable; added in migration 0010), password_hash (argon2), role (officer|admin), active, failed_logins, locked_until, created_at, updated_at`
 Migration 0008 added `failed_logins` and `locked_until` (lockout after repeated failures, SECURITY section 4). Users are created with `python -m app.api.users_cli` or, from Stage 8, by the admin in the Users screen (`POST /admin/users`); the CLI password is typed at a prompt and the screen's temporary password is shown once. Neither is stored in a file or the audit log. Stage 8 added no migration.
 
 **cases**
 `id, case_no (CASE-YYYY-NNNN, unique), loan_type (personal|home|education|business|vehicle), status (draft|uploaded|running|stopped|awaiting_confirmation|confirmed|overridden), created_by → users, loan_amount, tenure_months, purpose, form_data jsonb (type-specific fields), stopped_stage, stop_class (fix|eligibility|null), total_score (null if stopped), band (approve|refer|reject|null), recommendation, policy_version, rules_version, created_at, updated_at`
 
 **applicants**
-`id, case_id → cases, role (primary|co), full_name, dob, pan, aadhaar_last4, address, phone, email (nullable; Stage 9, synthetic), employment_type (salaried|self_employed), employer_or_business, declared_monthly_income, relationship_to_primary, created_at`
+`id, case_id → cases, role (primary|co), full_name, dob, pan, aadhaar_last4, address, phone, email (nullable; migration 0010, synthetic; kept only in this column, never in `cases.form_data`), employment_type (salaried|self_employed), employer_or_business, declared_monthly_income, relationship_to_primary, created_at`
 Raw PAN and Aadhaar are synthetic. Full Aadhaar is never stored.
 
 **documents**
@@ -52,9 +52,13 @@ One row per (case, stage); a stage that runs again (resume, correction) replaces
 `held` = failed the code-side hard-rule check; it never reaches the admin or RAG. A CHECK constraint stops a row becoming `approved` without a reviewer, review time, expiry date and embedding.
 Index: HNSW on `embedding`; btree on `(loan_type, status)`.
 
-**outbox** (Stage 9, planned)
-`id, case_id → cases, sent_by → users, recipient_email, template (stopped_contact|visit_branch|general_contact|blank...), subject, body, case_ref_included bool, status (draft|blocked|sent|failed), block_reason (nullable), error (nullable), created_at, sent_at`
-Stores exactly the text that was shown to the customer. The body never holds case data by design (the content check enforces it). Officers read only their own rows; the admin API returns counts only. Raw customer email is synthetic; lists show it masked. Retention: kept with the case.
+**outbox** (Stage 9, migration 0010)
+`id, case_id → cases (cascade), sent_by → users, recipient_email, template (general_contact|contact_soon|visit_branch|blank), subject, body (the officer-editable part), final_text (the full text with contact lines and footer, set at send), case_ref_included bool, status (draft|blocked|sent|failed), block_reason (nullable), error (nullable), created_at, updated_at, sent_at`
+`body` never holds case data by design (the content check enforces it); `final_text` is exactly what the customer received. Officers read only their own rows; the admin API returns counts only. Raw customer email is synthetic; every API view shows it masked. Retention: kept with the case.
+
+**issue_reports** (Stage 9, migration 0010)
+`id, reported_by → users, case_ref (nullable text CASE-YYYY-NNNN, not a foreign key, so the admin inbox cannot reach case data), category (bug|wrong_result|access|other), body, status (open|read|closed), created_at, read_at, closed_at`
+Reports containing PAN, Aadhaar, phone, account number or email patterns are refused and never stored. Officers read their own rows; the admin reads all.
 
 **audit_log**
 `id, actor_id, action, entity, entity_id, before jsonb, after jsonb, at`

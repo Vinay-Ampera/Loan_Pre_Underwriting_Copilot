@@ -34,16 +34,19 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 - Database roles per `DATABASE.md` section 7. Fairness attributes are isolated from the pipeline.
 
 - **D2. Login help (Stage 8 follow-up):** the login page has no request form, no password-recovery email and no contact details. It shows only the sentence "Can't sign in? Contact your admin.", so nothing unauthenticated can write to the system or be read from it, and the sign-in message cannot be used to learn which accounts exist. The score weights and bands are shown only after sign-in, on the Help page.
-- **E. Customer messages (Stage 9, planned):** officers read only their own outbox rows (another officer's is a 404); the admin sees counts only. The send endpoint runs the content check on the server, so the UI cannot skip it. The fraud footer is added server-side.
+- **E. Customer messages (Stage 9, built):** officers read only their own outbox rows (another officer's is a 404); the admin sees counts only. The send endpoint runs the content check on the server, so the UI cannot skip it. The fraud footer is added server-side.
 
-## 4b. Customer contact messages (Stage 9, planned)
+## 4b. Customer contact messages (Stage 9, built)
 
 - A message holds **no confidential data and no outcome hint**: no name, score, status, missing item, reason, PAN, Aadhaar, account or phone number. Only an optional case reference, the officer's contact lines and the fixed fraud warning.
 - The warning always says bank staff never ask for an OTP, PIN or password, and the content check blocks any draft that asks for one, so the channel cannot be used for phishing.
 - Blank messages go through the same check; a hit blocks the send. The officer sends with a second confirming click that shows the final text.
 - No-reply: the message asks the customer to contact the officer; nothing is read back from a reply.
 - Delivery in v1 is the terminal log and Sent Items. If a real mail or SMS sender is added later, it needs a new review: the recipient is customer data, so use consented, test or synthetic addresses only.
-- Customer email is masked in lists, logs and any model input. Sent text is stored in the outbox and audited (draft, edit, send, block, fail).
+- Customer email is masked in lists, logs and any model input; it is stored in its own column and never in the form the pipeline reads. The console sender prints the recipient masked. Sent text is stored in the outbox; audit rows (`message_drafted`, `message_edited`, `message_blocked`, `message_sent`, `message_failed`) hold template, status and reasons but never the text.
+- The check runs on the subject and the officer's body at create, edit and send, and also blocks the customer's name (any name part of three or more letters), amounts of money, links and other email addresses, so a message cannot carry a phishing link. The contact lines and footer are added by code from trusted data and are not scanned.
+- A blocked send is returned (422) with the status and audit row committed. A failed send returns 502, is saved as `failed` and can be retried by the same officer with a second click.
+- Issue reports: refused (and audited as `issue_blocked`, without the text) when they contain PAN, Aadhaar, phone, account number or email patterns; the case reference is plain text, so the admin inbox never joins to case data.
 
 ## 5. Secrets and logging
 

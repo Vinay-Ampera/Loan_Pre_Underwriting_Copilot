@@ -5,6 +5,8 @@ const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/
 const PAN_MASKED = /^[A-Z]{5}\*{4}[A-Z]$/
 const PHONE = /^[6-9][0-9]{9}$/
 const PHONE_MASKED = /^\*{6}[0-9]{4}$/
+const EMAIL = /^[^@\s*]+@[^@\s]+\.[^@\s]+$/
+const EMAIL_MASKED = /^\*{4}@[^@\s]+\.[^@\s]+$/
 
 const blankPerson = (role) => ({
   role,
@@ -13,6 +15,7 @@ const blankPerson = (role) => ({
   pan: '',
   aadhaar_last4: '',
   phone: '',
+  email: '',
   address: '',
   employment_type: role === 'co' ? 'salaried' : 'salaried',
   employer_or_business: '',
@@ -121,6 +124,17 @@ function Person({ p, set, errors, editing, prefix }) {
           autoComplete="off"
         />
       </Field>
+      {p.role === 'primary' && (
+        <Field
+          id={idOf('email')}
+          label="Customer email"
+          required={false}
+          error={errors.email}
+          hint="Used only to send the customer a contact request. Never shown to any AI service."
+        >
+          <input className="input" type="email" {...bind('email')} autoComplete="off" />
+        </Field>
+      )}
       <Field id={idOf('address')} label="Address" required error={errors.address}>
         <input className="input" {...bind('address')} autoComplete="off" />
       </Field>
@@ -214,6 +228,7 @@ function toBody(loanType, meta, s, hasCo) {
       aadhaar_last4: p.aadhaar_last4.trim(),
       address: p.address.trim(),
       phone: p.phone.trim() || null,
+      email: r === 'primary' ? p.email.trim() || null : null,
       employment_type: p.employment_type,
       employer_or_business: student ? null : p.employer_or_business.trim() || null,
       declared_monthly_income: student ? null : num(p.declared_monthly_income),
@@ -256,6 +271,9 @@ function validate(loanType, meta, s, hasCo, editing) {
     const ph = p.phone.trim()
     if (ph && !PHONE.test(ph) && !(editing && PHONE_MASKED.test(ph)))
       e.phone = 'Enter a 10-digit mobile number.'
+    const em = p.email.trim()
+    if (r === 'primary' && em && !EMAIL.test(em) && !(editing && EMAIL_MASKED.test(em)))
+      e.email = 'Enter a valid email address, or leave it empty.'
     if (p.address.trim().length < 5) e.address = 'Enter the address.'
     if (p.employment_type !== 'student' && p.declared_monthly_income === '')
       e.declared_monthly_income = 'Enter the monthly income.'

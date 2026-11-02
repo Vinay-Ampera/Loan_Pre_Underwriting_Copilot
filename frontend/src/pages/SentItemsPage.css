@@ -1,0 +1,30 @@
+.sent-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.sent-wrap {
+  overflow-x: auto;
+}
+.sent th,
+.sent td {
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.sent th {
+  color: var(--muted);
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sent tbody tr:last-child td {
+  border-bottom: 0;
+}
+.sent .row-actions {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}

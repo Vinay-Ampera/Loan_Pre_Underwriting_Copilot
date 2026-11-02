@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     login_lock_minutes: int = 15
     cors_origins: str = ""  # comma separated; empty = same origin (dev server proxies /api)
 
+    # Customer messages (Stage 9): v1 delivers to the backend terminal only
+    notification_sender: str = "console"
+    branch_contact_email: str = ""  # optional extra contact lines in customer messages
+    branch_contact_phone: str = ""
+
     def sqlalchemy_url(self) -> str:
         """DATABASE_URL rewritten for SQLAlchemy's psycopg (v3) driver."""
         if self.database_url is None:

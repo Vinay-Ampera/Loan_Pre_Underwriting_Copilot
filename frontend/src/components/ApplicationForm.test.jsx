@@ -38,4 +38,13 @@ describe('ApplicationForm required and optional fields', () => {
     expect(screen.queryByText(/mobile number\./i)).not.toBeInTheDocument()
     expect(screen.queryByText(/property owner name\./i)).not.toBeInTheDocument()
   })
+
+  it('has an optional customer email on the primary applicant that must look like an email', async () => {
+    const { onSubmit, user } = setup()
+    expect(screen.getByText('Customer email').textContent).toContain('(optional)')
+    await user.type(screen.getByLabelText(/Customer email/), 'not-an-email')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText(/Enter a valid email address/)).toBeInTheDocument()
+  })
 })

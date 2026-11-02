@@ -233,13 +233,15 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 
 - FR-20 v1: edit policy and rule files, run a re-index command. Policy and rule versions are recorded on each report. An admin upload screen comes later.
 
-### 9.6 Customer contact messages (Stage 9, planned)
+### 9.6 Customer contact messages (Stage 9, built 2026-11-02)
 
 - FR-21 After a case is confirmed, overridden or stopped, the officer can draft a message to the customer. Templates plus a **blank** option. The officer reviews, clicks Send and confirms in a second dialog.
 - FR-22 A message carries **no confidential data and no outcome hint**: no name, score, status, missing item or reason. It has one neutral subject, a short generic body, an optional case reference, the officer's name, email and phone, and a fixed fraud warning (bank staff never ask for an OTP, PIN or password). It is a no-reply message.
 - FR-23 A code check blocks a send that contains forbidden content (PAN or Aadhaar patterns, account or phone numbers, scores, rule IDs, outcome words such as approved or rejected, a request for an OTP, PIN or password) or lacks the footer. The block shows the reason.
 - FR-24 v1 delivery is a terminal log and a Sent Items list (sent, failed, blocked) per officer. Failed sends can be retried. Every draft, edit, send, block and failure is in the audit log.
 - FR-25 The fraud footer is added by code and cannot be edited out.
+- FR-26 (issue reports) An officer can report a problem to the admin: case reference (text only), category and short text. The same personal-data patterns (PAN, Aadhaar, phone, account number, email) refuse the report. The officer sees only their own reports; the admin reads and closes all of them in an inbox that holds no case data. Filed, read, closed and refused reports are audited.
+- FR-27 The officer's phone number is optional on the user record (set by the officer in the draft dialog) and the customer email is an optional field on the primary applicant, kept out of the application the pipeline reads.
 
 ### 9.7 Guardrails
 
@@ -328,4 +330,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 7 are built. Stages 8 (UI revamp), 9 (customer notifications) and 10 (hardening, Docker, demo) are planned and approved on 2026-11-02 and not started. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built (Stage 9 awaits the user's commit). Stage 10 (hardening, Docker, demo) is planned and approved and not started; a review window comes before it. Status is tracked in `PROGRESS.md`.

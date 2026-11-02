@@ -200,7 +200,7 @@ Risks: scope creep in visuals. Mitigation: tokens first, then the shell, then sc
 
 ---
 
-## Stage 9: Customer notifications (M)
+## Stage 9: Customer notifications (M) — built 2026-11-02, see `PROGRESS.md`
 
 **Goal:** after a case is assessed or stopped, the officer can send the customer a short, safe contact request, and every message is recorded in a Sent Items list.
 

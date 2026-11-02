@@ -63,10 +63,14 @@ def summary(
                   (SELECT count(*) FROM precedents WHERE status = 'pending') AS pending,
                   (SELECT count(*) FROM users WHERE role = 'officer' AND active) AS officers,
                   (SELECT count(*) FROM users WHERE role = 'admin' AND active) AS admins,
-                  (SELECT count(*) FROM users WHERE NOT active) AS disabled""")
+                  (SELECT count(*) FROM users WHERE NOT active) AS disabled,
+                  (SELECT count(*) FROM issue_reports WHERE status = 'open') AS issues,
+                  (SELECT count(*) FROM outbox WHERE status = 'sent') AS sent,
+                  (SELECT count(*) FROM outbox WHERE status = 'failed') AS failed""")
     ).one()
     return {"pending_precedents": r.pending, "active_officers": r.officers,
-            "active_admins": r.admins, "disabled_accounts": r.disabled}  # fmt: skip
+            "active_admins": r.admins, "disabled_accounts": r.disabled,
+            "open_issues": r.issues, "messages_sent": r.sent, "messages_failed": r.failed}  # fmt: skip
 
 
 @router.post("/users", status_code=201)

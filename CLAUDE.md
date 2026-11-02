@@ -44,7 +44,7 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 14. **Fairness** attributes are monitoring-only, in a separate table the pipeline cannot read.
 15. **Nothing is dropped without the user's permission.** DPO, TRL, Colab and the tuned Qwen model are **removed** (user decision, 2026-10-31): no model training and no local LLM. Only LLM calls go through APIs; embeddings, reranker and OCR still run locally from the pip venv.
 16. **UI (Stage 8, decided 2026-11-02):** brand and bank name **Pramaan**; Ampera purple with a darker purple for buttons (AA contrast); fonts Outfit (headings) and Inter (body) bundled via `@fontsource`; light, dark and system themes with a three-way toggle; login is the landing page (no public page, no signup); admin has a Users screen. Only colour feel and fonts are taken from amperadei.com, never its images, copy or policy. The 5-stage underwriting stepper and a display-only Credit / Capacity / Collateral strip are added; scoring and weights do not change.
-17. **Customer notifications (Stage 9, decided 2026-11-02):** the officer sends the customer a short, no-reply contact request. It carries **no confidential data and no outcome hint** (no name, score, status, missing items or reason), only an optional case reference, the officer's contact details and a fixed fraud warning (bank staff never ask for an OTP, PIN or password). Templates plus a blank option; a code check blocks forbidden content; the officer sends with a second confirming click. v1 delivery is a terminal log plus a Sent Items screen; no real email or SMS.
+17. **Customer notifications (Stage 9, decided 2026-11-02, built 2026-11-02):** the officer sends the customer a short, no-reply contact request. It carries **no confidential data and no outcome hint** (no name, score, status, missing items or reason), only an optional case reference, the officer's contact details and a fixed fraud warning (bank staff never ask for an OTP, PIN or password). Templates plus a blank option; a code check blocks forbidden content; the officer sends with a second confirming click. v1 delivery is a terminal log plus a Sent Items screen; no real email or SMS.
 18. **Stage order (2026-11-02):** Stage 8 UI, Stage 9 notifications, then a review window for additions, then Stage 10 hardening and Docker (the old Stage 8). Docker is always last.
 
 ## Hard constraints for any code you write
@@ -96,7 +96,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Stages 1 to 7 are built and committed (Stage 7 as `babe29b`). Stage 8 (UI revamp, Pramaan) is built (2026-11-02), awaiting the user's commit. Stages 9 (customer notifications) and 10 (hardening, Docker, demo) are planned and approved in the docs but **not started**; do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
+Stages 1 to 8 are built and committed (Stage 8 as `25e6ad6` and `ff177fa`). Stage 9 (customer notifications and issue reports) is built (2026-11-02), awaiting the user's commit; run `python -m app.db.migrate` (0010) before using it. Stage 10 (hardening, Docker, demo) is planned and approved in the docs but **not started**; the review window comes first, and do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
 
 ## Open items
 

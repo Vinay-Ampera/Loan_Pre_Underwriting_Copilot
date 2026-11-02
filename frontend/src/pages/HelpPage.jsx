@@ -53,12 +53,15 @@ const OFFICER = [
   ['stages', 'The five stages', 'cases'],
   ['report', 'Reading the report', 'precedent'],
   ['confirm', 'Confirm or override', 'shield'],
+  ['contact', 'Contact the customer', 'mail'],
+  ['problem', 'Report a problem', 'flag'],
   ['agents', 'What each agent does', 'users'],
   ['score', 'Score weights and bands', 'home'],
 ]
 const ADMIN = [
   ['users', 'Add and disable users', 'users'],
   ['reset', 'Reset a password', 'shield'],
+  ['issues', 'Read issue reports', 'flag'],
   ['precedents', 'The precedent queue', 'precedent'],
 ]
 
@@ -130,6 +133,41 @@ function OfficerGuide() {
         </Callout>
       </HelpSection>
 
+      <HelpSection id="contact" icon="mail" title="Contact the customer">
+        <ul>
+          <li>
+            After you confirm or override a case, or when a run stops, open the case and choose
+            Write a message.
+          </li>
+          <li>
+            Pick a template or write your own, then choose Review. A check runs on the server.
+          </li>
+          <li>
+            The message never carries a name, number, amount, score, result, missing item or reason.
+            If the check blocks it, the reason is shown and you can edit and review again.
+          </li>
+          <li>
+            The last screen shows the exact text. Nothing is sent until you click Yes, send there.
+          </li>
+          <li>
+            Your name, email and phone, and the fraud warning, are added automatically. Staff never
+            ask a customer for an OTP, PIN or password.
+          </li>
+          <li>
+            Sent items lists your messages. A failed one can be sent again. Messages are printed in
+            the backend terminal in this version; no real email is sent.
+          </li>
+        </ul>
+      </HelpSection>
+
+      <HelpSection id="problem" icon="flag" title="Report a problem">
+        <p>
+          Use Report a problem in the menu to tell the admin about something wrong. Add a case
+          reference if it helps. Never paste personal data: a report with a PAN, Aadhaar, phone,
+          account number or email is refused. You can see the status of your own reports there.
+        </p>
+      </HelpSection>
+
       <HelpSection id="agents" icon="users" title="What each agent does">
         <div className="agent-grid">
           {AGENTS.map(([name, points, does, more]) => (
@@ -180,6 +218,15 @@ function AdminGuide() {
           A temporary password is made and shown once, on the next screen. It cannot be shown again.
           A locked account unlocks by itself after a while.
         </Callout>
+      </HelpSection>
+
+      <HelpSection id="issues" icon="flag" title="Read issue reports">
+        <p>
+          Open Issues to see problems reported by officers. Opening a report marks it read, and Mark
+          as closed finishes it. Reports hold only a case reference, a category and short text; they
+          never include case data. Home shows how many are open, and how many customer messages were
+          sent or failed, as counts only.
+        </p>
       </HelpSection>
 
       <HelpSection id="precedents" icon="precedent" title="The precedent queue">

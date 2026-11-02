@@ -22,10 +22,11 @@ from sqlalchemy import Engine, create_engine
 from app.agents.checkpoint import postgres_saver
 from app.agents.graph import Pipeline
 from app.agents.runtime import AgentContext, Services
-from app.api import admin, auth, cases, users
+from app.api import admin, auth, cases, issues, messages, users
 from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
+from app.notifications.sender import Sender, build_sender
 from app.observability import metrics
 from app.rag.embedder import embed_passages
 from app.scoring.rules import load_rules
@@ -44,6 +45,7 @@ def create_app(
     embed: Callable[[list[str]], list[list[float]]] | None = None,
     ctx_kwargs: dict[str, Any] | None = None,
     recover: bool = True,
+    sender: Sender | None = None,
 ) -> FastAPI:  # fmt: skip
     settings = settings or get_settings()
     if settings.app_env != "dev" and settings.jwt_secret.get_secret_value() == DEFAULT_SECRET:
@@ -69,6 +71,7 @@ def create_app(
             runner = Runner(Pipeline(ctx, the_saver), eng)
             app.state.settings, app.state.engine, app.state.ruleset = settings, eng, ruleset
             app.state.runner, app.state.embed = runner, embed or embed_passages
+            app.state.sender = sender or build_sender(settings.notification_sender)
             if recover:
                 n = runner.recover()
                 if n:
@@ -86,7 +89,14 @@ def create_app(
     if origins:
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"],
                            allow_headers=["Authorization", "Content-Type"])  # fmt: skip
-    for r in (auth.router, cases.router, admin.router, users.router):
+    for r in (
+        auth.router,
+        cases.router,
+        admin.router,
+        users.router,
+        messages.router,
+        issues.router,
+    ):
         app.include_router(r, prefix="/api/v1")
 
     @app.get("/metrics", include_in_schema=False)

@@ -7,6 +7,7 @@ import ApplicationForm, { stateFromCase } from '../components/ApplicationForm'
 import AuditTimeline from '../components/AuditTimeline'
 import CaseStepper from '../components/CaseStepper'
 import ConfirmBar from '../components/ConfirmBar'
+import CustomerContact from '../components/CustomerContact'
 import DocumentChecklist from '../components/DocumentChecklist'
 import DocumentViewer from '../components/DocumentViewer'
 import { loanLabel } from '../components/LoanTypePicker'
@@ -408,6 +409,10 @@ export default function CaseWorkspacePage() {
           )}
 
           {c.officer_action && <Decision action={c.officer_action} report={report} />}
+
+          {['confirmed', 'overridden', 'stopped'].includes(c.status) && (
+            <CustomerContact caseId={id} recipient={c.applicants[0].email} />
+          )}
         </aside>
       </div>
     </div>

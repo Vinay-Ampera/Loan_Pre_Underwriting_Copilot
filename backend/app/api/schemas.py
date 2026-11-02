@@ -95,6 +95,9 @@ class ApplicantIn(BaseModel):
     aadhaar_last4: str = Field(pattern=r"^[0-9]{4}$")
     address: str = Field(min_length=5, max_length=300)
     phone: str | None = Field(default=None, pattern=r"^([6-9][0-9]{9}|\*{6}[0-9]{4})$")
+    # optional contact email for customer messages (primary applicant); a masked value keeps the stored one
+    email: str | None = Field(default=None, max_length=200,
+                              pattern=r"^([^@\s*]+|\*{4})@[^@\s]+\.[^@\s]+$")  # fmt: skip
     employment_type: EmploymentType
     employer_or_business: str | None = Field(default=None, max_length=160)
     declared_monthly_income: float | None = Field(default=None, ge=0)
@@ -103,7 +106,7 @@ class ApplicantIn(BaseModel):
     months_in_current_employment: int | None = Field(default=None, ge=0, le=1200)
     total_experience_months: int | None = Field(default=None, ge=0, le=1200)
 
-    @field_validator("phone", mode="before")
+    @field_validator("phone", "email", mode="before")
     @classmethod
     def _blank_phone(cls, v: object) -> object:
         return None if isinstance(v, str) and not v.strip() else v
@@ -185,3 +188,45 @@ class UserCreateIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: str = Field(min_length=3, max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     role: Literal["officer", "admin"] = "officer"
+
+
+EMAIL_PATTERN = r"^[^@\s*]+@[^@\s]+\.[^@\s]+$"
+
+
+class MessageIn(BaseModel):
+    """Start a customer message. `body` defaults to the template text; the footer and the contact
+    lines are added by the server."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    template: Literal["general_contact", "contact_soon", "visit_branch", "blank"]
+    body: str | None = Field(default=None, max_length=2000)
+    include_case_ref: bool = False
+    recipient_email: str | None = Field(default=None, max_length=200, pattern=EMAIL_PATTERN)
+
+
+class MessageEditIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    body: str = Field(max_length=2000)
+    include_case_ref: bool = False
+    recipient_email: str | None = Field(default=None, max_length=200, pattern=EMAIL_PATTERN)
+
+
+class SendIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    second_click: bool = False
+
+
+class IssueIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    category: Literal["bug", "wrong_result", "access", "other"]
+    case_ref: str | None = Field(default=None, pattern=r"^CASE-[0-9]{4}-[0-9]{4}$")
+    body: str = Field(min_length=10, max_length=1000)
+
+    @field_validator("case_ref", mode="before")
+    @classmethod
+    def _blank_ref(cls, v: object) -> object:
+        return None if isinstance(v, str) and not v.strip() else v

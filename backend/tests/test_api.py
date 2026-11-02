@@ -571,7 +571,8 @@ def test_admin_summary_counts(client: TestClient, engine: Engine) -> None:
     admin = login(client, "ada")
     add_precedent(engine)
     first = client.get("/api/v1/admin/summary", headers=admin).json()
-    assert first == {"pending_precedents": 1, "active_officers": 2, "active_admins": 1,
+    assert first == {"pending_precedents": 1, "active_officers": 2, "active_admins": 1, "open_issues": 0,
+                     "messages_sent": 0, "messages_failed": 0,
                      "disabled_accounts": 0}  # fmt: skip
     ben = next(u for u in client.get("/api/v1/admin/users", headers=admin).json()
                if u["email"] == "ben@example.test")  # fmt: skip

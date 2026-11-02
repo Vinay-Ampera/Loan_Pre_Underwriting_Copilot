@@ -68,7 +68,16 @@ def get_case(conn: Connection, case_id: UUID, user: User, *, lock: bool = False)
 
 
 def _applicant_dict(a: dict[str, Any]) -> dict[str, Any]:
-    return {**a, "dob": str(a["dob"])}
+    """An applicant as kept in the case form. The contact email is stored in its own column only
+    (it is for customer messages, never part of the application the pipeline reads)."""
+    return {**{k: v for k, v in a.items() if k != "email"}, "dob": str(a["dob"])}
+
+
+def _emails(conn: Connection, case_id: UUID) -> dict[str, str | None]:
+    rows = conn.execute(
+        text("SELECT role, email FROM applicants WHERE case_id = :c"), {"c": case_id}
+    )
+    return {r.role: r.email for r in rows}
 
 
 def _case_form(row: Any) -> dict[str, Any]:
@@ -232,18 +241,19 @@ def _insert_applicants(conn: Connection, case_id: UUID, body: CaseIn) -> None:
     for a in body.applicants:
         conn.execute(
             text("""INSERT INTO applicants (case_id, role, full_name, dob, pan, aadhaar_last4, address, phone,
-                        employment_type, employer_or_business, declared_monthly_income, relationship_to_primary)
-                    VALUES (:c, :role, :name, :dob, :pan, :a4, :addr, :phone, :emp, :biz, :inc, :rel)"""),
+                        employment_type, employer_or_business, declared_monthly_income, relationship_to_primary,
+                        email)
+                    VALUES (:c, :role, :name, :dob, :pan, :a4, :addr, :phone, :emp, :biz, :inc, :rel, :email)"""),
             {"c": case_id, "role": a.role, "name": a.full_name, "dob": a.dob, "pan": a.pan,
              "a4": a.aadhaar_last4, "addr": a.address, "phone": a.phone,
              "emp": None if a.employment_type == "student" else a.employment_type,
              "biz": a.employer_or_business, "inc": a.declared_monthly_income,
-             "rel": a.relationship_to_primary},
+             "rel": a.relationship_to_primary, "email": a.email},
         )  # fmt: skip
 
 
 def _is_masked(a: Any) -> bool:
-    return "*" in a.pan or "*" in (a.phone or "")
+    return "*" in a.pan or "*" in (a.phone or "") or "*" in (a.email or "")
 
 
 def _show_details(details: dict[str, Any]) -> dict[str, Any]:
@@ -252,8 +262,9 @@ def _show_details(details: dict[str, Any]) -> dict[str, Any]:
 
 
 def _merge_masked(
-    body: CaseIn, stored: list[dict[str, Any]], stored_details: dict[str, Any]
-) -> None:
+    body: CaseIn, stored: list[dict[str, Any]], stored_details: dict[str, Any],
+    stored_emails: dict[str, str | None] | None = None,
+) -> None:  # fmt: skip
     """A corrected form shows PAN, phone and GSTIN masked. A value left masked keeps the stored one."""
     for k, v in body.loan_details.items():
         if isinstance(v, str) and "*" in v:
@@ -272,6 +283,14 @@ def _merge_masked(
             if old is None or display.mask_phone(old["phone"]) != a.phone:
                 raise HTTPException(422, f"Type the full mobile number for the {a.role} applicant.")
             a.phone = old["phone"]
+        stored_emails = stored_emails or {}
+        if a.email and "*" in a.email:
+            if (
+                not stored_emails.get(a.role)
+                or display.display_text(stored_emails[a.role] or "") != a.email
+            ):
+                raise HTTPException(422, f"Type the full email for the {a.role} applicant.")
+            a.email = stored_emails[a.role]
 
 
 def _form_data(case_no: str, body: CaseIn, application_date: str) -> str:
@@ -289,7 +308,7 @@ def create_case(
     if any(_is_masked(a) for a in body.applicants) or any(
         isinstance(v, str) and "*" in v for v in body.loan_details.values()
     ):
-        raise HTTPException(422, "Enter the full PAN and mobile number.")
+        raise HTTPException(422, "Enter the full PAN, mobile number and email.")
     for _ in range(3):  # two officers creating at once can pick the same number
         try:
             with conn.begin_nested():
@@ -325,8 +344,9 @@ def read_case(
     checklist = _checklist(_ruleset(request), row, docs)
     report = _latest_report(conn, case_id)
     form = _case_form(row)
+    emails = _emails(conn, case_id)
     applicants = [
-        {"role": a["role"], "full_name": a["full_name"], "dob": a["dob"],
+        {"role": a["role"], "email": display.display_text(emails.get(a["role"]) or "") or None, "full_name": a["full_name"], "dob": a["dob"],
          "pan": display.mask_pan(a["pan"]), "aadhaar": display.mask_aadhaar_last4(a["aadhaar_last4"]),
          "phone": display.mask_phone(a["phone"]), "address": a["address"],
          "employment_type": a["employment_type"], "employer_or_business": a.get("employer_or_business"),
@@ -552,7 +572,10 @@ def _prepare_resume(
             if body.case.loan_type != row.loan_type:
                 raise HTTPException(422, "The loan type cannot be changed.")
             _merge_masked(
-                body.case, _case_form(row)["applicants"], _case_form(row).get("loan_details", {})
+                body.case,
+                _case_form(row)["applicants"],
+                _case_form(row).get("loan_details", {}),
+                _emails(conn, case_id),
             )
             kept = body.case.application_date or _case_form(row)["application_date"]
             form = json.loads(_form_data(row.case_no, body.case, str(kept)))

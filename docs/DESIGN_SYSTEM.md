@@ -135,7 +135,7 @@ A three-way pill in the sidebar: **system** (default), **dark**, **light**, show
 
 1. **Login (the landing page).** No public page and no signup; staff accounts are created by the admin. Split layout: a brand panel on the left (the 5-stage journey, the 20/15/30/25/10 score bar with the three bands, "A human confirms every case", a "Pramaan is a sample bank; synthetic data only" note) and the sign-in form on the right. The panel stacks above the form on small screens.
    **Follow-up (built 2026-11-02):** the panel keeps the five stages, "A human confirms every case", the sample-bank note and a few lines of About; the score bar and band wording are on the Help page behind sign-in. Under the form: "Can't sign in? Contact your admin." (plain sentence only). No footer on the login page and no request form.
-2. **App shell.** Sidebar with the Pramaan mark, navigation (officer: Home, Cases, New case, Sent items; admin: Home, Precedents, Users), the signed-in user and role, sign out, and the theme toggle. It collapses to icons on tablet widths (up to 1024 px, confirmed 2026-11-02; the names stay for screen readers) and becomes a bar across the top on phones. Stage 8 shows no Sent items link; it arrives with Stage 9.
+2. **App shell.** Sidebar with the Pramaan mark, navigation (officer: Home, Cases, New case, Sent items; admin: Home, Precedents, Users), the signed-in user and role, sign out, and the theme toggle. It collapses to icons on tablet widths (up to 1024 px, confirmed 2026-11-02; the names stay for screen readers) and becomes a bar across the top on phones. The Sent items, Report a problem (officer) and Issues (admin) links arrived with Stage 9.
 3. **Home (officer).** Summary tiles (awaiting confirmation, referred, stopped, in progress) and recent cases. Tiles filter the case list.
 4. **Case workspace.** The 5-stage stepper (8.5) above the existing tabs.
 5. **Report.** Score ring with band and "Recommended: ..." wording; the 3C strip (8.6); Conditions (missing or unverified items to fix or ask for); existing stage cards with rule IDs and clause links; confirm bar. The summary text appears with a one-time typing effect (confirmed 2026-11-02).
@@ -175,11 +175,19 @@ CSS only. Entrance fade and rise, score ring fill, stepper advance, skeleton shi
 
 WCAG AA contrast in both themes; visible focus; dialogs trap focus; icons come with text; the theme toggle has labels for screen readers; keyboard operable throughout.
 
-## 9. Stage 9 design: customer notifications (planned 2026-11-02, not built)
+## 9. Stage 9 design: customer notifications (planned 2026-11-02, built 2026-11-02)
 
 - **Draft dialog** on the case workspace after confirm, override or a stopped run: a template picker (a few short templates plus **Blank**), the recipient (customer email, masked in lists), the subject (fixed), the body (editable), the fixed fraud footer (shown, locked), and the officer's contact lines. A **Send** button opens a second confirmation that shows the final text. A blocked send shows the exact reason (for example "Contains a number that looks like an account number").
 - **Sent items screen:** the officer's own messages with date, case reference, template, status (sent, failed, blocked) and a retry action for failed ones. Open one to read it.
 - **Wording rule:** messages never state a score, status, missing item or reason; they only ask the customer to contact the officer, and always carry the fraud warning. The UI never says "approved" or "rejected" to the customer.
+
+### 9.1 Build notes (Stage 9)
+
+- **Case workspace:** a "Contact the customer" card appears in the right column when the case is confirmed, overridden or stopped (`CustomerContact`). It opens `MessageDialog` (step 1: template, recipient, subject locked, editable body with a character count, case-reference checkbox, locked contact lines and fraud footer, optional "your mobile number" field; **Review** saves a draft and the server checks it; a block lists each reason and stays on step 1. Step 2: the exact final text and **Yes, send**, which is the second click). The card also lists the latest three messages and links to Sent items.
+- **Sent items** (`/messages`, officer sidebar): date, case link, template, recipient (masked), status chip (Sent, Failed, Blocked, Draft). **Retry** on a failed message opens a dialog with the final text; its **Yes, send again** button is the second click. Drafts and blocked messages have **Edit**.
+- **Report a problem** (`/problems`, officer): category, optional case reference, text with a warning not to paste personal data, and a list of the officer's own reports with their status. **Issues** (`/admin/issues`, admin): tabs Open, Read, Closed, All; opening a report marks it read; Mark as closed finishes it. Admin Home gains an Open issues tile.
+- **Customer email** is an optional field on the primary applicant in the application form.
+- Help gets sections for officers (Contact the customer, Report a problem) and for admins (Read issue reports).
 
 ### 8.9 Build notes (Stage 8)
 
