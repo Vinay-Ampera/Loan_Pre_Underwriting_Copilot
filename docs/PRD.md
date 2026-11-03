@@ -29,9 +29,10 @@ The users are **bank staff**, not applicants. Applicants never log in.
 | Role | What they do |
 |---|---|
 | Loan officer | Creates a case, picks the loan type, fills the application form, uploads documents (all at once or one by one), clicks "Submit for assessment", reads the report, confirms or overrides (with a reason) |
+| Auditor | Read-only (added 2026-11-03). Exactly one account, created only from the command line. Reads cases (masked, no document files), scores, decisions, overrides, the audit log, precedents, the users list, customer messages (recipient masked) and charts built from our own database. Changes nothing |
 | Admin | Sits above the loan officers. Manages users (any number of officers) in a Users screen (create, disable, reset password; Stage 8), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits policy and rule files, triggers re-indexing |
 
-(Earlier we discussed a separate underwriter and a reviewer. For v1 the loan officer plays the underwriter, and the admin plays the reviewer. Two roles only: admin and loan officer.)
+(Earlier we discussed a separate underwriter and a reviewer. For v1 the loan officer plays the underwriter, and the admin plays the reviewer. Three roles: admin, loan officer and, from 2026-11-03, one read-only auditor.)
 
 ## 4. Scope
 

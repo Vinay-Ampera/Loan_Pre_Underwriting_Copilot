@@ -23,3 +23,10 @@ def test_no_pipeline_code_reads_the_fairness_table() -> None:
     for pkg in ("agents", "scoring", "rag", "intake", "learning", "services", "api"):
         for f in (REPO_ROOT / "backend" / "app" / pkg).rglob("*.py"):
             assert "fairness" not in Path(f).read_text().lower(), f
+
+
+def test_no_pipeline_module_imports_the_auditor_group_view() -> None:
+    for pkg in ("agents", "scoring", "rag", "intake", "learning", "services"):
+        for f in (REPO_ROOT / "backend" / "app" / pkg).rglob("*.py"):
+            text = Path(f).read_text()
+            assert "app.monitoring" not in text and "app.eval" not in text, f

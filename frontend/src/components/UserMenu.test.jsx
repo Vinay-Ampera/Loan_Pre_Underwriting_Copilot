@@ -41,3 +41,16 @@ describe('UserMenu', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
+
+describe('UserMenu for the auditor', () => {
+  it('shows a Read-only badge', async () => {
+    render(
+      <MemoryRouter>
+        <UserMenu user={{ name: 'Aud', email: 'a@x.test', role: 'auditor' }} onSignOut={() => {}} />
+      </MemoryRouter>,
+    )
+    expect(screen.getAllByText('Read-only').length).toBeGreaterThan(0)
+    await userEvent.setup().click(screen.getByRole('button', { name: /aud/i }))
+    expect(screen.getByText(/this account changes nothing/i)).toBeInTheDocument()
+  })
+})

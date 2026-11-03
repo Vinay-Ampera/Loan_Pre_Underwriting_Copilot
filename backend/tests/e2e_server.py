@@ -3,7 +3,7 @@
     cd backend && ../.venv/bin/python -m tests.e2e_server [port]
 
 Creates a database next to the one in DATABASE_URL, migrates it, indexes the policy with the
-test embedder, adds two users and one pending precedent, then serves the API and the built
+test embedder, adds an officer, an admin, the read-only auditor and one pending precedent, then serves the API and the built
 frontend (frontend/dist) on 127.0.0.1. Models are off, so the report text is written by code.
 The database is dropped when the process ends. Passwords below are for this throwaway database.
 """
@@ -46,7 +46,7 @@ def main() -> None:
         engine = create_engine(url)
         with engine.begin() as conn:
             reindex(conn, embed=fake_embed_passages)
-            for who, role in (("officer", "officer"), ("admin", "admin")):
+            for who, role in (("officer", "officer"), ("admin", "admin"), ("auditor", "auditor")):
                 conn.execute(
                     text(
                         "INSERT INTO users (name, email, password_hash, role) VALUES (:n, :e, :h, :r)"

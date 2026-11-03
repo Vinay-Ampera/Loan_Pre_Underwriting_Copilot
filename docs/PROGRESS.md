@@ -27,6 +27,15 @@ Next: the user commits Stage 9 and applies migration 0010 on Neon, then the revi
 
 ## Decisions log
 
+### 2026-11-03: Read-only auditor role approved (changes locked decision 9)
+
+- **Role:** `auditor`, UI label "Auditor". Strictly read-only. Reads our own database (cases, scores, decisions, overrides, audit log, precedents, users list, customer messages, counts, charts built in-app from Postgres). Sees **masked** applicant data and **no original documents**. No Grafana or Langfuse link or account. Customer messages are readable with recipient emails masked.
+- **Creation:** only by `python -m app.api.users_cli create --role auditor`; exactly one active auditor (the CLI refuses a second). The admin API and Users screen cannot create, disable, enable or reset an auditor.
+- **Admin creating an admin** stays allowed; the confirm dialog shows a red "You are creating an admin" warning (second click and audit row kept).
+- **Unchanged:** officers see only their own cases (404 on others); admin has no case access; an admin cannot disable themselves or the last active admin.
+- **Schema:** migration 0011 widens the `users.role` check; no new tables.
+- **Part 2 (after part 1 works):** aggregate fairness charts for the auditor, groups under 5 cases shown as "too few to show", never case-level rows, from a separate read-only route; the pipeline must still be unable to read the fairness table.
+
 ### 2026-11-02: Stages 8 to 10 planned
 
 - **Name:** the bank and the product are both called **Pramaan** ("proof" in Hindi). It replaces the display name "Sample Bank" in the UI, the customer messages and the docs. The policy and rules files keep their `Sample Bank` identifiers; only the display name changes. The name was not checked for trademarks; check before any public use.
@@ -153,10 +162,22 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 
 ---
 
+## Auditor role build notes (2026-11-03)
+
+- **Migration 0011:** widens the `users.role` check to include `auditor`, and adds a unique partial index so only one *active* auditor can exist (the CLI checks first; the index holds under a race). The downgrade turns an auditor into a disabled officer with an unusable password, because `audit_log` is append-only and references users.
+- **Backend:** `deps.py` (`auditor_only`, `case_reader` = officer or auditor, `any_reader`); `cases.py` read routes (list, read, status, audit, report) accept the auditor, who sees every case with masked name, DOB, address, PAN, phone, email and extracted fields; `display.scrub_for_auditor` masks identifiers and every part of the applicant names in the report and loan text. The document file route, the PDF export and every write stay officer-only (403 for the auditor). `api/auditor.py`: summary, charts, audit log (filter, paging), users, precedents, messages (recipient masked). `users.py` refuses disable, enable and reset of an auditor (403) and creating one (422). `users_cli --role auditor` refuses a second active auditor.
+- **Part 2:** `monitoring/auditor_view.py` serves `GET /auditor/fairness`, aggregate only, groups under 5 cases as `too_few`, no totals. `REPORT_DATABASE_URL` (optional) gives it a read-only login.
+- **Frontend:** auditor routes and sidebar (Overview, Cases, Messages, Precedents, Audit log, Users, Help); case workspace and report in view-only mode with a Read-only note and badge; BarChart component; Users screen shows the auditor with actions disabled and a red "You are creating an admin" warning plus a second click; auditor Help guide.
+- **Verified:** `tests/test_auditor.py` (403 on every non-GET route found in the OpenAPI schema, other officers' cases readable and masked, officers still get 404, admin cannot manage the auditor, one-auditor rule in CLI and database, migration up and down, group view aggregate only), frontend tests (view-only case page for four statuses, routing by role, admin warning, sidebar, badge), Playwright `e2e/auditor.spec.js`.
+- **Run it:** `cd backend && ../.venv/bin/python -m app.db.migrate` (0011), then `python -m app.api.users_cli create --email E --name N --role auditor`.
+- **Choices to confirm:** the auditor gets no PDF export (it writes an audit row, and the role changes nothing); `GET /cases/{id}/messages` stays officer-only (messages are read in the Messages screen); Precedents was added to the auditor sidebar beside the five screens the user listed.
+
+---
+
 ## Review-window additions (2026-11-03)
 
 - **Report:** an "At a glance" card above the Summary (score ring, top 3 reasons ranked hard fail, cap, biggest point loss, and the next step; all taken from existing findings, nothing computed in the UI). The Policy citations block has a text search and a "cited by stage" filter.
 - **Admin officer view** (`/admin/users/:id`, `GET /admin/users/{id}/activity`): case counts by status and band, confirm and override counts, precedents proposed by status, last sign-in, and the 10 latest case numbers with status. No applicant data, so the least-privilege rule (admin has no case access) is unchanged.
 - **User menu** top right, beside the theme toggle: name, email, role and Sign out (asks first). No separate Profile page. The sidebar keeps only navigation.
-- **Not done (waiting on the user):** read-only super admin / auditor role. It changes locked decision 9 and needs a migration for the role check.
+- **Auditor role:** approved by the user 2026-11-03 and built next (see the decision below).
 - **No schema change** in this batch, so no migration to run.

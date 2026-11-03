@@ -12,6 +12,15 @@ const NAV = {
     ['/problems', 'Report a problem', 'flag', false],
     ['/help', 'Help', 'help', false],
   ],
+  auditor: [
+    ['/', 'Overview', 'chart', true],
+    ['/cases', 'Cases', 'cases', false],
+    ['/auditor/messages', 'Messages', 'mail', false],
+    ['/auditor/precedents', 'Precedents', 'precedent', false],
+    ['/auditor/audit-log', 'Audit log', 'shield', false],
+    ['/auditor/users', 'Users', 'users', false],
+    ['/help', 'Help', 'help', false],
+  ],
   admin: [
     ['/', 'Home', 'home', true],
     ['/admin/precedents', 'Precedents', 'precedent', false],

@@ -14,6 +14,11 @@ import AdminHomePage from './pages/AdminHomePage'
 import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminOfficerPage from './pages/AdminOfficerPage'
+import AuditorOverviewPage from './pages/AuditorOverviewPage'
+import AuditorMessagesPage from './pages/AuditorMessagesPage'
+import AuditorAuditLogPage from './pages/AuditorAuditLogPage'
+import AuditorUsersPage from './pages/AuditorUsersPage'
+import AuditorPrecedentsPage from './pages/AuditorPrecedentsPage'
 import HelpPage from './pages/HelpPage'
 import SentItemsPage from './pages/SentItemsPage'
 import IssuesPage from './pages/IssuesPage'
@@ -23,11 +28,11 @@ import './App.css'
 const SessionContext = createContext(null)
 export const useSession = () => useContext(SessionContext)
 
-// role is 'officer', 'admin' or 'any' (both roles, e.g. Help)
+// role is one role, an array of roles, or 'any' (every role, e.g. Help)
 function Shell({ role, children }) {
   const { session, signOut } = useSession()
   if (!session) return <Navigate to="/login" replace />
-  if (role !== 'any' && session.user.role !== role) {
+  if (role !== 'any' && ![role].flat().includes(session.user.role)) {
     return <Navigate to="/" replace />
   }
   return (
@@ -57,6 +62,10 @@ function Routing() {
             <Shell role="admin">
               <AdminHomePage />
             </Shell>
+          ) : session?.user.role === 'auditor' ? (
+            <Shell role="auditor">
+              <AuditorOverviewPage />
+            </Shell>
           ) : (
             <Shell role="officer">
               <HomePage />
@@ -67,7 +76,7 @@ function Routing() {
       <Route
         path="/cases"
         element={
-          <Shell role="officer">
+          <Shell role={['officer', 'auditor']}>
             <CaseQueuePage />
           </Shell>
         }
@@ -83,7 +92,7 @@ function Routing() {
       <Route
         path="/cases/:id"
         element={
-          <Shell role="officer">
+          <Shell role={['officer', 'auditor']}>
             <CaseWorkspacePage />
           </Shell>
         }
@@ -133,6 +142,38 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminIssuesPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/auditor/messages"
+        element={
+          <Shell role="auditor">
+            <AuditorMessagesPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/auditor/precedents"
+        element={
+          <Shell role="auditor">
+            <AuditorPrecedentsPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/auditor/audit-log"
+        element={
+          <Shell role="auditor">
+            <AuditorAuditLogPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/auditor/users"
+        element={
+          <Shell role="auditor">
+            <AuditorUsersPage />
           </Shell>
         }
       />

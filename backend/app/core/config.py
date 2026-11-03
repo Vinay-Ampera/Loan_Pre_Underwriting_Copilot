@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     )
 
     database_url: SecretStr | None = None
+    report_database_url: SecretStr | None = None  # read-only monitoring login (report_ro)
 
     gemini_api_key: SecretStr | None = None
     groq_api_key: SecretStr | None = None
@@ -44,6 +45,16 @@ class Settings(BaseSettings):
     notification_sender: str = "console"
     branch_contact_email: str = ""  # optional extra contact lines in customer messages
     branch_contact_phone: str = ""
+
+    def report_sqlalchemy_url(self) -> str | None:
+        """REPORT_DATABASE_URL for the auditor's group charts, or None to use DATABASE_URL."""
+        if self.report_database_url is None:
+            return None
+        url = self.report_database_url.get_secret_value()
+        for prefix in ("postgresql://", "postgres://"):
+            if url.startswith(prefix):
+                return "postgresql+psycopg://" + url[len(prefix) :]
+        return url
 
     def sqlalchemy_url(self) -> str:
         """DATABASE_URL rewritten for SQLAlchemy's psycopg (v3) driver."""

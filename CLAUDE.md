@@ -36,7 +36,7 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 6. **Co-applicant:** optional second upload set for home; mandatory for education. Same pipeline per person, combined FOIR.
 7. **Rules live in a rules file plus policy documents** linked by rule ID. Learning never edits them.
 8. **Learning = precedent store** in RAG. Override → LLM summary by loan type → rule-based hard-rule check in code (a hard-rule breach is held, never enters RAG) → **admin** approves → stored. Three gates: officer, code, admin. Used only for borderline cases, same loan type, above a similarity threshold, never over a hard rule, capped bonus, expiry date.
-9. **Security:** synthetic data only; mask PII before any cloud LLM call (text only, never raw PDFs); local OCR first; document text is data, not instructions; roles: admin on top, any number of loan officers under the admin (count is configurable); audit log; secrets in `.env`.
+9. **Security:** synthetic data only; mask PII before any cloud LLM call (text only, never raw PDFs); local OCR first; document text is data, not instructions; roles: admin on top, any number of loan officers under the admin (count is configurable), plus exactly one read-only **auditor** (added 2026-11-03: reads masked data from our own database, no documents, changes nothing, created only by the CLI); audit log; secrets in `.env`.
 10. **Stack:** React + plain JavaScript + CSS (one `.css` file per component or page; no TypeScript, no Tailwind; changed by the user 2026-11-01); FastAPI; LangGraph with Postgres checkpoints; LiteLLM; Neon Postgres + pgvector; BGE-small (384-d) with a local cross-encoder reranker; PaddleOCR; PyMuPDF + pdfplumber + OpenCV; Langfuse; Prometheus, Loki, Tempo, Grafana; GitHub Actions; Docker Compose at the last stage.
 11. **Models:** Gemini Flash (Supervisor, Extraction, Decision), Groq gpt-oss-20b (KYC, Risk), NVIDIA Nemotron (Policy), a free fallback via LiteLLM. Verify exact IDs and limits at Stage 1.
 12. **No Celery or Redis in v1.** Local disk for uploads. Policy updates via files plus a re-index command.
@@ -75,7 +75,7 @@ Suggested reading order for a new session: `docs/PRD.md` → `docs/ARCHITECTURE.
 ```
 setup:     virtualenv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/pip install -e .
 backend:   cd backend && uvicorn app.main:app --reload   (serves frontend/dist too if built)
-users:     python -m app.api.users_cli create --email E --name N --role officer|admin | password --email E   (or the admin Users screen)
+users:     python -m app.api.users_cli create --email E --name N --role officer|admin|auditor | password --email E   (or the admin Users screen; the auditor is created by the CLI only, one allowed)
 tests:     pytest -q                              (DB tests use a throwaway database)
 lint:      ruff check . && ruff format --check . && mypy
 frontend:  cd frontend && npm run dev | npm run build | npm test | npm run lint
@@ -96,7 +96,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Stages 1 to 8 are built and committed (Stage 8 as `25e6ad6` and `ff177fa`). Stage 9 (customer notifications and issue reports) is committed as `a91f035`. Review-window additions (2026-11-03: At a glance box, citation filter, admin officer view, top-right user menu with theme toggle and sign-out confirm) are built and await the user's commit; a read-only super admin role is deferred and not started (needs the user's go-ahead, changes decision 9); run `python -m app.db.migrate` (0010) before using it. Stage 10 (hardening, Docker, demo) is planned and approved in the docs but **not started**; the review window comes first, and do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
+Stages 1 to 8 are built and committed (Stage 8 as `25e6ad6` and `ff177fa`). Stage 9 (customer notifications and issue reports) is committed as `a91f035`. Review-window additions (2026-11-03: At a glance box, citation filter, admin officer view, top-right user menu with theme toggle and sign-out confirm) are built and await the user's commit; the read-only auditor role (decision 9, approved 2026-11-03) is being built; run `python -m app.db.migrate` (0010, then 0011) before using it. Stage 10 (hardening, Docker, demo) is planned and approved in the docs but **not started**; the review window comes first, and do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
 
 ## Open items
 

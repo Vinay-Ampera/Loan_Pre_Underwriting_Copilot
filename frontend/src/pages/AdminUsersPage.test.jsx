@@ -96,4 +96,50 @@ describe('AdminUsersPage', () => {
     )
     expect(await screen.findByRole('alert')).toHaveTextContent('last active admin')
   })
+
+  it('shows the auditor but does not let an admin manage it', async () => {
+    api.get.mockResolvedValue([
+      ...users,
+      { id: 'a1', name: 'Aud Auditor', email: 'aud@x.test', role: 'auditor', active: true },
+    ])
+    renderPage()
+    expect(await screen.findByText('Aud Auditor')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Disable Aud Auditor' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset password for Aud Auditor' })).toBeDisabled()
+    expect(screen.getByText('Auditor')).toBeInTheDocument()
+  })
+
+  it('warns in red and asks again before creating an admin', async () => {
+    const user = userEvent.setup()
+    api.post.mockResolvedValue({
+      id: 'u9',
+      email: 'n@x.test',
+      temporary_password: 'abcd-efgh-ijkl',
+    })
+    renderPage()
+    await screen.findByText('Ben Officer')
+    await user.click(screen.getByRole('button', { name: 'Add user' }))
+    const dialog = screen.getByRole('dialog')
+    await user.type(within(dialog).getByLabelText('Full name'), 'New Admin')
+    await user.type(within(dialog).getByLabelText('Email'), 'n@x.test')
+    expect(within(dialog).queryByText(/You are creating an admin/)).toBeNull()
+    await user.selectOptions(within(dialog).getByLabelText('Role'), 'admin')
+    expect(within(dialog).getByText(/You are creating an admin/)).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Create user' }))
+    expect(api.post).not.toHaveBeenCalled() // the first click only asks
+    await user.click(within(dialog).getByRole('button', { name: 'Yes, create an admin' }))
+    expect(api.post).toHaveBeenCalledWith(
+      '/admin/users',
+      expect.objectContaining({ role: 'admin' }),
+    )
+  })
+
+  it('has no auditor option in the role list', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Ben Officer')
+    await user.click(screen.getByRole('button', { name: 'Add user' }))
+    const options = within(screen.getByLabelText('Role')).getAllByRole('option')
+    expect(options.map((o) => o.value)).toEqual(['officer', 'admin'])
+  })
 })

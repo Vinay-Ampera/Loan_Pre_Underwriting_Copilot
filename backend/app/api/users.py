@@ -2,7 +2,8 @@
 
 The server generates the temporary password and returns it once in the response; it is never
 stored in the clear, logged, or written to the audit log (only the fact that it happened).
-Admins have no case access, so nothing here touches case data. An admin cannot disable their own
+Admins have no case access, so nothing here touches case data. The read-only auditor account is
+created and reset only from the command line: disable, enable and reset refuse it here. An admin cannot disable their own
 account, and the last active admin cannot be disabled, so the system cannot lock itself out.
 """
 
@@ -42,6 +43,11 @@ def _target(conn: Connection, user_id: UUID) -> Any:
     if row is None:
         raise HTTPException(404, "User not found.")
     return row
+
+
+def _not_auditor(target: Any) -> None:
+    if target.role == "auditor":
+        raise HTTPException(403, "The auditor account is managed from the command line only.")
 
 
 @router.get("/users")
@@ -136,6 +142,7 @@ def disable_user(
     user_id: UUID, admin: User = Depends(admin_only), conn: Connection = Depends(get_conn)
 ) -> dict[str, Any]:  # fmt: skip
     target = _target(conn, user_id)
+    _not_auditor(target)
     if target.id == admin.id:
         raise HTTPException(409, "You cannot disable your own account.")
     if target.role == "admin" and target.active:
@@ -157,6 +164,7 @@ def enable_user(
     user_id: UUID, admin: User = Depends(admin_only), conn: Connection = Depends(get_conn)
 ) -> dict[str, Any]:  # fmt: skip
     target = _target(conn, user_id)
+    _not_auditor(target)
     conn.execute(
         text("""UPDATE users SET active = true, failed_logins = 0, locked_until = NULL,
                     updated_at = now() WHERE id = :i"""), {"i": user_id})  # fmt: skip
@@ -170,6 +178,7 @@ def reset_password(
     user_id: UUID, admin: User = Depends(admin_only), conn: Connection = Depends(get_conn)
 ) -> dict[str, Any]:  # fmt: skip
     target = _target(conn, user_id)
+    _not_auditor(target)
     password = temporary_password()
     conn.execute(
         text("""UPDATE users SET password_hash = :h, failed_logins = 0, locked_until = NULL,

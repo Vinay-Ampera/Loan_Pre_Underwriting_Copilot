@@ -22,10 +22,11 @@ from sqlalchemy import Engine, create_engine
 from app.agents.checkpoint import postgres_saver
 from app.agents.graph import Pipeline
 from app.agents.runtime import AgentContext, Services
-from app.api import admin, auth, cases, issues, messages, users
+from app.api import admin, auditor, auth, cases, issues, messages, users
 from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
+from app.monitoring import auditor_view
 from app.notifications.sender import Sender, build_sender
 from app.observability import metrics
 from app.rag.embedder import embed_passages
@@ -72,6 +73,7 @@ def create_app(
             app.state.settings, app.state.engine, app.state.ruleset = settings, eng, ruleset
             app.state.runner, app.state.embed = runner, embed or embed_passages
             app.state.sender = sender or build_sender(settings.notification_sender)
+            app.state.monitor_engine = auditor_view.build_engine(settings, eng)
             if recover:
                 n = runner.recover()
                 if n:
@@ -80,6 +82,8 @@ def create_app(
                 yield
             finally:
                 await runner.shutdown()
+                if app.state.monitor_engine is not eng:
+                    app.state.monitor_engine.dispose()
                 if engine is None:
                     eng.dispose()
 
@@ -93,6 +97,8 @@ def create_app(
         auth.router,
         cases.router,
         admin.router,
+        auditor.router,
+        auditor_view.router,
         users.router,
         messages.router,
         issues.router,

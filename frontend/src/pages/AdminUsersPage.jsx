@@ -8,14 +8,31 @@ import StatusChip from '../components/StatusChip'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AdminUsersPage.css'
 
+const ROLE = { officer: 'Loan officer', admin: 'Admin', auditor: 'Auditor' }
+const CLI_ONLY = 'The auditor account is managed from the command line only'
+
+function AdminWarning() {
+  return (
+    <p className="admin-warning" role="alert">
+      <strong>You are creating an admin.</strong> An admin can manage every account and approve
+      precedents.
+    </p>
+  )
+}
+
 function CreateDialog({ onClose, onCreated }) {
   const [form, setForm] = useState({ name: '', email: '', role: 'officer' })
+  const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   async function submit(e) {
     e.preventDefault()
+    if (form.role === 'admin' && !confirming) {
+      setConfirming(true) // creating an admin needs a second, deliberate click
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -23,6 +40,7 @@ function CreateDialog({ onClose, onCreated }) {
     } catch (err) {
       setError(err.message)
       setBusy(false)
+      setConfirming(false)
     }
   }
 
@@ -53,13 +71,23 @@ function CreateDialog({ onClose, onCreated }) {
         </div>
         <div className="field">
           <label htmlFor="u-role">Role</label>
-          <select id="u-role" className="select" value={form.role} onChange={set('role')}>
+          <select
+            id="u-role"
+            className="select"
+            value={form.role}
+            onChange={(e) => {
+              setConfirming(false)
+              set('role')(e)
+            }}
+          >
             <option value="officer">Loan officer</option>
             <option value="admin">Admin</option>
           </select>
         </div>
+        {form.role === 'admin' && <AdminWarning />}
         <p className="small muted">
-          A temporary password is made for the account and shown once on the next screen.
+          A temporary password is made for the account and shown once on the next screen. The
+          read-only auditor is not made here; it is created from the command line.
         </p>
         {error && (
           <p className="field-error" role="alert">
@@ -71,7 +99,7 @@ function CreateDialog({ onClose, onCreated }) {
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={busy}>
-            {busy ? 'Creating…' : 'Create user'}
+            {busy ? 'Creating…' : confirming ? 'Yes, create an admin' : 'Create user'}
           </button>
         </div>
       </form>
@@ -189,6 +217,7 @@ export default function AdminUsersPage() {
             <tbody>
               {data.map((u) => {
                 const me = u.id === session.user.id
+                const auditor = u.role === 'auditor'
                 return (
                   <tr key={u.id}>
                     <td data-label="Name">
@@ -200,7 +229,7 @@ export default function AdminUsersPage() {
                       {me && <span className="muted">(you)</span>}
                     </td>
                     <td data-label="Email">{u.email}</td>
-                    <td data-label="Role">{u.role}</td>
+                    <td data-label="Role">{ROLE[u.role] ?? u.role}</td>
                     <td data-label="Status">
                       {u.active ? (
                         u.locked ? (
@@ -216,6 +245,8 @@ export default function AdminUsersPage() {
                       <button
                         type="button"
                         className="btn"
+                        disabled={auditor}
+                        title={auditor ? CLI_ONLY : undefined}
                         onClick={() => setDialog({ kind: 'reset', user: u })}
                         aria-label={`Reset password for ${u.name}`}
                       >
@@ -225,8 +256,14 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           className="btn"
-                          disabled={me}
-                          title={me ? 'You cannot disable your own account' : undefined}
+                          disabled={me || auditor}
+                          title={
+                            auditor
+                              ? CLI_ONLY
+                              : me
+                                ? 'You cannot disable your own account'
+                                : undefined
+                          }
                           onClick={() => setDialog({ kind: 'disable', user: u })}
                           aria-label={`Disable ${u.name}`}
                         >
@@ -236,6 +273,8 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           className="btn"
+                          disabled={auditor}
+                          title={auditor ? CLI_ONLY : undefined}
                           onClick={() => run(`/admin/users/${u.id}/enable`)}
                           aria-label={`Enable ${u.name}`}
                         >

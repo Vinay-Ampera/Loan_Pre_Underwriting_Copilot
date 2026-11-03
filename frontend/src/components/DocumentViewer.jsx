@@ -11,7 +11,7 @@ const FIELD = {
 const label = (n) => FIELD[n] || n.replaceAll('_', ' ')
 
 /** The file on the left (image or PDF), what was read from it on the right. */
-export default function DocumentViewer({ caseId, doc }) {
+export default function DocumentViewer({ caseId, doc, readOnly = false }) {
   const [url, setUrl] = useState(null)
   const [error, setError] = useState(null)
 
@@ -20,7 +20,7 @@ export default function DocumentViewer({ caseId, doc }) {
     let made = null
     setUrl(null)
     setError(null)
-    if (!doc?.id || doc.status !== 'accepted') return undefined
+    if (readOnly || !doc?.id || doc.status !== 'accepted') return undefined
     api
       .blob(`/cases/${caseId}/documents/${doc.id}/file`)
       .then((b) => {
@@ -33,7 +33,7 @@ export default function DocumentViewer({ caseId, doc }) {
       live = false
       if (made) URL.revokeObjectURL(made)
     }
-  }, [caseId, doc?.id, doc?.status])
+  }, [caseId, doc?.id, doc?.status, readOnly])
 
   if (!doc) return <p className="muted">Choose a document to see what was read from it.</p>
   const isPdf = doc.mime === 'application/pdf'
@@ -42,8 +42,13 @@ export default function DocumentViewer({ caseId, doc }) {
   return (
     <div className="viewer">
       <div className="viewer-file card">
+        {readOnly && (
+          <p className="muted">
+            The auditor does not see the original document, only what was read.
+          </p>
+        )}
         {error && <p className="field-error">{error}</p>}
-        {!url && !error && <div className="skeleton" style={{ height: 320 }} />}
+        {!readOnly && !url && !error && <div className="skeleton" style={{ height: 320 }} />}
         {url && isPdf && <iframe title={`Document ${doc.name}`} src={url} />}
         {url && !isPdf && <img src={url} alt={`Uploaded document ${doc.name}`} />}
       </div>

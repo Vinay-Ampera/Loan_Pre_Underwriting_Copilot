@@ -7,7 +7,7 @@ Conventions: `id` is UUID primary key; `created_at` and `updated_at` are `timest
 ## 1. Core case data
 
 **users**
-`id, name, email (unique), phone (nullable; added in migration 0010), password_hash (argon2), role (officer|admin), active, failed_logins, locked_until, created_at, updated_at`
+`id, name, email (unique), phone (nullable; added in migration 0010), password_hash (argon2), role (officer|admin|auditor; auditor added in migration 0011, one active at most via a unique partial index), active, failed_logins, locked_until, created_at, updated_at`
 Migration 0008 added `failed_logins` and `locked_until` (lockout after repeated failures, SECURITY section 4). Users are created with `python -m app.api.users_cli` or, from Stage 8, by the admin in the Users screen (`POST /admin/users`); the CLI password is typed at a prompt and the screen's temporary password is shown once. Neither is stored in a file or the audit log. Stage 8 added no migration.
 
 **cases**

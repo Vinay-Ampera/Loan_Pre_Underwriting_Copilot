@@ -3,7 +3,7 @@ import Dialog from './Dialog'
 import Icon from './Icons'
 import './UserMenu.css'
 
-const ROLE = { officer: 'Loan officer', admin: 'Admin' }
+const ROLE = { officer: 'Loan officer', admin: 'Admin', auditor: 'Auditor' }
 
 /** Top-right account menu: who is signed in, and Sign out (which asks first). */
 export default function UserMenu({ user, onSignOut }) {
@@ -36,7 +36,8 @@ export default function UserMenu({ user, onSignOut }) {
           {user.name.trim().charAt(0).toUpperCase()}
         </span>
         <span className="user-menu-name">{user.name}</span>
-        <span className="role-tag">{user.role}</span>
+        <span className="role-tag">{user.role === 'auditor' ? 'Auditor' : user.role}</span>
+        {user.role === 'auditor' && <span className="readonly-badge">Read-only</span>}
       </button>
       {open && (
         <div className="user-menu-list card" role="menu">
@@ -44,6 +45,9 @@ export default function UserMenu({ user, onSignOut }) {
             <strong>{user.name}</strong>
             <span className="small muted">{user.email}</span>
             <span className="small muted">{ROLE[user.role] ?? user.role}</span>
+            {user.role === 'auditor' && (
+              <span className="readonly-badge">Read-only: this account changes nothing</span>
+            )}
           </div>
           <button
             type="button"

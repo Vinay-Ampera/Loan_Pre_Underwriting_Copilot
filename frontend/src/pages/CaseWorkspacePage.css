@@ -138,3 +138,11 @@
     order: -1;
   }
 }
+
+.readonly-note {
+  margin-top: var(--s-1);
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--radius-input);
+  background: var(--unverified-bg);
+  color: var(--unverified);
+}

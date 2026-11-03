@@ -1,6 +1,6 @@
 """Create or reset a user. The password is typed at a prompt and never written anywhere.
 
-python -m app.api.users_cli create --email a@b.c --name "Asha" --role officer
+python -m app.api.users_cli create --email a@b.c --name "Asha" --role officer|admin|auditor
 python -m app.api.users_cli password --email a@b.c
 """
 
@@ -25,19 +25,26 @@ def ask_password() -> str:
     return first
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("create")
     c.add_argument("--email", required=True)
     c.add_argument("--name", required=True)
-    c.add_argument("--role", choices=["officer", "admin"], required=True)
+    c.add_argument("--role", choices=["officer", "admin", "auditor"], required=True)
     p = sub.add_parser("password")
     p.add_argument("--email", required=True)
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     engine = create_engine(get_settings().sqlalchemy_url())
     with engine.begin() as conn:
         if args.cmd == "create":
+            if args.role == "auditor":
+                # one read-only auditor for now: the check and the insert share one transaction
+                conn.execute(text("LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE"))
+                if conn.execute(
+                    text("SELECT count(*) FROM users WHERE role = 'auditor' AND active")
+                ).scalar_one():
+                    raise SystemExit("An active auditor already exists. Only one is allowed.")
             conn.execute(
                 text(
                     "INSERT INTO users (name, email, password_hash, role) VALUES (:n, lower(:e), :h, :r)"

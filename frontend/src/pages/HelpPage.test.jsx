@@ -42,4 +42,12 @@ describe('HelpPage', () => {
     expect(screen.getByRole('heading', { name: 'Reset a password' })).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Score weights' })).toBeNull()
   })
+
+  it('shows the read-only guide to an auditor, without officer or admin actions', () => {
+    renderAs('auditor')
+    expect(screen.getByText('Guide for the auditor')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'What you cannot do' })).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Score weights' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Reset a password' })).toBeNull()
+  })
 })

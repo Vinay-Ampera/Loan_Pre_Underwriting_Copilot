@@ -65,6 +65,62 @@ const ADMIN = [
   ['precedents', 'The precedent queue', 'precedent'],
 ]
 
+const AUDITOR = [
+  ['aud-what', 'What you can see', 'eye'],
+  ['aud-cases', 'Read a case', 'cases'],
+  ['aud-data', 'Overview, log and messages', 'chart'],
+  ['aud-limits', 'What you cannot do', 'shield'],
+]
+
+function AuditorGuide() {
+  return (
+    <>
+      <HelpSection id="aud-what" icon="eye" title="What you can see">
+        <p>
+          The auditor account is <strong>read-only</strong>. It reads the system&apos;s own records:
+          every officer&apos;s cases with their scores, decisions and overrides, the audit log,
+          precedents, the staff list, the messages officers sent to customers, and charts built from
+          those records.
+        </p>
+        <Callout tone="info" title="Masked data, no documents">
+          Applicant names, PAN, phone, email and addresses are masked, and the original document
+          files are never shown to this role.
+        </Callout>
+      </HelpSection>
+
+      <HelpSection id="aud-cases" icon="cases" title="Read a case">
+        <ol className="help-steps">
+          <li>Open Cases. The list shows every officer&apos;s cases; search by case number.</li>
+          <li>
+            Open a case to see the stepper, the extracted fields, the report and its audit trail.
+          </li>
+          <li>
+            The Read-only badge is shown, and there are no buttons to confirm, override, upload or
+            send.
+          </li>
+        </ol>
+      </HelpSection>
+
+      <HelpSection id="aud-data" icon="chart" title="Overview, log and messages">
+        <p>
+          Overview shows counts and charts. Audit log lists who did what and when, and can be
+          filtered by action. Messages shows contact requests officers sent, with the recipient
+          masked. Users and Precedents are lists only.
+        </p>
+      </HelpSection>
+
+      <HelpSection id="aud-limits" icon="shield" title="What you cannot do">
+        <p>
+          You cannot change anything. Every action that writes data answers “not allowed” for this
+          account, on the server as well as in the screen. There is exactly one auditor, created
+          from the command line by whoever runs the system; an admin cannot create, disable or reset
+          it.
+        </p>
+      </HelpSection>
+    </>
+  )
+}
+
 function OfficerGuide() {
   return (
     <>
@@ -194,6 +250,10 @@ function AdminGuide() {
       <HelpSection id="users" icon="users" title="Add and disable users">
         <ul>
           <li>Open Users and choose the option to add a user. Give a name, an email and a role.</li>
+          <li>
+            Creating an admin shows a red warning and asks you to confirm. The read-only auditor is
+            not made here and cannot be disabled or reset from this screen.
+          </li>
           <li>Disable an account to stop it signing in. You cannot disable your own account.</li>
           <li>Enable a disabled account to let that person sign in again.</li>
         </ul>
@@ -293,8 +353,10 @@ function useActiveSection(ids) {
 
 export default function HelpPage() {
   const { session } = useSession()
-  const admin = session.user.role === 'admin'
-  const toc = admin ? ADMIN : OFFICER
+  const role = session.user.role
+  const admin = role === 'admin'
+  const auditor = role === 'auditor'
+  const toc = admin ? ADMIN : auditor ? AUDITOR : OFFICER
   const active = useActiveSection(toc.map(([id]) => id))
   return (
     <div className="help-page">
@@ -304,11 +366,19 @@ export default function HelpPage() {
         </span>
         <div className="help-hero-text">
           <h1>Help</h1>
-          <p className="muted">{admin ? 'Guide for admins' : 'Guide for loan officers'}</p>
+          <p className="muted">
+            {admin
+              ? 'Guide for admins'
+              : auditor
+                ? 'Guide for the auditor'
+                : 'Guide for loan officers'}
+          </p>
           <p>
             {admin
               ? 'Manage staff accounts and review precedents. Short steps, in plain words.'
-              : 'From a new case to your confirmed decision, and what the system is doing in between.'}
+              : auditor
+                ? 'A read-only view of cases, decisions and the audit log, in plain words.'
+                : 'From a new case to your confirmed decision, and what the system is doing in between.'}
           </p>
         </div>
       </header>
@@ -327,7 +397,9 @@ export default function HelpPage() {
       </ul>
 
       <div className="help-layout">
-        <div className="help">{admin ? <AdminGuide /> : <OfficerGuide />}</div>
+        <div className="help">
+          {admin ? <AdminGuide /> : auditor ? <AuditorGuide /> : <OfficerGuide />}
+        </div>
         <nav className="help-toc" aria-label="On this page">
           <p className="help-toc-title">On this page</p>
           <ul>

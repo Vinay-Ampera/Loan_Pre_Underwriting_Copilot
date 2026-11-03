@@ -76,7 +76,7 @@ function Citations({ report }) {
 }
 
 /** Summary, stage cards, findings by person, citations, rejection reason and PDF export. */
-export default function ReportPanel({ caseId, caseNo, report, officerAction }) {
+export default function ReportPanel({ caseId, caseNo, report, officerAction, readOnly = false }) {
   const [pdfError, setPdfError] = useState(null)
   const byStage = (stage) => report.findings.filter((f) => f.stage === stage)
   const known = new Set(report.stage_scores.map((s) => s.stage))
@@ -95,13 +95,15 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction }) {
           )}
           {report.status === 'stopped' && <p className="muted">{report.stop_text}</p>}
         </div>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => downloadPdf(caseId, caseNo).catch((e) => setPdfError(e.message))}
-        >
-          Export PDF
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => downloadPdf(caseId, caseNo).catch((e) => setPdfError(e.message))}
+          >
+            Export PDF
+          </button>
+        )}
       </div>
       {pdfError && (
         <p className="field-error" role="alert">

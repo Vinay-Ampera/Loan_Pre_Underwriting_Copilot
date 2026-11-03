@@ -213,3 +213,5 @@ WCAG AA contrast in both themes; visible focus; dialogs trap focus; icons come w
 - **Policy citations filter:** a text search (clause ID or wording) and a "cited by stage" select above the list, with a "Showing X of Y" count.
 - **Admin officer view** (`/admin/users/:id`, reached from the officer's name in Users): counts and the latest case numbers only; no applicant data.
 - **User menu** (top right, beside the theme toggle): name, email, role and Sign out; there is no separate Profile page. Sign-out opens a small dialog ("Stay signed in" / "Sign out").
+
+- **Auditor screens (2026-11-03):** the read-only role has its own sidebar (Overview, Cases, Messages, Precedents, Audit log, Users, Help) and a "Read-only" badge in the user menu. The case workspace and report are reused with every action removed (no Confirm, Override, Upload, Remove, Submit, Contact, Export PDF, and no document image). Overview charts are CSS bars (`BarChart`) drawn from counts, with the numbers as text; a group under 5 cases reads "too few to show". Creating an admin on the Users screen shows a red "You are creating an admin" warning and needs a second click.
