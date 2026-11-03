@@ -1,10 +1,9 @@
 """The admin's part in a case: read every case (documents too), correct a decision the officer has
 already made (reason, second click, never over a hard rule), hand an undecided case to another
-officer, read sent messages and the audit log. The officer's own decision is never edited."""
+officer, read sent messages. The officer's own decision is never edited."""
 
 import json
 import uuid
-from datetime import date
 from pathlib import Path
 
 import pytest
@@ -244,39 +243,19 @@ def test_admin_sees_sent_messages_only(client: TestClient, engine: Engine) -> No
         assert client.get(f"{V1}/admin/messages", headers=login(client, who)).status_code == 403
 
 
-def test_admin_audit_log_is_unmasked_with_case_ids_and_filters(
+def test_the_system_wide_audit_log_is_the_auditors_alone(
     client: TestClient, engine: Engine
 ) -> None:
     case_id, _ = seed_case(client, engine)
-    ada = login(client, "ada")
+    ada, aud = login(client, "ada"), login(client, "aud")
     decide(engine, case_id)
     override(client, ada, case_id)
-    log = client.get(
-        f"{V1}/admin/audit-log", params={"action": "admin_override"}, headers=ada
-    ).json()
-    assert log["total"] == 1 and log["rows"][0]["case_id"] == case_id
-    assert log["rows"][0]["actor"] == "Ada Admin" and log["rows"][0]["actor_role"] == "admin"
-    me = client.get(f"{V1}/auth/me", headers=ada).json()
-    mine = client.get(f"{V1}/admin/audit-log", params={"actor": me["id"]}, headers=ada).json()
-    assert mine["total"] >= 2  # the login and the override
-    today = date.today().isoformat()
-    assert (
-        client.get(f"{V1}/admin/audit-log", params={"date_from": today}, headers=ada).json()[
-            "total"
-        ]
-        >= 2
-    )
-    assert (
-        client.get(f"{V1}/admin/audit-log", params={"date_from": "2999-01-01"}, headers=ada).json()[
-            "total"
-        ]
-        == 0
-    )
-    csv_ = client.get(f"{V1}/admin/audit-log.csv", params={"action": "admin_override"}, headers=ada)
-    assert "admin override" not in csv_.text and "admin_override" in csv_.text
-    assert "admin_override" in client.get(f"{V1}/admin/audit-log/actions", headers=ada).json()
-    for who in ("asha", "aud"):
-        assert client.get(f"{V1}/admin/audit-log", headers=login(client, who)).status_code == 403
+    for path in ("audit-log", "audit-log/actions", "audit-log.csv"):
+        assert client.get(f"{V1}/admin/{path}", headers=ada).status_code in (404, 405), path
+    assert client.get(f"{V1}/auditor/audit-log", headers=aud).status_code == 200
+    # the admin still reads one case's own trail, including the correction
+    trail = client.get(f"{V1}/cases/{case_id}/audit", headers=ada).json()
+    assert "admin_override" in {e["action"] for e in trail}
 
 
 def test_the_decision_chain_reaches_the_officer_report(client: TestClient, engine: Engine) -> None:

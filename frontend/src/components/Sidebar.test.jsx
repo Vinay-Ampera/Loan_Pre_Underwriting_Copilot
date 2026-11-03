@@ -19,17 +19,9 @@ describe('Sidebar', () => {
     expect(links('auditor')).toEqual(['Overview', 'Cases', 'Audit log', 'Users', 'Help'])
   })
 
-  it('gives the admin messages and the audit log but no case list or creating', () => {
+  it('gives the admin messages but no audit log, case list or creating', () => {
     const items = links('admin')
-    expect(items).toEqual([
-      'Home',
-      'Precedents',
-      'Messages',
-      'Issues',
-      'Users',
-      'Audit log',
-      'Help',
-    ])
+    expect(items).toEqual(['Home', 'Precedents', 'Messages', 'Issues', 'Users', 'Help'])
     expect(items).not.toContain('New case')
   })
 })

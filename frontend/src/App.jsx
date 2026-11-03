@@ -154,14 +154,6 @@ function Routing() {
         }
       />
       <Route
-        path="/admin/audit-log"
-        element={
-          <Shell role="admin">
-            <AuditLogPage scope="admin" />
-          </Shell>
-        }
-      />
-      <Route
         path="/auditor/cases"
         element={
           <Shell role="auditor">
@@ -173,7 +165,7 @@ function Routing() {
         path="/auditor/audit-log"
         element={
           <Shell role="auditor">
-            <AuditLogPage scope="auditor" />
+            <AuditLogPage />
           </Shell>
         }
       />

@@ -48,7 +48,6 @@ test('an officer cannot open or call the precedent queue', async ({ page }) => {
   expect((await page.request.get('/api/v1/admin/users', { headers })).status()).toBe(403)
   expect((await page.request.get('/api/v1/admin/summary', { headers })).status()).toBe(403)
   expect((await page.request.get('/api/v1/admin/messages', { headers })).status()).toBe(403)
-  expect((await page.request.get('/api/v1/admin/audit-log', { headers })).status()).toBe(403)
   const id = '00000000-0000-0000-0000-000000000000'
   expect(
     (

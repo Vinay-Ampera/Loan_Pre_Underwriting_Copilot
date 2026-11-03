@@ -80,14 +80,15 @@ describe('routing by role', () => {
     }
   })
 
-  it('lets an admin open the audit log and messages but keeps the officer pages closed', async () => {
+  it('lets an admin open messages but keeps the audit log and officer pages closed', async () => {
     signInAs('admin', '/admin/messages')
     const first = render(<App />)
     expect(await screen.findByRole('heading', { name: 'Messages' })).toBeInTheDocument()
     first.unmount()
     signInAs('admin', '/admin/audit-log')
     const second = render(<App />)
-    expect(await screen.findByRole('heading', { name: 'Audit log' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: 'Home' })
+    expect(window.location.pathname).toBe('/')
     second.unmount()
     signInAs('admin', '/cases/new')
     render(<App />)

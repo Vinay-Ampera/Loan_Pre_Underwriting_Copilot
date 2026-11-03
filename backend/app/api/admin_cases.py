@@ -3,18 +3,17 @@
 The admin corrects, and only after the officer has decided: `override` adds an `admin_actions`
 row (reason, second click) beside the officer's decision and never edits it. A case that failed a
 hard rule cannot be corrected. `reassign` hands a case the officer has not decided to another
-active officer, so every case is still decided by an officer first. Sent messages and the audit
-log are listed here read-only.
+active officer, so every case is still decided by an officer first. Sent messages are
+listed here read-only. The system-wide audit log is the auditor's alone.
 """
 
-from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import Connection, text
 
-from app.api import auditlog, display
+from app.api import display
 from app.api.decisions import REASSIGNABLE, decision_in_force, override_block
 from app.api.deps import User, admin_only, get_conn, write_audit
 from app.api.schemas import AdminOverrideIn, ReassignIn
@@ -141,34 +140,3 @@ def sent_messages(
         "template": r.template, "template_label": TEMPLATE_LABEL.get(r.template, r.template),
         "subject": r.subject, "text": r.final_text or r.body, "sent_at": r.sent_at,
     } for r in rows]  # fmt: skip
-
-
-@router.get("/audit-log")
-def audit_log(
-    action: str | None = None, entity: str | None = None, actor: str | None = None,
-    case_no: str | None = None, date_from: date | None = None, date_to: date | None = None,
-    limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0),
-    _: User = Depends(admin_only), conn: Connection = Depends(get_conn),
-) -> dict[str, Any]:  # fmt: skip
-    return auditlog.query(conn, auditor=False, action=action, entity=entity, actor=actor,
-                          case_no=case_no, date_from=date_from, date_to=date_to,
-                          limit=limit, offset=offset)  # fmt: skip
-
-
-@router.get("/audit-log/actions")
-def audit_actions(
-    _: User = Depends(admin_only), conn: Connection = Depends(get_conn)
-) -> list[str]:  # fmt: skip
-    return auditlog.actions(conn)
-
-
-@router.get("/audit-log.csv")
-def audit_log_csv(
-    action: str | None = None, entity: str | None = None, actor: str | None = None,
-    case_no: str | None = None, date_from: date | None = None, date_to: date | None = None,
-    _: User = Depends(admin_only), conn: Connection = Depends(get_conn),
-) -> Response:  # fmt: skip
-    result = auditlog.query(conn, auditor=False, action=action, entity=entity, actor=actor,
-                            case_no=case_no, date_from=date_from, date_to=date_to,
-                            limit=auditlog.CSV_LIMIT)  # fmt: skip
-    return auditlog.log_csv(result, "audit-log.csv")

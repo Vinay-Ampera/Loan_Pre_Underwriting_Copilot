@@ -63,7 +63,7 @@ const ADMIN = [
   ['reset', 'Reset a password', 'shield'],
   ['adm-case', 'Open and correct a case', 'cases'],
   ['adm-reassign', 'Reassign a case', 'users'],
-  ['adm-records', 'Messages and the audit log', 'mail'],
+  ['adm-records', "Messages and a case's history", 'mail'],
   ['issues', 'Read issue reports', 'flag'],
   ['precedents', 'The precedent queue', 'precedent'],
 ]
@@ -316,11 +316,12 @@ function AdminGuide() {
         </p>
       </HelpSection>
 
-      <HelpSection id="adm-records" icon="mail" title="Messages and the audit log">
+      <HelpSection id="adm-records" icon="mail" title="Messages and a case's history">
         <p>
           Messages lists the contact requests officers actually sent (no drafts), with filters for
-          officer, template, case and date. Audit log lists who did what and when, with filters for
-          action, user, case reference and dates, and a CSV export.
+          officer, template, case and date. Each case has an Audit tab with that case&apos;s own
+          history. The system-wide audit log belongs to the auditor alone, so that nobody reviews
+          their own actions.
         </p>
       </HelpSection>
 

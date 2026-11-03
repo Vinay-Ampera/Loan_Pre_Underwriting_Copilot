@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import { downloadFile, queryOf } from '../lib/download'
@@ -15,19 +14,16 @@ const detail = (r) => {
 }
 
 /**
- * The append-only audit log, newest first, with filters and a CSV export. The admin reads it as
- * stored; the auditor reads it with identifiers masked and without links into cases.
+ * The append-only audit log, newest first, with filters and a CSV export. Only the auditor reads
+ * it, with identifiers masked and without links into cases.
  */
-export default function AuditLogPage({ scope }) {
-  const base = `/${scope}`
+export default function AuditLogPage() {
+  const base = '/auditor'
   const [filter, setFilter] = useState(NONE)
   const [page, setPage] = useState(0)
   const [exportError, setExportError] = useState(null)
   const actions = useAsync(() => api.get(`${base}/audit-log/actions`), [base])
-  const users = useAsync(
-    () => api.get(scope === 'admin' ? '/admin/users' : '/auditor/users'),
-    [scope],
-  )
+  const users = useAsync(() => api.get('/auditor/users'), [])
   const { data, error, loading, reload } = useAsync(
     () => api.get(`${base}/audit-log?${queryOf(filter, { limit: PAGE, offset: page * PAGE })}`),
     [base, filter, page],
@@ -50,8 +46,7 @@ export default function AuditLogPage({ scope }) {
       <header>
         <h1>Audit log</h1>
         <p className="muted">
-          Who did what, and when. Entries cannot be changed or removed.
-          {scope === 'auditor' && ' Identifiers are masked.'}
+          Who did what, and when. Entries cannot be changed or removed. Identifiers are masked.
         </p>
       </header>
       <div className="card aud-filters" role="search">
@@ -159,7 +154,7 @@ export default function AuditLogPage({ scope }) {
                     </td>
                     <td data-label="Action">{r.action.replaceAll('_', ' ')}</td>
                     <td data-label="Case" className="mono">
-                      {r.case_id ? <Link to={`/cases/${r.case_id}`}>{r.case_no}</Link> : r.case_no}
+                      {r.case_no}
                     </td>
                     <td data-label="Detail" className="aud-detail small muted">
                       {detail(r)}

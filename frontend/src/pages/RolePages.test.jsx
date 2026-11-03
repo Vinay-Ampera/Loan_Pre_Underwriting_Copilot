@@ -109,30 +109,26 @@ describe('AuditLogPage', () => {
     return log
   }
 
-  it('lets the admin follow a case link and filters by user and case', async () => {
+  it('filters by user and case reference', async () => {
     const user = userEvent.setup()
     api.get.mockImplementation(serve)
-    page(<AuditLogPage scope="admin" />)
-    expect(await screen.findByRole('link', { name: 'CASE-2026-0001' })).toHaveAttribute(
-      'href',
-      '/cases/c1',
-    )
+    page(<AuditLogPage />)
+    await screen.findByText('CASE-2026-0001')
     await user.selectOptions(screen.getByLabelText('User'), 'u1')
     await user.type(screen.getByLabelText('Case reference'), 'CASE-2026')
-    const urls = api.get.mock.calls.map(([p]) => p).filter((p) => p.includes('/admin/audit-log?'))
+    const urls = api.get.mock.calls.map(([p]) => p).filter((p) => p.includes('/auditor/audit-log?'))
     const last = new URLSearchParams(urls.at(-1).split('?')[1])
     expect(last.get('actor')).toBe('u1')
     expect(last.get('case_no')).toBe('CASE-2026')
-    expect(api.get).toHaveBeenCalledWith('/admin/users')
   })
 
-  it('gives the auditor the same log with no link into a case', async () => {
+  it('shows masked entries with no link into a case', async () => {
     api.get.mockImplementation(async (path) =>
       path.includes('/audit-log?')
         ? { ...log, rows: [{ ...log.rows[0], case_id: null }] }
         : serve(path),
     )
-    page(<AuditLogPage scope="auditor" />)
+    page(<AuditLogPage />)
     expect(await screen.findByText('CASE-2026-0001')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'CASE-2026-0001' })).toBeNull()
     expect(screen.getByText(/Identifiers are masked/)).toBeInTheDocument()
@@ -145,7 +141,7 @@ describe('AuditLogPage', () => {
     api.blob.mockResolvedValue(new Blob(['x']))
     URL.createObjectURL = vi.fn(() => 'blob:x')
     URL.revokeObjectURL = vi.fn()
-    page(<AuditLogPage scope="auditor" />)
+    page(<AuditLogPage />)
     await screen.findByText('CASE-2026-0001')
     await user.selectOptions(screen.getByLabelText('Action'), 'login')
     await user.click(screen.getByRole('button', { name: 'Export CSV' }))
