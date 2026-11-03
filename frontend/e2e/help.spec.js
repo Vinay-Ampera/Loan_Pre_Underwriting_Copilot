@@ -44,7 +44,9 @@ test('an admin sees the footer and the admin Help guide only', async ({ page }) 
 test('signing out removes the footer', async ({ page }) => {
   await signIn(page, 'officer')
   await expect(page.getByRole('contentinfo')).toBeVisible()
-  await page.getByRole('button', { name: 'Sign out' }).click()
+  await page.getByRole('button', { name: /E2E Officer/ }).click() // the user menu, top right
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Sign out' }).click() // it asks first
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole('contentinfo')).toHaveCount(0)
 })

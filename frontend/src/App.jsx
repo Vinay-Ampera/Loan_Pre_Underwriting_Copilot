@@ -15,10 +15,10 @@ import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminOfficerPage from './pages/AdminOfficerPage'
 import AuditorOverviewPage from './pages/AuditorOverviewPage'
-import AuditorMessagesPage from './pages/AuditorMessagesPage'
-import AuditorAuditLogPage from './pages/AuditorAuditLogPage'
+import AuditLogPage from './pages/AuditLogPage'
+import AuditorCasesPage from './pages/AuditorCasesPage'
 import AuditorUsersPage from './pages/AuditorUsersPage'
-import AuditorPrecedentsPage from './pages/AuditorPrecedentsPage'
+import AdminMessagesPage from './pages/AdminMessagesPage'
 import HelpPage from './pages/HelpPage'
 import SentItemsPage from './pages/SentItemsPage'
 import IssuesPage from './pages/IssuesPage'
@@ -76,7 +76,7 @@ function Routing() {
       <Route
         path="/cases"
         element={
-          <Shell role={['officer', 'auditor']}>
+          <Shell role="officer">
             <CaseQueuePage />
           </Shell>
         }
@@ -92,7 +92,7 @@ function Routing() {
       <Route
         path="/cases/:id"
         element={
-          <Shell role={['officer', 'auditor']}>
+          <Shell role={['officer', 'admin']}>
             <CaseWorkspacePage />
           </Shell>
         }
@@ -146,18 +146,26 @@ function Routing() {
         }
       />
       <Route
-        path="/auditor/messages"
+        path="/admin/messages"
         element={
-          <Shell role="auditor">
-            <AuditorMessagesPage />
+          <Shell role="admin">
+            <AdminMessagesPage />
           </Shell>
         }
       />
       <Route
-        path="/auditor/precedents"
+        path="/admin/audit-log"
+        element={
+          <Shell role="admin">
+            <AuditLogPage scope="admin" />
+          </Shell>
+        }
+      />
+      <Route
+        path="/auditor/cases"
         element={
           <Shell role="auditor">
-            <AuditorPrecedentsPage />
+            <AuditorCasesPage />
           </Shell>
         }
       />
@@ -165,7 +173,7 @@ function Routing() {
         path="/auditor/audit-log"
         element={
           <Shell role="auditor">
-            <AuditorAuditLogPage />
+            <AuditLogPage scope="auditor" />
           </Shell>
         }
       />

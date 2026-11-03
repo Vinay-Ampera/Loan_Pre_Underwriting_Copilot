@@ -2,7 +2,7 @@
 
 The server generates the temporary password and returns it once in the response; it is never
 stored in the clear, logged, or written to the audit log (only the fact that it happened).
-Admins have no case access, so nothing here touches case data. The read-only auditor account is
+The officer profile lists that officer's cases (the admin may open any case). The read-only auditor account is
 created and reset only from the command line: disable, enable and reset refuse it here. An admin cannot disable their own
 account, and the last active admin cannot be disabled, so the system cannot lock itself out.
 """
@@ -55,9 +55,13 @@ def list_users(
     _: User = Depends(admin_only), conn: Connection = Depends(get_conn)
 ) -> list[dict[str, Any]]:  # fmt: skip
     rows = conn.execute(
-        text(f"SELECT {_COLUMNS} FROM users ORDER BY role, lower(name)")  # noqa: S608
+        text(f"""SELECT {_COLUMNS},
+                        (SELECT count(*) FROM cases c WHERE c.created_by = users.id
+                           AND c.status IN ('draft', 'uploaded', 'stopped', 'awaiting_confirmation')
+                        ) AS open_cases
+                 FROM users ORDER BY role, lower(name)""")  # noqa: S608
     )
-    return [_row(r) for r in rows]
+    return [{**_row(r), "open_cases": r.open_cases} for r in rows]
 
 
 @router.get("/summary")
@@ -83,8 +87,7 @@ def summary(
 def user_activity(
     user_id: UUID, _: User = Depends(admin_only), conn: Connection = Depends(get_conn)
 ) -> dict[str, Any]:  # fmt: skip
-    """A basic officer profile for the admin: counts and case numbers only. No applicant names,
-    documents or figures (admins have no case access)."""
+    """An officer profile for the admin: counts, and every case the officer owns."""
     user = _target(conn, user_id)
     by_status = {r.status: r.n for r in conn.execute(
         text("SELECT status, count(*) AS n FROM cases WHERE created_by = :u GROUP BY status"),
@@ -98,9 +101,18 @@ def user_activity(
     precedents = {r.status: r.n for r in conn.execute(
         text("SELECT status, count(*) AS n FROM precedents WHERE proposed_by = :u GROUP BY status"),
         {"u": user_id})}  # fmt: skip
-    recent = conn.execute(
-        text("""SELECT case_no, loan_type, status, band, recommendation, updated_at FROM cases
-                WHERE created_by = :u ORDER BY updated_at DESC LIMIT 10"""),
+    corrected = conn.execute(
+        text("""SELECT count(DISTINCT a.case_id) FROM admin_actions a
+                JOIN cases c ON c.id = a.case_id WHERE c.created_by = :u"""),
+        {"u": user_id},
+    ).scalar_one()
+    cases = conn.execute(
+        text("""SELECT c.id, c.case_no, c.loan_type, c.status, c.band, c.recommendation,
+                       c.updated_at, c.loan_amount,
+                       (SELECT a.full_name FROM applicants a
+                         WHERE a.case_id = c.id AND a.role = 'primary') AS applicant,
+                       EXISTS (SELECT 1 FROM admin_actions x WHERE x.case_id = c.id) AS corrected
+                FROM cases c WHERE c.created_by = :u ORDER BY c.updated_at DESC LIMIT 300"""),
         {"u": user_id},
     )
     last_login = conn.execute(
@@ -111,10 +123,11 @@ def user_activity(
         "user": _row(user), "last_login": last_login, "cases_total": sum(by_status.values()),
         "cases_by_status": by_status, "cases_by_band": by_band,
         "confirmed": actions.get("confirm", 0), "overridden": actions.get("override", 0),
-        "precedents_by_status": precedents,
-        "recent_cases": [{"case_no": r.case_no, "loan_type": r.loan_type, "status": r.status,
-                          "band": r.band, "recommendation": r.recommendation,
-                          "updated_at": r.updated_at} for r in recent],
+        "admin_corrected": corrected, "precedents_by_status": precedents,
+        "cases": [{"id": r.id, "case_no": r.case_no, "loan_type": r.loan_type, "status": r.status,
+                   "band": r.band, "recommendation": r.recommendation, "applicant": r.applicant,
+                   "loan_amount": float(r.loan_amount), "corrected": r.corrected,
+                   "updated_at": r.updated_at} for r in cases],
     }  # fmt: skip
 
 

@@ -15,12 +15,21 @@ const links = (role) => {
 }
 
 describe('Sidebar', () => {
-  it('gives the auditor read-only destinations and nothing that creates', () => {
-    const items = links('auditor')
-    expect(items).toEqual(
-      expect.arrayContaining(['Overview', 'Cases', 'Messages', 'Audit log', 'Users']),
-    )
+  it('gives the auditor overview, cases table, audit log, users and help only', () => {
+    expect(links('auditor')).toEqual(['Overview', 'Cases', 'Audit log', 'Users', 'Help'])
+  })
+
+  it('gives the admin messages and the audit log but no case list or creating', () => {
+    const items = links('admin')
+    expect(items).toEqual([
+      'Home',
+      'Precedents',
+      'Messages',
+      'Issues',
+      'Users',
+      'Audit log',
+      'Help',
+    ])
     expect(items).not.toContain('New case')
-    expect(items).not.toContain('Report a problem')
   })
 })

@@ -8,10 +8,25 @@ import './HomePage.css'
 import './AuditorOverviewPage.css'
 
 const TILES = [
-  ['cases', 'Cases', 'All officers', '/cases'],
-  ['awaiting_confirmation', 'Awaiting confirmation', 'Not yet decided by an officer', '/cases'],
-  ['overridden', 'Overrides', 'Officer decisions that differ', '/auditor/audit-log'],
-  ['pending_precedents', 'Pending precedents', 'Waiting for an admin', '/auditor/precedents'],
+  ['cases', 'Cases', 'All officers', '/auditor/cases'],
+  [
+    'awaiting_confirmation',
+    'Awaiting confirmation',
+    'Not yet decided by an officer',
+    '/auditor/cases?status=awaiting_confirmation',
+  ],
+  [
+    'overridden',
+    'Officer overrides',
+    'Decisions that differ from the system',
+    '/auditor/cases?overridden=officer',
+  ],
+  [
+    'admin_corrected',
+    'Admin changes',
+    'Cases an admin corrected',
+    '/auditor/cases?overridden=admin',
+  ],
 ]
 
 const STATUS = {
@@ -47,8 +62,8 @@ export default function AuditorOverviewPage() {
         <div>
           <h1>Overview</h1>
           <p className="muted">
-            A read-only view of the whole system, built from our own database. Applicant names and
-            identifiers are masked, and original documents are not available to this role.
+            How many cases there are, in which state, and who decided them, built from our own
+            database. This role sees counts and tables only: no applicant, document or report.
           </p>
         </div>
       </header>
@@ -104,6 +119,10 @@ export default function AuditorOverviewPage() {
               value: v.override,
               tone: 'refer',
             }))}
+          />
+          <BarChart
+            title="Cases per officer"
+            rows={c.cases_per_officer.map((o) => ({ label: o.officer, value: o.count }))}
           />
           <BarChart
             title="Cases created per week (last 12 weeks)"

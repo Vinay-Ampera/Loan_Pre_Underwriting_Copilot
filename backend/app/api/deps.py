@@ -79,8 +79,9 @@ def require_role(*roles: str) -> Callable[[User], User]:
 officer_only = require_role("officer")
 admin_only = require_role("admin")
 auditor_only = require_role("auditor")
-# Read-only case data: an officer (own cases) or the auditor (all cases, masked). Never an admin.
-case_reader = require_role("officer", "auditor")
+# Case data: an officer (own cases) or an admin (every case). Never the auditor, who sees
+# aggregate tables only.
+case_reader = require_role("officer", "admin")
 # Read-only data every signed-in role may see. Writes must never use this.
 any_reader = require_role("officer", "admin", "auditor")
 

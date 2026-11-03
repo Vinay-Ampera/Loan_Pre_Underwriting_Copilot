@@ -1,8 +1,8 @@
-"""Case endpoints. Every route here is for loan officers and only for their own cases: an admin
-account gets 403, another officer's case gets 404. The read-only auditor may use the read routes
-for every case, with names, identifiers and addresses masked and no document files (SECURITY.md
-D3); every write route stays officer-only. The UI shows what these endpoints return; it
-computes nothing (scores, bands and stop decisions all come from the pipeline).
+"""Case endpoints. Officers use every route here, only for their own cases (another officer's
+case is a 404). An admin may use the read routes for every case, including the document files,
+and corrects decisions through `admin_cases.py`; every officer write route stays officer-only.
+The auditor never reaches a case: 403 everywhere here (SECURITY.md D3). The UI shows what these
+endpoints return; it computes nothing (scores, bands and stop decisions come from the pipeline).
 """
 
 import json
@@ -23,6 +23,7 @@ from app.agents import store
 from app.agents.state import DB_STAGES
 from app.agents.submission import DocumentRef, Submission
 from app.api import display
+from app.api.decisions import admin_actions, decision_in_force, override_block
 from app.api.deps import (
     User,
     case_reader,
@@ -36,7 +37,6 @@ from app.api.reportpdf import build_report_pdf
 from app.api.runner import Runner
 from app.api.schemas import CO_APPLICANT, LOAN_FIELDS, CaseIn, OfficerActionIn, ResumeIn
 from app.core.config import REPO_ROOT, Settings
-from app.intake.fields import ADDRESS_FIELDS, NAME_FIELDS
 from app.intake.upload import check_case_size, check_upload
 from app.scoring.facts import applicable_requirements
 from app.scoring.rules import RuleSet
@@ -67,7 +67,7 @@ def upload_root(settings: Settings) -> Path:
 
 def get_case(conn: Connection, case_id: UUID, user: User, *, lock: bool = False) -> Any:
     sql = "SELECT * FROM cases WHERE id = :i" + (
-        "" if user.role == "auditor" else " AND created_by = :u"  # the auditor reads every case
+        "" if user.role == "admin" else " AND created_by = :u"  # an admin reads every case
     )
     row = conn.execute(
         text(sql + (" FOR UPDATE" if lock else "")), {"i": case_id, "u": user.id}
@@ -152,9 +152,7 @@ def _documents(conn: Connection, case_id: UUID) -> list[Any]:
                 WHERE d.case_id = :c ORDER BY a.role DESC, d.uploaded_at"""), {"c": case_id}))  # fmt: skip
 
 
-def _fields(
-    conn: Connection, case_id: UUID, *, auditor: bool = False
-) -> dict[UUID, list[dict[str, Any]]]:
+def _fields(conn: Connection, case_id: UUID) -> dict[UUID, list[dict[str, Any]]]:
     out: dict[UUID, list[dict[str, Any]]] = {}
     rows = conn.execute(
         text("""SELECT f.document_id, f.field_name, f.value_masked, f.value_local, f.needs_review
@@ -163,9 +161,6 @@ def _fields(
     for r in rows:
         raw = bytes(r.value_local).decode(errors="replace") if r.value_local is not None else None
         shown = display.display_text(raw) if raw is not None else (r.value_masked or "")
-        if auditor:
-            hidden = r.field_name in NAME_FIELDS | ADDRESS_FIELDS | {"dob"}
-            shown = "masked" if hidden else display.display_text(r.value_masked or shown)
         out.setdefault(r.document_id, []).append(
             {"name": r.field_name, "value": shown, "needs_review": r.needs_review}
         )
@@ -233,23 +228,24 @@ def list_cases(
     status: str | None = None, loan_type: str | None = None, q: str | None = None,
     user: User = Depends(case_reader), conn: Connection = Depends(get_conn),
 ) -> list[dict[str, Any]]:  # fmt: skip
-    auditor = user.role == "auditor"
+    everyone = user.role == "admin"
     rows = conn.execute(
         text("""SELECT c.*, u.name AS officer_name,
                        (SELECT a.full_name FROM applicants a WHERE a.case_id = c.id AND a.role = 'primary') AS applicant,
+                       EXISTS (SELECT 1 FROM admin_actions x WHERE x.case_id = c.id) AS corrected,
                        floor(extract(epoch FROM (now() - c.created_at)) / 86400)::int AS age_days
                 FROM cases c JOIN users u ON u.id = c.created_by
                 WHERE (CAST(:all AS boolean) OR c.created_by = :u)
                   AND (CAST(:st AS text) IS NULL OR c.status = :st)
                   AND (CAST(:lt AS text) IS NULL OR c.loan_type = :lt)
                   AND (CAST(:q AS text) IS NULL OR c.case_no ILIKE '%' || :q || '%'
-                       OR (NOT CAST(:all AS boolean) AND EXISTS (SELECT 1 FROM applicants a WHERE a.case_id = c.id
-                                  AND a.full_name ILIKE '%' || :q || '%')))
+                       OR EXISTS (SELECT 1 FROM applicants a WHERE a.case_id = c.id
+                                  AND a.full_name ILIKE '%' || :q || '%'))
                 ORDER BY c.updated_at DESC LIMIT 200"""),
-        {"u": user.id, "all": auditor, "st": status or None, "lt": loan_type or None, "q": (q or "").strip() or None},
+        {"u": user.id, "all": everyone, "st": status or None, "lt": loan_type or None, "q": (q or "").strip() or None},
     )  # fmt: skip
-    return [{**_summary(r), "applicant": display.mask_name(r.applicant) if auditor else r.applicant,
-             "officer": r.officer_name, "age_days": r.age_days} for r in rows]  # fmt: skip
+    return [{**_summary(r), "applicant": r.applicant, "officer": r.officer_name,
+             "age_days": r.age_days, "admin_corrected": r.corrected} for r in rows]  # fmt: skip
 
 
 def _insert_applicants(conn: Connection, case_id: UUID, body: CaseIn) -> None:
@@ -356,8 +352,7 @@ def read_case(
 ) -> dict[str, Any]:  # fmt: skip
     row = get_case(conn, case_id, user)
     docs = _documents(conn, case_id)
-    auditor = user.role == "auditor"
-    fields = _fields(conn, case_id, auditor=auditor)
+    fields = _fields(conn, case_id)
     checklist = _checklist(_ruleset(request), row, docs)
     report = _latest_report(conn, case_id)
     form = _case_form(row)
@@ -372,13 +367,6 @@ def read_case(
         for a in form["applicants"]
     ]  # fmt: skip
     runner = _runner(request)
-    names = [a["full_name"] for a in form["applicants"]]
-    if auditor:
-        for a, shown in zip(applicants, form["applicants"], strict=True):
-            a["full_name"] = display.mask_name(shown["full_name"])
-            a["dob"] = display.mask_dob(shown["dob"])
-            a["address"] = "masked"
-            a["employer_or_business"] = display.mask_name(a["employer_or_business"])
     out = {
         **_summary(row),
         "loan_details": _show_details(form.get("loan_details", {})),
@@ -400,21 +388,19 @@ def read_case(
         "report_version": report[0] if report else None,
         "report": report[1] if report else None,
         "officer_action": _officer_action(conn, case_id),
+        "admin_actions": admin_actions(conn, case_id),
+        "decision_in_force": decision_in_force(conn, case_id),
         "last_failure": _last_failure(conn, case_id, row.status),
         "loan_fields": LOAN_FIELDS[row.loan_type],
     }  # fmt: skip
-    if not auditor:
+    if user.role != "admin":
         return out
-    # read-only view: masked, with no document files and no way to act
-    officer = conn.execute(
-        text("SELECT name FROM users WHERE id = :u"), {"u": row.created_by}
-    ).scalar()
-    scrubbed = display.scrub_for_auditor(
-        {k: out[k] for k in ("report", "officer_action", "loan_details", "purpose", "documents")},
-        names,
-    )
-    assert isinstance(scrubbed, dict)
-    return {**out, **scrubbed, "read_only": True, "officer": officer}
+    # the admin's view: the same data, plus who owns the case and whether it may be corrected
+    owner = conn.execute(
+        text("SELECT id, name FROM users WHERE id = :u"), {"u": row.created_by}
+    ).one()
+    return {**out, "officer": owner.name, "officer_id": owner.id,
+            "admin_block": override_block(row, report[1] if report else None)}  # fmt: skip
 
 
 @router.get("/{case_id}/status")
@@ -550,7 +536,7 @@ def delete_document(
 
 @router.get("/{case_id}/documents/{doc_id}/file")
 def document_file(
-    case_id: UUID, doc_id: UUID, user: User = Depends(officer_only),
+    case_id: UUID, doc_id: UUID, user: User = Depends(case_reader),
     conn: Connection = Depends(get_conn),
 ) -> FileResponse:  # fmt: skip
     get_case(conn, case_id, user)
@@ -648,18 +634,16 @@ async def resume_case(
 def case_report(
     case_id: UUID, user: User = Depends(case_reader), conn: Connection = Depends(get_conn)
 ) -> dict[str, Any]:  # fmt: skip
-    row = get_case(conn, case_id, user)
+    get_case(conn, case_id, user)
     rep = _latest_report(conn, case_id)
     if rep is None:
         raise HTTPException(404, "No report yet.")
-    out: dict[str, Any] = {"version": rep[0], "report": rep[1],
-                           "officer_action": _officer_action(conn, case_id)}  # fmt: skip
-    if user.role == "auditor":
-        names = [a["full_name"] for a in _case_form(row)["applicants"]]
-        scrubbed = display.scrub_for_auditor(out, names)
-        assert isinstance(scrubbed, dict)
-        return scrubbed
-    return out
+    return {
+        "version": rep[0],
+        "report": rep[1],
+        "officer_action": _officer_action(conn, case_id),
+        "admin_actions": admin_actions(conn, case_id),
+    }
 
 
 @router.get("/{case_id}/report.pdf")

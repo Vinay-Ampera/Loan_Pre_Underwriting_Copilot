@@ -40,6 +40,8 @@ describe('HelpPage', () => {
     expect(screen.getByText('Guide for admins')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'The precedent queue' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Reset a password' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Open and correct a case' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Reassign a case' })).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Score weights' })).toBeNull()
   })
 
@@ -47,6 +49,7 @@ describe('HelpPage', () => {
     renderAs('auditor')
     expect(screen.getByText('Guide for the auditor')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'What you cannot do' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'The Cases table' })).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Score weights' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Reset a password' })).toBeNull()
   })

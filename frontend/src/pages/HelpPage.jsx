@@ -61,14 +61,17 @@ const OFFICER = [
 const ADMIN = [
   ['users', 'Add and disable users', 'users'],
   ['reset', 'Reset a password', 'shield'],
+  ['adm-case', 'Open and correct a case', 'cases'],
+  ['adm-reassign', 'Reassign a case', 'users'],
+  ['adm-records', 'Messages and the audit log', 'mail'],
   ['issues', 'Read issue reports', 'flag'],
   ['precedents', 'The precedent queue', 'precedent'],
 ]
 
 const AUDITOR = [
   ['aud-what', 'What you can see', 'eye'],
-  ['aud-cases', 'Read a case', 'cases'],
-  ['aud-data', 'Overview, log and messages', 'chart'],
+  ['aud-cases', 'The Cases table', 'cases'],
+  ['aud-data', 'Overview and audit log', 'chart'],
   ['aud-limits', 'What you cannot do', 'shield'],
 ]
 
@@ -77,44 +80,46 @@ function AuditorGuide() {
     <>
       <HelpSection id="aud-what" icon="eye" title="What you can see">
         <p>
-          The auditor account is <strong>read-only</strong>. It reads the system&apos;s own records:
-          every officer&apos;s cases with their scores, decisions and overrides, the audit log,
-          precedents, the staff list, the messages officers sent to customers, and charts built from
-          those records.
+          The auditor account is <strong>read-only</strong> and looks at how the system is used, not
+          at any one loan: how many cases there are, in which state, who decided them and whether a
+          decision was overridden. You see the Overview charts, the Cases table, the audit log and
+          the staff list.
         </p>
-        <Callout tone="info" title="Masked data, no documents">
-          Applicant names, PAN, phone, email and addresses are masked, and the original document
-          files are never shown to this role.
+        <Callout tone="info" title="No applicant data">
+          You never see an applicant, a document, a report or a message. Identifiers in the audit
+          log are masked.
         </Callout>
       </HelpSection>
 
-      <HelpSection id="aud-cases" icon="cases" title="Read a case">
+      <HelpSection id="aud-cases" icon="cases" title="The Cases table">
         <ol className="help-steps">
-          <li>Open Cases. The list shows every officer&apos;s cases; search by case number.</li>
           <li>
-            Open a case to see the stepper, the extracted fields, the report and its audit trail.
+            Open Cases. Each row is one case: reference, loan type, officer, status, score, the
+            officer&apos;s decision and whether an admin changed it.
           </li>
           <li>
-            The Read-only badge is shown, and there are no buttons to confirm, override, upload or
-            send.
+            Filter by status, loan type, recommendation, officer, who changed it, or created date.
+            Search by case reference.
           </li>
+          <li>Export CSV saves the filtered rows. The rows cannot be opened.</li>
         </ol>
       </HelpSection>
 
-      <HelpSection id="aud-data" icon="chart" title="Overview, log and messages">
+      <HelpSection id="aud-data" icon="chart" title="Overview and audit log">
         <p>
-          Overview shows counts and charts. Audit log lists who did what and when, and can be
-          filtered by action. Messages shows contact requests officers sent, with the recipient
-          masked. Users and Precedents are lists only.
+          Overview shows counts and charts, with the tiles opening the matching Cases table. The
+          audit log lists who did what and when, newest first, with filters for action, user, case
+          reference and dates, and a CSV export. Users lists accounts with their last sign-in, with
+          no buttons.
         </p>
       </HelpSection>
 
       <HelpSection id="aud-limits" icon="shield" title="What you cannot do">
         <p>
           You cannot change anything. Every action that writes data answers “not allowed” for this
-          account, on the server as well as in the screen. There is exactly one auditor, created
-          from the command line by whoever runs the system; an admin cannot create, disable or reset
-          it.
+          account, on the server as well as in the screen, and so does every case page. There is
+          exactly one auditor, created from the command line by whoever runs the system; an admin
+          cannot create, disable or reset it.
         </p>
       </HelpSection>
     </>
@@ -280,12 +285,50 @@ function AdminGuide() {
         </Callout>
       </HelpSection>
 
+      <HelpSection id="adm-case" icon="cases" title="Open and correct a case">
+        <ol className="help-steps">
+          <li>
+            Open Users, choose an officer, then a case from their list. Home also lists the cases
+            officers decided most recently.
+          </li>
+          <li>
+            You can read everything on the case: the documents, the extracted fields, the report and
+            its audit trail. You cannot confirm, upload or submit.
+          </li>
+          <li>
+            After the officer has decided, Change the decision lets you pick a different decision
+            and write a reason. The officer&apos;s decision stays on the case and your change is
+            shown beneath it as the decision in force; the officer is told on the case and on Home.
+          </li>
+        </ol>
+        <Callout tone="warn" title="Hard rules stay hard">
+          A case that failed a hard rule cannot be changed by an admin, and a change does not become
+          a precedent.
+        </Callout>
+      </HelpSection>
+
+      <HelpSection id="adm-reassign" icon="users" title="Reassign a case">
+        <p>
+          If a case is waiting on an officer who is away or disabled, open the case and choose
+          Reassign to another officer. Pick an active officer and write a reason; the new officer
+          then decides it. An admin never decides a case first. Disabling an officer warns you when
+          they still have undecided cases.
+        </p>
+      </HelpSection>
+
+      <HelpSection id="adm-records" icon="mail" title="Messages and the audit log">
+        <p>
+          Messages lists the contact requests officers actually sent (no drafts), with filters for
+          officer, template, case and date. Audit log lists who did what and when, with filters for
+          action, user, case reference and dates, and a CSV export.
+        </p>
+      </HelpSection>
+
       <HelpSection id="issues" icon="flag" title="Read issue reports">
         <p>
           Open Issues to see problems reported by officers. Opening a report marks it read, and Mark
           as closed finishes it. Reports hold only a case reference, a category and short text; they
-          never include case data. Home shows how many are open, and how many customer messages were
-          sent or failed, as counts only.
+          never include case data. Home shows how many are open.
         </p>
       </HelpSection>
 
@@ -316,9 +359,9 @@ function AdminGuide() {
           Approved precedents help only borderline cases of the same loan type and never over a hard
           rule. Use the Approve… button (or reject) on the card.
         </p>
-        <Callout tone="info" title="No case data for admins">
-          Admins have no access to case data. Click an officer&apos;s name in Users to see their
-          counts and case numbers only.
+        <Callout tone="info" title="Corrections are not precedents">
+          An admin change to one case never creates a precedent. Only an officer&apos;s override
+          goes through the three gates.
         </Callout>
       </HelpSection>
     </>

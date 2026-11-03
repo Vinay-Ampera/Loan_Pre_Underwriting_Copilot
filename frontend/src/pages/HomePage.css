@@ -72,3 +72,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.corrected-note {
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--radius-input);
+  background: var(--refer-bg);
+}

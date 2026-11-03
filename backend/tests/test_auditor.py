@@ -1,8 +1,10 @@
-"""The read-only auditor (SECURITY.md D3): 403 on every write route, reads every case masked and
-without documents, cannot be managed from the admin API, and the CLI allows only one."""
+"""The read-only auditor (SECURITY.md D3): 403 on every write route and on every case route (no
+case page, report or document), static tables and charts only, cannot be managed from the admin
+API, and the CLI allows only one."""
 
 import uuid
 from collections.abc import Iterator
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +26,7 @@ from app.monitoring.auditor_view import shown
 from app.rag.index import reindex
 from app.rag.retrieve import PolicyRetriever
 from tests.rag_helpers import fake_embed_passages, fake_rerank, fake_vector
-from tests.test_api import PASSWORD, add_precedent, create, login, minimal
+from tests.test_api import PASSWORD, create, login, minimal
 
 pytestmark = pytest.mark.db
 V1 = "/api/v1"
@@ -88,7 +90,7 @@ def seed_case(client: TestClient, engine: Engine) -> tuple[str, str]:
 
 
 # --------------------------------------------------------------------------- read only
-def test_auditor_gets_403_on_every_write_route_and_on_every_other_role_route(
+def test_auditor_gets_403_on_every_route_outside_the_auditor_ones(
     client: TestClient,
 ) -> None:
     h = login(client, "aud")
@@ -108,12 +110,7 @@ def test_auditor_gets_403_on_every_write_route_and_on_every_other_role_route(
             url = url.replace("{" + part + "}", str(uuid.uuid4()))
         for method in methods:
             r = client.request(method.upper(), url, headers=h, json={})
-            is_case_read = method == "get" and path.startswith("/cases") \
-                and not any(x in path for x in ("documents", "messages", ".pdf"))  # fmt: skip
-            if is_case_read:
-                assert r.status_code in (200, 404), (method, path, r.status_code)
-            else:
-                assert r.status_code == 403, (method, path, r.status_code)
+            assert r.status_code == 403, (method, path, r.status_code)
             checked += 1
     assert checked > 25
 
@@ -136,7 +133,7 @@ def test_auditor_cannot_reach_documents_or_act(client: TestClient, engine: Engin
     assert client.post(f"{V1}/cases/{case_id}/messages", headers=h, json={}).status_code == 403
 
 
-def test_auditor_reads_another_officers_case_masked_and_officers_still_get_404(
+def test_auditor_cannot_open_any_case_and_officers_still_get_404(
     client: TestClient, engine: Engine
 ) -> None:
     case_id, _ = seed_case(client, engine)
@@ -144,53 +141,62 @@ def test_auditor_reads_another_officers_case_masked_and_officers_still_get_404(
     assert client.get(f"{V1}/cases/{case_id}", headers=ben).status_code == 404
     assert client.get(f"{V1}/cases/{case_id}/report", headers=ben).status_code == 404
     assert client.get(f"{V1}/cases/{case_id}", headers=asha).status_code == 200
-
-    got = client.get(f"{V1}/cases/{case_id}", headers=aud)
-    assert got.status_code == 200
-    body = got.json()
-    assert body["read_only"] is True and body["officer"] == "Asha Officer"
-    a = body["applicants"][0]
-    assert a["full_name"] == "T*** P***" and a["pan"] == "ABCDE****F"
-    assert a["phone"] == "******3210" and a["email"] == "****@example.com"
-    assert a["address"] == "masked" and a["dob"] == "1990-**-**"
-    flat = got.text
-    assert "Test Person" not in flat and "Person" not in flat and "ABCDE1234F" not in flat
-    assert "9876543210" not in flat and "1 Test Street" not in flat
-    rep = client.get(f"{V1}/cases/{case_id}/report", headers=aud).json()["report"]
-    assert "Test Person" not in str(rep) and "ABCDE1234F" not in str(rep)
+    for tail in ("", "/report", "/audit", "/status"):
+        assert client.get(f"{V1}/cases/{case_id}{tail}", headers=aud).status_code == 403, tail
+    assert client.get(f"{V1}/cases", headers=aud).status_code == 403
 
 
-def test_auditor_lists_every_case_but_cannot_search_by_name(
+def test_auditor_cases_table_has_no_applicant_or_report_content(
     client: TestClient, engine: Engine
 ) -> None:
     seed_case(client, engine)
     create(client, login(client, "ben"), minimal())
     aud = login(client, "aud")
-    rows = client.get(f"{V1}/cases", headers=aud).json()
-    assert len(rows) == 2 and {r["officer"] for r in rows} == {"Asha Officer", "Ben Officer"}
-    assert all(r["applicant"] == "T*** P***" for r in rows)
-    assert client.get(f"{V1}/cases", params={"q": "Test Person"}, headers=aud).json() == []
-    assert len(client.get(f"{V1}/cases", params={"q": rows[0]["case_no"]}, headers=aud).json()) == 1
-    assert len(client.get(f"{V1}/cases", headers=login(client, "ben")).json()) == 1
-
-
-def test_admin_still_has_no_case_access(client: TestClient, engine: Engine) -> None:
-    case_id, _ = seed_case(client, engine)
-    ada = login(client, "ada")
-    assert client.get(f"{V1}/cases", headers=ada).status_code == 403
-    assert client.get(f"{V1}/cases/{case_id}", headers=ada).status_code == 403
-    assert client.get(f"{V1}/auditor/summary", headers=ada).status_code == 403
-    assert client.get(f"{V1}/auditor/summary", headers=login(client, "asha")).status_code == 403
+    got = client.get(f"{V1}/auditor/cases", headers=aud)
+    body = got.json()
+    assert body["total"] == 2 and {r["officer"] for r in body["rows"]} == {
+        "Asha Officer",
+        "Ben Officer",
+    }
+    assert set(body["rows"][0]) == {
+        "case_no",
+        "loan_type",
+        "officer",
+        "status",
+        "band",
+        "score",
+        "officer_decision",
+        "admin_corrected",
+        "created_at",
+        "updated_at",
+    }
+    assert "Test Person" not in got.text and "ABCDE1234F" not in got.text
+    one = client.get(f"{V1}/auditor/cases", params={"q": body["rows"][0]["case_no"]}, headers=aud)
+    assert one.json()["total"] == 1
+    assert (
+        client.get(f"{V1}/auditor/cases", params={"status": "confirmed"}, headers=aud).json()[
+            "total"
+        ]
+        == 0
+    )
+    assert (
+        client.get(f"{V1}/auditor/cases", params={"overridden": "admin"}, headers=aud).json()[
+            "total"
+        ]
+        == 0
+    )
+    csv_ = client.get(f"{V1}/auditor/cases.csv", headers=aud)
+    assert csv_.status_code == 200 and csv_.text.startswith("Case,Loan type,Officer")
+    assert csv_.text.count("CASE-") == 2 and "Test Person" not in csv_.text
 
 
 # --------------------------------------------------------------------------- auditor reads
 def test_auditor_data_routes(client: TestClient, engine: Engine) -> None:
     seed_case(client, engine)
-    add_precedent(engine)
     aud = login(client, "aud")
 
     s = client.get(f"{V1}/auditor/summary", headers=aud).json()
-    assert s["cases"] >= 1 and s["pending_precedents"] == 1 and s["messages_sent"] == 1
+    assert s["cases"] >= 1 and s["admin_corrected"] == 0 and s["active_users"] == 4
 
     c = client.get(f"{V1}/auditor/charts", headers=aud).json()
     assert set(c["cases_by_band"]) == {"approve", "refer", "reject"}
@@ -204,15 +210,10 @@ def test_auditor_data_routes(client: TestClient, engine: Engine) -> None:
 
     users = client.get(f"{V1}/auditor/users", headers=aud).json()
     assert {u["role"] for u in users} == {"officer", "admin", "auditor"}
-    assert all("password" not in k for u in users for k in u)
-
-    pre = client.get(f"{V1}/auditor/precedents", headers=aud).json()
-    assert len(pre) == 1 and pre[0]["status"] == "pending"
-
-    msgs = client.get(f"{V1}/auditor/messages", headers=aud).json()
-    assert len(msgs) == 1 and msgs[0]["recipient"] == "****@example.com"
-    assert "example.com" in msgs[0]["recipient"] and "test.person" not in str(msgs)
-    assert msgs[0]["officer"] == "Asha Officer" and "OTP" in msgs[0]["text"]
+    assert all(set(u) == {"id", "name", "role", "active", "locked", "last_login"} for u in users)
+    # messages and precedents are not auditor pages any more
+    for gone in ("precedents", "messages"):
+        assert client.get(f"{V1}/auditor/{gone}", headers=aud).status_code in (404, 405)
 
 
 def test_auditor_changes_nothing_in_the_database(client: TestClient, engine: Engine) -> None:
@@ -226,9 +227,8 @@ def test_auditor_changes_nothing_in_the_database(client: TestClient, engine: Eng
             return {t: c.execute(text(f"SELECT count(*) FROM {t}")).scalar_one() for t in tables}  # noqa: S608
 
     before = counts()
-    for path in ("summary", "charts", "audit-log", "users", "precedents", "messages"):
+    for path in ("summary", "charts", "audit-log", "audit-log.csv", "users", "cases", "cases.csv"):
         assert client.get(f"{V1}/auditor/{path}", headers=aud).status_code == 200
-    assert client.get(f"{V1}/cases", headers=aud).status_code == 200
     assert counts() == before
 
 
@@ -309,6 +309,51 @@ def test_mask_helpers() -> None:
     assert display.mask_name(None) is None and display.mask_dob("1990-05-06") == "1990-**-**"
     out: Any = display.scrub_for_auditor({"a": ["Asha Rao paid", {"b": "asha@x.in"}]}, ["Asha Rao"])
     assert out == {"a": ["A*** R** paid", {"b": "****@x.in"}]}
+
+
+def test_auditor_audit_log_filters_and_masks(client: TestClient, engine: Engine) -> None:
+    case_id, _ = seed_case(client, engine)
+    aud = login(client, "aud")
+    with engine.begin() as c:
+        c.execute(text("""INSERT INTO audit_log (action, entity, entity_id, after)
+                          VALUES ('probe', 'case', :i, CAST('{"pan": "ABCDE1234F"}' AS jsonb))"""),
+                  {"i": case_id})  # fmt: skip
+    case_no = client.get(f"{V1}/auditor/cases", headers=aud).json()["rows"][0]["case_no"]
+    by_case = client.get(f"{V1}/auditor/audit-log", params={"case_no": case_no}, headers=aud).json()
+    assert by_case["total"] >= 2 and {r["case_no"] for r in by_case["rows"]} == {case_no}
+    assert all(r["case_id"] is None for r in by_case["rows"])  # the auditor gets no case ids
+    assert "ABCDE1234F" not in str(by_case) and "ABCDE****F" in str(by_case)
+    ada = next(
+        u for u in client.get(f"{V1}/auditor/users", headers=aud).json() if u["role"] == "admin"
+    )
+    assert (
+        client.get(f"{V1}/auditor/audit-log", params={"actor": ada["id"]}, headers=aud).json()[
+            "total"
+        ]
+        == 0
+    )
+    today = date.today().isoformat()
+    day = client.get(
+        f"{V1}/auditor/audit-log", params={"date_from": today, "date_to": today}, headers=aud
+    )
+    assert day.json()["total"] >= 2
+    gone = client.get(f"{V1}/auditor/audit-log", params={"date_to": "2000-01-01"}, headers=aud)
+    assert gone.json()["total"] == 0
+    exported = client.get(f"{V1}/auditor/audit-log.csv", params={"case_no": case_no}, headers=aud)
+    assert (
+        exported.text.startswith("When,Actor,Role,Action,Case,Detail") and "probe" in exported.text
+    )
+
+
+def test_csv_cells_that_look_like_formulas_stay_text() -> None:
+    from app.api.auditlog import _cell  # noqa: PLC0415
+
+    assert (
+        _cell("=1+1") == "'=1+1"
+        and _cell("@x") == "'@x"
+        and _cell(None) == ""
+        and _cell("ok") == "ok"
+    )
 
 
 def test_migration_0011_widens_the_role_check_and_rolls_back(clean_db_url: str) -> None:

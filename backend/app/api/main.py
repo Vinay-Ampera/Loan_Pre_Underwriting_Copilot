@@ -22,7 +22,7 @@ from sqlalchemy import Engine, create_engine
 from app.agents.checkpoint import postgres_saver
 from app.agents.graph import Pipeline
 from app.agents.runtime import AgentContext, Services
-from app.api import admin, auditor, auth, cases, issues, messages, users
+from app.api import admin, admin_cases, auditor, auth, cases, issues, messages, users
 from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
@@ -97,6 +97,7 @@ def create_app(
         auth.router,
         cases.router,
         admin.router,
+        admin_cases.router,
         auditor.router,
         auditor_view.router,
         users.router,

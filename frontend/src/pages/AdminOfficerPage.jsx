@@ -1,8 +1,9 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
-import { CaseStatusChip } from '../components/StatusChip'
-import { ErrorState, Skeleton } from '../components/States'
+import StatusChip, { CaseStatusChip } from '../components/StatusChip'
+import { loanLabel } from '../components/LoanTypePicker'
+import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AdminOfficerPage.css'
 
 const STATUS = [
@@ -20,7 +21,21 @@ const BAND = [
   ['reject', 'Recommended reject'],
 ]
 const PRECEDENT = ['pending', 'approved', 'rejected', 'held', 'expired']
+// cases the officer has not decided and that are not running: the ones an admin can reassign
+const OPEN = ['draft', 'uploaded', 'stopped', 'awaiting_confirmation']
+const FILTERS = [
+  ['', 'All cases', () => true],
+  ['open', 'Not decided by the officer', (c) => OPEN.includes(c.status)],
+  ...STATUS.map(([k, l]) => [k, l, (c) => c.status === k]),
+  ['corrected', 'Changed by an admin', (c) => c.corrected],
+]
 const when = (v) => (v ? new Date(v).toLocaleString() : 'Never')
+const money = (n) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(n)
 
 function Counts({ title, rows }) {
   return (
@@ -37,13 +52,17 @@ function Counts({ title, rows }) {
   )
 }
 
-/** Officer profile for the admin: counts and case numbers only, no applicant data. */
+/** An officer's profile for the admin: counts, and every case the officer owns, openable. */
 export default function AdminOfficerPage() {
   const { id } = useParams()
+  const [params, setParams] = useSearchParams()
+  const filter = FILTERS.some(([k]) => k === params.get('status')) ? params.get('status') : ''
   const { data, error, loading, reload } = useAsync(
     () => api.get(`/admin/users/${id}/activity`),
     [id],
   )
+  const test = FILTERS.find(([k]) => k === filter)[2]
+  const shown = data ? data.cases.filter(test) : []
   return (
     <div className="officer-page">
       <Link to="/admin/users">← Users</Link>
@@ -68,10 +87,11 @@ export default function AdminOfficerPage() {
               rows={BAND.map(([k, l]) => [l, data.cases_by_band[k] ?? 0])}
             />
             <Counts
-              title="Officer decisions"
+              title="Decisions"
               rows={[
-                ['Confirmed', data.confirmed],
-                ['Overridden', data.overridden],
+                ['Confirmed by the officer', data.confirmed],
+                ['Overridden by the officer', data.overridden],
+                ['Changed by an admin', data.admin_corrected],
               ]}
             />
             <Counts
@@ -80,26 +100,55 @@ export default function AdminOfficerPage() {
             />
           </div>
           <section className="card officer-block">
-            <h2>Recent cases</h2>
-            {data.recent_cases.length === 0 ? (
+            <div className="officer-cases-head">
+              <h2>Cases</h2>
+              <div className="field officer-filter">
+                <label htmlFor="officer-status">Show</label>
+                <select
+                  id="officer-status"
+                  className="select"
+                  value={filter}
+                  onChange={(e) => setParams(e.target.value ? { status: e.target.value } : {})}
+                >
+                  {FILTERS.map(([k, l]) => (
+                    <option key={k} value={k}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {data.cases.length === 0 ? (
               <p className="muted">No cases yet.</p>
+            ) : shown.length === 0 ? (
+              <EmptyState title="No cases match">Choose another filter.</EmptyState>
             ) : (
               <table className="officer-cases">
                 <thead>
                   <tr>
                     <th>Case</th>
-                    <th>Loan type</th>
+                    <th>Applicant</th>
+                    <th>Loan</th>
                     <th>Status</th>
                     <th>Updated</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.recent_cases.map((c) => (
-                    <tr key={c.case_no}>
-                      <td data-label="Case">{c.case_no}</td>
-                      <td data-label="Loan type">{c.loan_type}</td>
+                  {shown.map((c) => (
+                    <tr key={c.id}>
+                      <td data-label="Case">
+                        <Link to={`/cases/${c.id}`} className="mono">
+                          {c.case_no}
+                        </Link>
+                      </td>
+                      <td data-label="Applicant">{c.applicant}</td>
+                      <td data-label="Loan">
+                        {loanLabel(c.loan_type)}{' '}
+                        <span className="muted">{money(c.loan_amount)}</span>
+                      </td>
                       <td data-label="Status">
-                        <CaseStatusChip status={c.status} band={c.band} />
+                        <CaseStatusChip status={c.status} band={c.band} />{' '}
+                        {c.corrected && <StatusChip tone="refer">Changed by an admin</StatusChip>}
                       </td>
                       <td data-label="Updated">{when(c.updated_at)}</td>
                     </tr>
@@ -107,9 +156,6 @@ export default function AdminOfficerPage() {
                 </tbody>
               </table>
             )}
-            <p className="small muted">
-              Admins see counts and case numbers only. Applicant details stay with the officer.
-            </p>
           </section>
         </>
       )}

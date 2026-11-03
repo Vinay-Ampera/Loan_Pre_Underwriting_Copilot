@@ -2,6 +2,7 @@
 
 from datetime import date
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -168,6 +169,22 @@ class OfficerActionIn(BaseModel):
     second_click: bool = False
     reason: str | None = Field(default=None, max_length=2000)
     final_decision: Literal["approve", "refer", "reject"] | None = None
+
+
+class AdminOverrideIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    second_click: bool = False
+    reason: str = Field(default="", max_length=2000)
+    final_decision: Literal["approve", "refer", "reject"]
+
+
+class ReassignIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    second_click: bool = False
+    reason: str = Field(default="", max_length=2000)
+    officer_id: UUID
 
 
 class PrecedentApproveIn(BaseModel):

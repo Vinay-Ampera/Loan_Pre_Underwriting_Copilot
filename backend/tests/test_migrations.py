@@ -14,7 +14,7 @@ EXPECTED_TABLES = {
     "rule_results", "reports", "eval_scores", "llm_calls", "officer_actions", "precedents",
     "audit_log", "policy_documents", "policy_chunks", "rules", "rule_set_versions",
     "mock_identity", "mock_bureau", "mock_gst", "mock_udyam", "test_cases",
-    "fairness_attributes",
+    "fairness_attributes", "admin_actions",
 }  # fmt: skip
 
 
@@ -146,4 +146,26 @@ def test_role_grants_isolate_fairness_and_protect_audit_log(clean_db_url: str) -
         # monitoring role reads, never writes
         assert can(conn, "report_ro", "fairness_attributes", "SELECT")
         assert not can(conn, "report_ro", "fairness_attributes", "INSERT")
+    engine.dispose()
+
+
+def test_admin_action_needs_a_reason_and_a_real_decision(clean_db_url: str) -> None:
+    command.upgrade(alembic_config(clean_db_url), "head")
+    engine = create_engine(clean_db_url)
+    with engine.begin() as conn:
+        uid = conn.execute(
+            text("""INSERT INTO users (name, email, password_hash, role)
+                                   VALUES ('A', 'a@example.test', 'x', 'admin') RETURNING id""")
+        ).scalar_one()
+        case = conn.execute(text("""INSERT INTO cases (case_no, loan_type, created_by, loan_amount, tenure_months)
+                                    VALUES ('CASE-2026-0001', 'personal', :u, 1000, 12) RETURNING id"""),
+                            {"u": uid}).scalar_one()  # fmt: skip
+    insert = text("""INSERT INTO admin_actions (case_id, admin_id, action, previous_decision,
+                         final_decision, reason, second_click_at)
+                     VALUES (:c, :u, 'override', 'approve', :f, :r, now())""")
+    for final, reason in (("reject", "   "), ("maybe", "a real reason")):
+        with pytest.raises(DBAPIError), engine.begin() as conn:
+            conn.execute(insert, {"c": case, "u": uid, "f": final, "r": reason})
+    with engine.begin() as conn:
+        conn.execute(insert, {"c": case, "u": uid, "f": "reject", "r": "a real reason"})
     engine.dispose()

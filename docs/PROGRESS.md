@@ -27,12 +27,20 @@ Next: the user commits Stage 9 and applies migration 0010 on Neon, then the revi
 
 ## Decisions log
 
+### 2026-11-03 (later): Auditor reshaped, admin reads and corrects cases (changes locked decision 9 again)
+
+- **Auditor:** no case page, report, document, message or precedent. Sees Overview (counts, charts, cases per officer), a static Cases table (filters, CSV), the audit log (masked, filters, CSV) and the Users list (no buttons). Admin Users screen: the auditor's buttons are greyed out with no tooltip.
+- **Admin:** reads every officer's case, documents included, with the same masking as the officer; Users → officer lists their cases. Sees Messages (sent only, no drafts, filters) and the Audit log (unmasked, same filters, CSV). Home lists recently decided cases.
+- **Correction:** after the officer has decided only, never over a hard rule, reason (15+ characters) and a second click, stored as a separate `admin_actions` row beside the officer's; the latest is the decision in force; the officer is told on the case and on Home; it never creates a precedent. May repeat; each is kept.
+- **Reassign:** a case the officer has not decided (`draft`, `uploaded`, `stopped`, `awaiting_confirmation`) goes to another active officer, with a reason and a second click, so an officer still decides first. Disabling an officer with undecided cases warns and links to the list.
+- **Schema:** migration 0012 adds `admin_actions`. See `SECURITY.md` D3 and D4.
+
 ### 2026-11-03: Read-only auditor role approved (changes locked decision 9)
 
 - **Role:** `auditor`, UI label "Auditor". Strictly read-only. Reads our own database (cases, scores, decisions, overrides, audit log, precedents, users list, customer messages, counts, charts built in-app from Postgres). Sees **masked** applicant data and **no original documents**. No Grafana or Langfuse link or account. Customer messages are readable with recipient emails masked.
 - **Creation:** only by `python -m app.api.users_cli create --role auditor`; exactly one active auditor (the CLI refuses a second). The admin API and Users screen cannot create, disable, enable or reset an auditor.
 - **Admin creating an admin** stays allowed; the confirm dialog shows a red "You are creating an admin" warning (second click and audit row kept).
-- **Unchanged:** officers see only their own cases (404 on others); admin has no case access; an admin cannot disable themselves or the last active admin.
+- **Unchanged:** officers see only their own cases (404 on others); an admin cannot disable themselves or the last active admin. (The auditor's case access and the admin's lack of it were changed later the same day; see the entry above.)
 - **Schema:** migration 0011 widens the `users.role` check; no new tables.
 - **Part 2 (after part 1 works):** aggregate fairness charts for the auditor, groups under 5 cases shown as "too few to show", never case-level rows, from a separate read-only route; the pipeline must still be unable to read the fairness table.
 
@@ -181,3 +189,14 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 - **User menu** top right, beside the theme toggle: name, email, role and Sign out (asks first). No separate Profile page. The sidebar keeps only navigation.
 - **Auditor role:** approved by the user 2026-11-03 and built next (see the decision below).
 - **No schema change** in this batch, so no migration to run.
+
+---
+
+## Auditor and admin reshape build notes (2026-11-03, later)
+
+- **Migration 0012:** `admin_actions` (case, admin, previous and final decision, reason, second click time); grants for `app_rw`, `report_ro` and `migrator` when those roles exist. Downgrade drops it.
+- **Backend:** `deps.case_reader` is now officer or admin (the auditor gets 403 on every case route). `api/decisions.py` (decision in force, hard-rule check, override block), `api/admin_cases.py` (override, reassign, recent decisions, sent messages, audit log and CSV), `api/auditlog.py` (one audit query for admin and auditor, masking for the auditor, CSV with formula-safe cells). `api/auditor.py` rewritten: summary, charts (cases per officer), `/auditor/cases` and CSV, audit log and CSV, users with last sign-in; `/auditor/messages` and `/auditor/precedents` removed. `users.py`: `open_cases` per user, the officer page lists every case. `cases.py`: admin reads every case and document, `admin_actions` and `decision_in_force` in the case and report, `admin_corrected` in the list.
+- **Frontend:** sidebars and routes per role; shared `AuditLogPage`; `AuditorCasesPage`; `AdminMessagesPage`; `AdminCorrection` (change the decision, reassign) and `AdminChanges` (the card shown to admin and officer); case workspace in an Admin view; Home notice for the officer; Help guides for admin and auditor rewritten. Removed: auditor messages, precedents and case-page pages.
+- **Verified:** backend `test_auditor.py` (403 on every route outside `/auditor`, no case route for the auditor, table content and CSV, audit log filters and masking), `test_admin_cases.py` (reading, override rules, hard-rule refusal, reassign rules, lists, audit log), `test_migrations.py` (0012); frontend tests for each screen; Playwright `auditor.spec.js` and `roles.spec.js` updated.
+- **Run it:** `cd backend && ../.venv/bin/python -m app.db.migrate` (0012).
+- **Not built:** an admin UI test in the browser that corrects a case end to end (the browser test database seeds a case without a report; the API and component tests cover it).

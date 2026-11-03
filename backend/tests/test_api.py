@@ -164,7 +164,7 @@ def test_missing_bad_and_expired_tokens_are_refused(client: TestClient, engine: 
 
 
 # --------------------------------------------------------------------------- roles
-def test_admin_cannot_create_upload_submit_or_confirm(client: TestClient) -> None:
+def test_admin_cannot_create_upload_submit_or_confirm_but_can_read(client: TestClient) -> None:
     officer, admin = login(client, "asha"), login(client, "ada")
     case_id = create(client, officer, minimal())
     assert client.post("/api/v1/cases", json=minimal(), headers=admin).status_code == 403
@@ -181,8 +181,9 @@ def test_admin_cannot_create_upload_submit_or_confirm(client: TestClient) -> Non
             f"/api/v1/cases/{case_id}/{path}", json={"second_click": True}, headers=admin
         )
         assert r.status_code == 403, path
-    assert client.get("/api/v1/cases", headers=admin).status_code == 403
-    assert client.get(f"/api/v1/cases/{case_id}", headers=admin).status_code == 403
+    # an admin may read every case but acts on none of them as an officer
+    assert client.get("/api/v1/cases", headers=admin).status_code == 200
+    assert client.get(f"/api/v1/cases/{case_id}", headers=admin).status_code == 200
 
 
 def test_officer_cannot_reach_the_precedent_queue(client: TestClient, engine: Engine) -> None:
@@ -800,7 +801,7 @@ def test_a_fix_type_stop_can_be_resumed_through_the_api(client: TestClient) -> N
 
 
 # --------------------------------------------------------------------------- profile and officer view
-def test_admin_sees_officer_activity_without_case_details(client: TestClient) -> None:
+def test_admin_sees_officer_activity_and_case_list(client: TestClient) -> None:
     admin = login(client, "ada")
     asha = next(u for u in client.get("/api/v1/admin/users", headers=admin).json()
                 if u["email"] == "asha@example.test")  # fmt: skip
@@ -808,7 +809,12 @@ def test_admin_sees_officer_activity_without_case_details(client: TestClient) ->
     assert got.status_code == 200
     body = got.json()
     assert body["user"]["email"] == "asha@example.test" and body["cases_total"] == 0
-    assert body["confirmed"] == 0 and body["overridden"] == 0 and body["recent_cases"] == []
+    assert (
+        body["confirmed"] == 0
+        and body["overridden"] == 0
+        and body["cases"] == []
+        and body["admin_corrected"] == 0
+    )
     assert (
         client.get(
             f"/api/v1/admin/users/{asha['id']}/activity", headers=login(client, "ben")

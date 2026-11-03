@@ -9,7 +9,6 @@ import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AdminUsersPage.css'
 
 const ROLE = { officer: 'Loan officer', admin: 'Admin', auditor: 'Auditor' }
-const CLI_ONLY = 'The auditor account is managed from the command line only'
 
 function AdminWarning() {
   return (
@@ -246,7 +245,6 @@ export default function AdminUsersPage() {
                         type="button"
                         className="btn"
                         disabled={auditor}
-                        title={auditor ? CLI_ONLY : undefined}
                         onClick={() => setDialog({ kind: 'reset', user: u })}
                         aria-label={`Reset password for ${u.name}`}
                       >
@@ -257,13 +255,7 @@ export default function AdminUsersPage() {
                           type="button"
                           className="btn"
                           disabled={me || auditor}
-                          title={
-                            auditor
-                              ? CLI_ONLY
-                              : me
-                                ? 'You cannot disable your own account'
-                                : undefined
-                          }
+                          title={me ? 'You cannot disable your own account' : undefined}
                           onClick={() => setDialog({ kind: 'disable', user: u })}
                           aria-label={`Disable ${u.name}`}
                         >
@@ -274,7 +266,6 @@ export default function AdminUsersPage() {
                           type="button"
                           className="btn"
                           disabled={auditor}
-                          title={auditor ? CLI_ONLY : undefined}
                           onClick={() => run(`/admin/users/${u.id}/enable`)}
                           aria-label={`Enable ${u.name}`}
                         >
@@ -326,6 +317,16 @@ export default function AdminUsersPage() {
             <strong>{dialog.user.name}</strong> will be signed out and will not be able to sign in
             until you enable the account again.
           </p>
+          {dialog.user.open_cases > 0 && (
+            <p className="field-error" role="alert">
+              {dialog.user.name} still has {dialog.user.open_cases} case
+              {dialog.user.open_cases === 1 ? '' : 's'} the officer has not decided.{' '}
+              <Link to={`/admin/users/${dialog.user.id}?status=open`}>
+                Open the list to reassign {dialog.user.open_cases === 1 ? 'it' : 'them'}
+              </Link>
+              .
+            </p>
+          )}
         </ConfirmDialog>
       )}
       {dialog?.kind === 'reset' && (

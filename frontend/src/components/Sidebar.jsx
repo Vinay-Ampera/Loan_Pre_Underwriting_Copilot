@@ -14,9 +14,7 @@ const NAV = {
   ],
   auditor: [
     ['/', 'Overview', 'chart', true],
-    ['/cases', 'Cases', 'cases', false],
-    ['/auditor/messages', 'Messages', 'mail', false],
-    ['/auditor/precedents', 'Precedents', 'precedent', false],
+    ['/auditor/cases', 'Cases', 'cases', false],
     ['/auditor/audit-log', 'Audit log', 'shield', false],
     ['/auditor/users', 'Users', 'users', false],
     ['/help', 'Help', 'help', false],
@@ -24,8 +22,10 @@ const NAV = {
   admin: [
     ['/', 'Home', 'home', true],
     ['/admin/precedents', 'Precedents', 'precedent', false],
-    ['/admin/users', 'Users', 'users', false],
+    ['/admin/messages', 'Messages', 'mail', false],
     ['/admin/issues', 'Issues', 'flag', false],
+    ['/admin/users', 'Users', 'users', false],
+    ['/admin/audit-log', 'Audit log', 'shield', false],
     ['/help', 'Help', 'help', false],
   ],
 }

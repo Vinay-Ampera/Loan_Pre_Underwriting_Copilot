@@ -47,6 +47,10 @@ One row per (case, stage); a stage that runs again (resume, correction) replaces
 **officer_actions**
 `id, case_id, officer_id, action (confirm|override), original_recommendation, final_decision, reason (required for override), second_click_at, created_at`
 
+**admin_actions** (migration 0012)
+`id, case_id → cases (cascade), admin_id → users, action (override), previous_decision, final_decision (approve|refer|reject), reason (not blank), second_click_at, created_at`
+An admin's correction of an officer's decision, next to `officer_actions` (never edited). The latest row per case is the decision in force. Reassigning a case changes `cases.created_by` and is recorded in `audit_log` (`case_reassigned`, before and after officer names, reason). `report_ro` may read the table.
+
 **precedents**
 `id, source_case_id (nullable; cleared if the source case is deleted), status (pending|held|approved|rejected|expired), loan_type, rule_ids text[] (rules involved), original_score, original_recommendation, final_decision, officer_reason, report_summary, embedding vector(384), proposed_by, reviewed_by, reviewed_at, valid_until, times_used, created_at`
 `held` = failed the code-side hard-rule check; it never reaches the admin or RAG. A CHECK constraint stops a row becoming `approved` without a reviewer, review time, expiry date and embedding.

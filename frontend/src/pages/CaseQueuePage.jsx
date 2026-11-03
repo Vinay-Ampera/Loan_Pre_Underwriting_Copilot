@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
-import { useSession } from '../App'
 import { useAsync } from '../hooks/useAsync'
 import CaseQueueTable from '../components/CaseQueueTable'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
@@ -21,7 +20,6 @@ const STATUSES = [
 ]
 
 export default function CaseQueuePage() {
-  const readOnly = useSession().session.user.role === 'auditor'
   const [params, setParams] = useSearchParams()
   const view = VIEWS[params.get('view')] ? params.get('view') : ''
   const [status, setStatus] = useState('')
@@ -40,24 +38,17 @@ export default function CaseQueuePage() {
     <div className="queue-page">
       <div className="queue-head">
         <h1>Cases</h1>
-        {!readOnly && (
-          <Link to="/cases/new" className="btn btn-primary">
-            New case
-          </Link>
-        )}
+        <Link to="/cases/new" className="btn btn-primary">
+          New case
+        </Link>
       </div>
-      {readOnly && (
-        <p className="muted">
-          Every officer&apos;s cases, read-only. Names and identifiers are masked.
-        </p>
-      )}
       <div className="filters" role="search">
         <div className="field">
           <label htmlFor="q">Search</label>
           <input
             id="q"
             className="input"
-            placeholder={readOnly ? 'Case number' : 'Case number or applicant'}
+            placeholder="Case number or applicant"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -103,14 +94,12 @@ export default function CaseQueuePage() {
         <EmptyState
           title="No cases yet"
           action={
-            readOnly ? undefined : (
-              <Link to="/cases/new" className="btn">
-                Start a new case
-              </Link>
-            )
+            <Link to="/cases/new" className="btn">
+              Start a new case
+            </Link>
           }
         >
-          {readOnly ? 'No cases match.' : 'Cases you create appear here.'}
+          Cases you create appear here.
         </EmptyState>
       )}
       {shown && shown.length > 0 && <CaseQueueTable cases={shown} />}

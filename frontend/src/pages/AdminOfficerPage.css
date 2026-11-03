@@ -41,3 +41,13 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+.officer-cases-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.officer-filter {
+  min-width: 240px;
+}

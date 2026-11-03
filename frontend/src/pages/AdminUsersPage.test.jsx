@@ -107,6 +107,34 @@ describe('AdminUsersPage', () => {
     expect(screen.getByRole('button', { name: 'Disable Aud Auditor' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Reset password for Aud Auditor' })).toBeDisabled()
     expect(screen.getByText('Auditor')).toBeInTheDocument()
+    // greyed out and silent: no tooltip explaining why
+    expect(screen.getByRole('button', { name: 'Disable Aud Auditor' })).not.toHaveAttribute('title')
+    expect(
+      screen.getByRole('button', { name: 'Reset password for Aud Auditor' }),
+    ).not.toHaveAttribute('title')
+  })
+
+  it('warns when disabling an officer who still has undecided cases', async () => {
+    const user = userEvent.setup()
+    api.get.mockResolvedValue(users.map((u) => (u.id === 'u2' ? { ...u, open_cases: 2 } : u)))
+    renderPage()
+    await screen.findByText('Ben Officer')
+    await user.click(screen.getByRole('button', { name: 'Disable Ben Officer' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('2 cases')
+    expect(within(dialog).getByRole('link', { name: /reassign them/ })).toHaveAttribute(
+      'href',
+      '/admin/users/u2?status=open',
+    )
+  })
+
+  it('shows no warning for an officer with nothing waiting', async () => {
+    const user = userEvent.setup()
+    api.get.mockResolvedValue(users.map((u) => (u.id === 'u2' ? { ...u, open_cases: 0 } : u)))
+    renderPage()
+    await screen.findByText('Ben Officer')
+    await user.click(screen.getByRole('button', { name: 'Disable Ben Officer' }))
+    expect(within(screen.getByRole('dialog')).queryByRole('alert')).toBeNull()
   })
 
   it('warns in red and asks again before creating an admin', async () => {

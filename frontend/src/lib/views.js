@@ -10,6 +10,8 @@ export const VIEWS = {
     label: 'In progress',
     test: (c) => ['draft', 'uploaded', 'running'].includes(c.status),
   },
+  // not a tile: the notice on Home links here when an admin has changed one of the officer's cases
+  corrected: { label: 'Changed by an admin', test: (c) => c.admin_corrected === true },
 }
 
 export const matchesView = (c, view) => !view || !VIEWS[view] || VIEWS[view].test(c)

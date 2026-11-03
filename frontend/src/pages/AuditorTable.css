@@ -30,8 +30,12 @@
   max-width: 420px;
   overflow-wrap: anywhere;
 }
-.aud-filter {
-  max-width: 280px;
+.aud-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: flex-end;
+  padding: var(--s-4);
 }
 .aud-pager {
   display: flex;

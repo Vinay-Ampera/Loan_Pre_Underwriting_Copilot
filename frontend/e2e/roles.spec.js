@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { signIn } from './helpers'
 
-test('an admin has no way to create or upload, and an officer has no precedent queue', async ({
+test('an admin can read cases but not create or upload, and an officer has no precedent queue', async ({
   page,
 }) => {
   await signIn(page, 'admin')
@@ -15,7 +15,8 @@ test('an admin has no way to create or upload, and an officer has no precedent q
   // and the server refuses even when the UI is bypassed
   const token = await page.evaluate(() => JSON.parse(sessionStorage.getItem('lc.session')).token)
   const headers = { Authorization: `Bearer ${token}` }
-  expect((await page.request.get('/api/v1/cases', { headers })).status()).toBe(403)
+  expect((await page.request.get('/api/v1/cases', { headers })).status()).toBe(200) // read-only
+  expect((await page.request.post('/api/v1/cases', { headers, data: {} })).status()).toBe(403)
   const upload = await page.request.post(
     '/api/v1/cases/00000000-0000-0000-0000-000000000000/documents',
     {
@@ -34,15 +35,20 @@ test('an officer cannot open or call the precedent queue', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Precedents' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Users' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Audit log' })).toHaveCount(0)
   await page.goto('/admin/precedents')
   await expect(page).not.toHaveURL(/admin/)
   await page.goto('/admin/users')
+  await expect(page).not.toHaveURL(/admin/)
+  await page.goto('/admin/audit-log')
   await expect(page).not.toHaveURL(/admin/)
   const token = await page.evaluate(() => JSON.parse(sessionStorage.getItem('lc.session')).token)
   const headers = { Authorization: `Bearer ${token}` }
   expect((await page.request.get('/api/v1/admin/precedents', { headers })).status()).toBe(403)
   expect((await page.request.get('/api/v1/admin/users', { headers })).status()).toBe(403)
   expect((await page.request.get('/api/v1/admin/summary', { headers })).status()).toBe(403)
+  expect((await page.request.get('/api/v1/admin/messages', { headers })).status()).toBe(403)
+  expect((await page.request.get('/api/v1/admin/audit-log', { headers })).status()).toBe(403)
   const id = '00000000-0000-0000-0000-000000000000'
   expect(
     (

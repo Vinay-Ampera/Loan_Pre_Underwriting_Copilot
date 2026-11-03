@@ -5,6 +5,8 @@ import { useSession } from '../App'
 import { useAsync } from '../hooks/useAsync'
 import { usePolling } from '../hooks/usePolling'
 import ApplicationForm, { stateFromCase } from '../components/ApplicationForm'
+import AdminChanges from '../components/AdminChanges'
+import AdminCorrection from '../components/AdminCorrection'
 import AuditTimeline from '../components/AuditTimeline'
 import CaseStepper from '../components/CaseStepper'
 import ConfirmBar from '../components/ConfirmBar'
@@ -52,8 +54,8 @@ function Decision({ action, report }) {
 
 export default function CaseWorkspacePage() {
   const { id } = useParams()
-  // the auditor opens the same page with every action removed (SECURITY.md D3)
-  const readOnly = useSession().session.user.role === 'auditor'
+  // an admin opens the same page without the officer's actions: only the admin's own (SECURITY.md D3)
+  const isAdmin = useSession().session.user.role === 'admin'
   const { data: c, error, loading, reload } = useAsync(() => api.get(`/cases/${id}`), [id])
   const [tab, setTab] = useState(null)
   const [selected, setSelected] = useState(null)
@@ -64,7 +66,7 @@ export default function CaseWorkspacePage() {
   const [removingDoc, setRemovingDoc] = useState(false)
   const audit = useAsync(
     () => (tab === 'audit' ? api.get(`/cases/${id}/audit`) : Promise.resolve(null)),
-    [id, tab, c?.status],
+    [id, tab, c?.status, c?.admin_actions?.length, c?.officer],
   )
 
   const running = c?.status === 'running'
@@ -97,7 +99,7 @@ export default function CaseWorkspacePage() {
   if (!c) return null
 
   const fixStop = c.status === 'stopped' && c.stop_class === 'fix'
-  const editable = !readOnly && (['draft', 'uploaded'].includes(c.status) || fixStop)
+  const editable = !isAdmin && (['draft', 'uploaded'].includes(c.status) || fixStop)
   const roles = c.applicants.map((a) => a.role)
   const report = c.report
   const recommendation = c.recommendation
@@ -159,12 +161,12 @@ export default function CaseWorkspacePage() {
           <p className="muted">
             {loanLabel(c.loan_type)} · {c.applicants[0].full_name}
             {c.applicants.length > 1 && ` with ${c.applicants[1].full_name}`}
-            {readOnly && c.officer && ` · officer ${c.officer}`}
+            {isAdmin && c.officer && ` · officer ${c.officer}`}
           </p>
-          {readOnly && (
+          {isAdmin && (
             <p className="readonly-note small">
-              <strong>Read-only.</strong> Names and identifiers are masked and original documents
-              are not shown.
+              <strong>Admin view.</strong> You can read everything on this case. You correct a
+              decision after the officer has made it, and you cannot confirm, upload or submit.
             </p>
           )}
         </div>
@@ -315,7 +317,6 @@ export default function CaseWorkspacePage() {
                         </select>
                       </div>
                       <DocumentViewer
-                        readOnly={readOnly}
                         caseId={id}
                         doc={c.documents.find((d) => d.id === selected)}
                       />
@@ -331,7 +332,7 @@ export default function CaseWorkspacePage() {
                       caseId={id}
                       caseNo={c.case_no}
                       report={report}
-                      readOnly={readOnly}
+                      readOnly={isAdmin}
                       officerAction={c.officer_action}
                     />
                   ) : (
@@ -367,7 +368,7 @@ export default function CaseWorkspacePage() {
             </p>
           )}
 
-          {!readOnly && c.last_failure && !running && (
+          {!isAdmin && c.last_failure && !running && (
             <div className="failed-note" role="alert">
               <strong>The assessment failed.</strong> Please try again, or contact an admin if it
               keeps failing.
@@ -377,7 +378,7 @@ export default function CaseWorkspacePage() {
             </div>
           )}
 
-          {!readOnly && ['draft', 'uploaded'].includes(c.status) && (
+          {!isAdmin && ['draft', 'uploaded'].includes(c.status) && (
             <div className="ws-actions">
               <button
                 type="button"
@@ -402,7 +403,7 @@ export default function CaseWorkspacePage() {
             </div>
           )}
 
-          {!readOnly && fixStop && !editing && (
+          {!isAdmin && fixStop && !editing && (
             <div className="ws-actions">
               <p className="stopped-note">{report?.stop_text}</p>
               <p className="small muted">
@@ -417,7 +418,7 @@ export default function CaseWorkspacePage() {
             </div>
           )}
 
-          {!readOnly && c.status === 'awaiting_confirmation' && (
+          {!isAdmin && c.status === 'awaiting_confirmation' && (
             <ConfirmBar
               recommendation={recommendation}
               recommendationText={report.recommendation_text}
@@ -429,8 +430,10 @@ export default function CaseWorkspacePage() {
           )}
 
           {c.officer_action && <Decision action={c.officer_action} report={report} />}
+          <AdminChanges actions={c.admin_actions} />
+          {isAdmin && <AdminCorrection c={c} onDone={reload} />}
 
-          {!readOnly && ['confirmed', 'overridden', 'stopped'].includes(c.status) && (
+          {!isAdmin && ['confirmed', 'overridden', 'stopped'].includes(c.status) && (
             <CustomerContact caseId={id} recipient={c.applicants[0].email} />
           )}
         </aside>

@@ -181,7 +181,7 @@ Tasks
 5. **Home screens:** officer home with summary tiles (awaiting confirmation, referred, stopped, in progress) and recent cases; admin home with pending precedents and user counts.
 6. **Case workspace:** a 5-stage stepper (intake and screening, verification and documents, risk and ratios, decisioning and conditions, officer sign-off) showing where the case is and where it stopped.
 7. **Report:** score ring and band, a Credit / Capacity / Collateral strip (display only; Collateral reads "not scored in v1"), a separate Conditions list for missing items, and the existing stage cards. The recommendation wording rules stay.
-8. **Admin Users screen:** list, create, disable, reset password; backed by new admin endpoints that reuse the `users_cli` rules and write to the audit log. Admin still has no access to case endpoints.
+8. **Admin Users screen:** list, create, disable, reset password; backed by new admin endpoints that reuse the `users_cli` rules and write to the audit log. (Changed 2026-11-03: the admin now reads every case and corrects decisions; see `SECURITY.md` D4.)
 9. **Motion:** light entrance and progress animation, a one-time typing effect on the report summary, all off under `prefers-reduced-motion`.
 10. **Brand name:** replace the display name "Sample Bank" with "Pramaan" in the UI and docs (policy and rules identifiers unchanged).
 11. Update `DESIGN_SYSTEM.md` and the other affected docs in the same change.

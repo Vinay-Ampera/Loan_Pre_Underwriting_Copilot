@@ -21,7 +21,7 @@ beforeEach(() => {
   sessionStorage.clear()
   api.get.mockReset().mockImplementation(async (path) => {
     if (path === '/auditor/summary')
-      return { cases: 7, awaiting_confirmation: 1, overridden: 0, pending_precedents: 0 }
+      return { cases: 7, awaiting_confirmation: 1, overridden: 0, admin_corrected: 0 }
     if (path === '/auditor/charts')
       return {
         cases_by_status: {},
@@ -30,8 +30,10 @@ beforeEach(() => {
         score_histogram: [],
         officer_actions_by_loan_type: [],
         cases_per_week: [],
+        cases_per_officer: [],
         top_failed_rules: [],
       }
+    if (path.includes('/audit-log?')) return { total: 0, rows: [] }
     if (path === '/auditor/fairness')
       return {
         min_group: 5,
@@ -68,12 +70,43 @@ describe('routing by role', () => {
     expect(window.location.pathname).toBe('/')
   })
 
-  it('sends an officer away from the auditor pages and an admin from the case list', async () => {
+  it('keeps the auditor out of every case page and the removed screens', async () => {
+    for (const path of ['/cases', '/cases/abc', '/auditor/messages', '/auditor/precedents']) {
+      signInAs('auditor', path)
+      const view = render(<App />)
+      expect(await screen.findByRole('heading', { name: 'Overview' })).toBeInTheDocument()
+      expect(window.location.pathname).toBe('/')
+      view.unmount()
+    }
+  })
+
+  it('lets an admin open the audit log and messages but keeps the officer pages closed', async () => {
+    signInAs('admin', '/admin/messages')
+    const first = render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Messages' })).toBeInTheDocument()
+    first.unmount()
+    signInAs('admin', '/admin/audit-log')
+    const second = render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Audit log' })).toBeInTheDocument()
+    second.unmount()
+    signInAs('admin', '/cases/new')
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Home' })
+    expect(window.location.pathname).toBe('/')
+  })
+
+  it('sends an officer away from the auditor and admin pages and an admin from the case list', async () => {
     signInAs('officer', '/auditor/audit-log')
     const first = render(<App />)
     await screen.findByRole('heading', { name: 'Home' })
     expect(window.location.pathname).toBe('/')
     first.unmount()
+
+    signInAs('officer', '/admin/audit-log')
+    const second = render(<App />)
+    await screen.findByRole('heading', { name: 'Home' })
+    expect(window.location.pathname).toBe('/')
+    second.unmount()
 
     signInAs('admin', '/cases')
     render(<App />)

@@ -34,6 +34,12 @@ export default function HomePage() {
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && (
         <>
+          {counts.corrected > 0 && (
+            <p className="corrected-note" role="status">
+              An admin changed the decision on {counts.corrected} of your cases.{' '}
+              <Link to="/cases?view=corrected">See which</Link>
+            </p>
+          )}
           <ul className="tiles" aria-label="Case summary">
             {TILES.map((key) => (
               <li key={key}>

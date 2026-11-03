@@ -12,6 +12,8 @@ const LABEL = {
   pipeline_failed: 'Assessment failed',
   officer_confirm: 'Recommendation confirmed',
   officer_override: 'Recommendation overridden',
+  admin_override: 'Decision changed by an admin',
+  case_reassigned: 'Case reassigned to another officer',
   report_exported: 'Report exported to PDF',
 }
 
@@ -27,6 +29,9 @@ export default function AuditTimeline({ events }) {
               <strong>{LABEL[e.action] || e.action}</strong>
               {e.detail?.final && (
                 <span className="muted"> – final decision: {e.detail.final}</span>
+              )}
+              {e.action === 'case_reassigned' && e.detail?.officer && (
+                <span className="muted"> – now with {e.detail.officer}</span>
               )}
               {e.detail?.result === 'rejected' && <span className="muted"> – {e.detail.code}</span>}
             </p>
