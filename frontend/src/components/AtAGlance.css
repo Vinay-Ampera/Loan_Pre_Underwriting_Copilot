@@ -1,0 +1,39 @@
+.glance {
+  display: flex;
+  gap: var(--s-5);
+  align-items: center;
+  padding: var(--s-4);
+  border-left: 4px solid var(--brand);
+}
+.glance-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+.glance-body h3 {
+  color: var(--muted);
+  font-size: var(--fs-12);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.glance-reasons {
+  padding-left: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.glance-sev {
+  color: var(--muted);
+  font-weight: 600;
+}
+.glance-next {
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 640px) {
+  .glance {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -797,3 +797,24 @@ def test_a_fix_type_stop_can_be_resumed_through_the_api(client: TestClient) -> N
     time.sleep(0.5)
     again = client.get(f"/api/v1/cases/{case_id}", headers=h).json()
     assert again["report_version"] == 2  # a correction re-runs the case as a new version
+
+
+# --------------------------------------------------------------------------- profile and officer view
+def test_admin_sees_officer_activity_without_case_details(client: TestClient) -> None:
+    admin = login(client, "ada")
+    asha = next(u for u in client.get("/api/v1/admin/users", headers=admin).json()
+                if u["email"] == "asha@example.test")  # fmt: skip
+    got = client.get(f"/api/v1/admin/users/{asha['id']}/activity", headers=admin)
+    assert got.status_code == 200
+    body = got.json()
+    assert body["user"]["email"] == "asha@example.test" and body["cases_total"] == 0
+    assert body["confirmed"] == 0 and body["overridden"] == 0 and body["recent_cases"] == []
+    assert (
+        client.get(
+            f"/api/v1/admin/users/{asha['id']}/activity", headers=login(client, "ben")
+        ).status_code
+        == 403
+    )
+    assert (
+        client.get(f"/api/v1/admin/users/{uuid.uuid4()}/activity", headers=admin).status_code == 404
+    )

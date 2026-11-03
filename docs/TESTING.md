@@ -153,3 +153,8 @@ On release: full dev run plus one run on the held-out test split; results attach
 - Forced model failure triggers fallback; case still completes.
 - Login, theme toggle, 5-stage stepper and admin Users screen shown (Stage 8).
 - A customer contact message is drafted, checked, sent and appears in Sent Items and the terminal (Stage 9).
+
+## Review-window additions (2026-11-03)
+
+- **Backend** (`test_api.py`): `test_admin_sees_officer_activity_without_case_details` (admin 200 with counts only, officer 403, unknown id 404).
+- **Frontend unit:** `glance.test.js` (reason ranking, citation filtering) and `UserMenu.test.jsx` (name, email and role; sign-out needs the second click; cancelling stays signed in).

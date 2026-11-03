@@ -3,8 +3,10 @@ import { api } from '../api/client'
 import StageCard from './StageCard'
 import FindingList from './FindingList'
 import CreditStrip from './CreditStrip'
+import AtAGlance from './AtAGlance'
 import TypedText from './TypedText'
 import { conditionsFrom } from '../lib/conditions'
+import { filterCitations } from '../lib/glance'
 import './ReportPanel.css'
 
 const SECTION = { primary: 'Applicant', co: 'Co-applicant', case: 'Case-level' }
@@ -17,6 +19,60 @@ async function downloadPdf(caseId, caseNo) {
   a.download = `${caseNo}-report.pdf`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function Citations({ report }) {
+  const [q, setQ] = useState('')
+  const [stage, setStage] = useState('')
+  const shown = filterCitations(report, { q, stage })
+  return (
+    <>
+      <div className="citation-filters" role="search">
+        <div className="field">
+          <label htmlFor="cite-q">Search clauses</label>
+          <input
+            id="cite-q"
+            className="input"
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Clause ID or wording"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="cite-stage">Cited by stage</label>
+          <select
+            id="cite-stage"
+            className="select"
+            value={stage}
+            onChange={(e) => setStage(e.target.value)}
+          >
+            <option value="">All stages</option>
+            {report.stage_scores.map((s) => (
+              <option key={s.stage} value={s.stage}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <p className="small muted" aria-live="polite">
+        Showing {shown.length} of {report.citations.length}
+      </p>
+      {shown.length === 0 ? (
+        <p className="muted">No clauses match.</p>
+      ) : (
+        <ul className="citations">
+          {shown.map((c) => (
+            <li key={c.clause_id} id={`clause-${c.clause_id}`}>
+              <code>{c.clause_id}</code>
+              <p>{c.text}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  )
 }
 
 /** Summary, stage cards, findings by person, citations, rejection reason and PDF export. */
@@ -56,6 +112,8 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction }) {
       {report.status !== 'stopped' && report.stop_text && (
         <p className="stop-note">{report.stop_text}</p>
       )}
+
+      <AtAGlance report={report} />
 
       <section className="card report-block">
         <h3>Summary</h3>
@@ -168,14 +226,7 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction }) {
         {report.citations.length === 0 ? (
           <p className="muted">No clauses cited.</p>
         ) : (
-          <ul className="citations">
-            {report.citations.map((c) => (
-              <li key={c.clause_id} id={`clause-${c.clause_id}`}>
-                <code>{c.clause_id}</code>
-                <p>{c.text}</p>
-              </li>
-            ))}
-          </ul>
+          <Citations report={report} />
         )}
         <p className="small muted">
           Rules version {report.versions?.rules ?? '–'}. Synthetic data; the recommendation is for

@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { clearSession, loadSession, saveSession } from './api/session'
 import Sidebar from './components/Sidebar'
+import UserMenu from './components/UserMenu'
+import ThemeToggle from './components/ThemeToggle'
 import AppFooter from './components/AppFooter'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
@@ -11,6 +13,7 @@ import CaseWorkspacePage from './pages/CaseWorkspacePage'
 import AdminHomePage from './pages/AdminHomePage'
 import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import AdminOfficerPage from './pages/AdminOfficerPage'
 import HelpPage from './pages/HelpPage'
 import SentItemsPage from './pages/SentItemsPage'
 import IssuesPage from './pages/IssuesPage'
@@ -29,8 +32,12 @@ function Shell({ role, children }) {
   }
   return (
     <div className="shell">
-      <Sidebar user={session.user} onSignOut={signOut} />
+      <Sidebar user={session.user} />
       <div className="page-col">
+        <header className="topbar">
+          <ThemeToggle />
+          <UserMenu user={session.user} onSignOut={signOut} />
+        </header>
         <main className="page">{children}</main>
         <AppFooter />
       </div>
@@ -94,6 +101,14 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminUsersPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/users/:id"
+        element={
+          <Shell role="admin">
+            <AdminOfficerPage />
           </Shell>
         }
       />

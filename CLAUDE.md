@@ -96,7 +96,7 @@ diagrams:  python3 docs/diagrams/make_diagrams.py
 
 ## Current status
 
-Stages 1 to 8 are built and committed (Stage 8 as `25e6ad6` and `ff177fa`). Stage 9 (customer notifications and issue reports) is built (2026-11-02), awaiting the user's commit; run `python -m app.db.migrate` (0010) before using it. Stage 10 (hardening, Docker, demo) is planned and approved in the docs but **not started**; the review window comes first, and do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
+Stages 1 to 8 are built and committed (Stage 8 as `25e6ad6` and `ff177fa`). Stage 9 (customer notifications and issue reports) is committed as `a91f035`. Review-window additions (2026-11-03: At a glance box, citation filter, admin officer view, top-right user menu with theme toggle and sign-out confirm) are built and await the user's commit; a read-only super admin role is deferred and not started (needs the user's go-ahead, changes decision 9); run `python -m app.db.migrate` (0010) before using it. Stage 10 (hardening, Docker, demo) is planned and approved in the docs but **not started**; the review window comes first, and do not start any stage until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
 
 ## Open items
 

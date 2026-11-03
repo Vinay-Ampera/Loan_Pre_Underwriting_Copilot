@@ -1,7 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import BrandMark from './BrandMark'
 import Icon from './Icons'
-import ThemeToggle from './ThemeToggle'
 import './Sidebar.css'
 
 const NAV = {
@@ -23,7 +22,7 @@ const NAV = {
 }
 
 /** Left navigation. Icons only on tablet widths; the text stays for screen readers. */
-export default function Sidebar({ user, onSignOut }) {
+export default function Sidebar({ user }) {
   return (
     <aside className="sidebar">
       <NavLink to="/" className="sidebar-brand" aria-label="Pramaan home">
@@ -37,17 +36,6 @@ export default function Sidebar({ user, onSignOut }) {
           </NavLink>
         ))}
       </nav>
-      <div className="sidebar-foot">
-        <ThemeToggle />
-        <div className="sidebar-user">
-          <span className="user-name">{user.name}</span>
-          <span className="role-tag">{user.role}</span>
-        </div>
-        <button type="button" className="btn btn-ghost sign-out" onClick={onSignOut}>
-          <Icon name="signout" />
-          <span className="nav-label">Sign out</span>
-        </button>
-      </div>
     </aside>
   )
 }

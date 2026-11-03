@@ -150,3 +150,13 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 - **Browser tests:** Playwright 1.64 with the installed Chrome (1.49 hung on Node 24). The user approved the install on 2026-11-01.
 - **Not done here:** admin users page and policy/rule status, Grafana link; `Runner.recover` (continue `running` cases at start-up) has no dedicated test; the migration and user creation on Neon are for the user to run (below).
 - **Run it:** `cd backend && ../.venv/bin/python -m app.db.migrate`, then `python -m app.api.users_cli create --email ... --name ... --role officer|admin`, then `uvicorn app.main:app --reload` and `npm run dev` in `frontend/` (proxy to port 8000), or `npm run build` and open the API's port to get both from one process.
+
+---
+
+## Review-window additions (2026-11-03)
+
+- **Report:** an "At a glance" card above the Summary (score ring, top 3 reasons ranked hard fail, cap, biggest point loss, and the next step; all taken from existing findings, nothing computed in the UI). The Policy citations block has a text search and a "cited by stage" filter.
+- **Admin officer view** (`/admin/users/:id`, `GET /admin/users/{id}/activity`): case counts by status and band, confirm and override counts, precedents proposed by status, last sign-in, and the 10 latest case numbers with status. No applicant data, so the least-privilege rule (admin has no case access) is unchanged.
+- **User menu** top right, beside the theme toggle: name, email, role and Sign out (asks first). No separate Profile page. The sidebar keeps only navigation.
+- **Not done (waiting on the user):** read-only super admin / auditor role. It changes locked decision 9 and needs a migration for the role check.
+- **No schema change** in this batch, so no migration to run.

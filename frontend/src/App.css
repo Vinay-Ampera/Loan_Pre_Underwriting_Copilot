@@ -30,3 +30,15 @@
     padding: var(--s-4);
   }
 }
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-6) 0;
+}
+@media (max-width: 720px) {
+  .topbar {
+    padding: var(--s-2) var(--s-4) 0;
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import './Dialog.css'
 
 const FOCUSABLE =
@@ -35,7 +36,7 @@ export default function Dialog({ title, children, onClose, labelledBy = 'dialog-
     }
   }
 
-  return (
+  return createPortal(
     <div className="dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={box}
@@ -50,6 +51,7 @@ export default function Dialog({ title, children, onClose, labelledBy = 'dialog-
         </h2>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

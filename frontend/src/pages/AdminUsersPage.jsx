@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { useSession } from '../App'
 import { useAsync } from '../hooks/useAsync'
@@ -191,7 +192,12 @@ export default function AdminUsersPage() {
                 return (
                   <tr key={u.id}>
                     <td data-label="Name">
-                      {u.name} {me && <span className="muted">(you)</span>}
+                      {u.role === 'officer' ? (
+                        <Link to={`/admin/users/${u.id}`}>{u.name}</Link>
+                      ) : (
+                        u.name
+                      )}{' '}
+                      {me && <span className="muted">(you)</span>}
                     </td>
                     <td data-label="Email">{u.email}</td>
                     <td data-label="Role">{u.role}</td>

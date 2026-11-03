@@ -257,7 +257,8 @@ function AdminGuide() {
           rule. Use the Approve… button (or reject) on the card.
         </p>
         <Callout tone="info" title="No case data for admins">
-          Admins have no access to case data.
+          Admins have no access to case data. Click an officer&apos;s name in Users to see their
+          counts and case numbers only.
         </Callout>
       </HelpSection>
     </>

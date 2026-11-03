@@ -73,6 +73,45 @@ def summary(
             "open_issues": r.issues, "messages_sent": r.sent, "messages_failed": r.failed}  # fmt: skip
 
 
+@router.get("/users/{user_id}/activity")
+def user_activity(
+    user_id: UUID, _: User = Depends(admin_only), conn: Connection = Depends(get_conn)
+) -> dict[str, Any]:  # fmt: skip
+    """A basic officer profile for the admin: counts and case numbers only. No applicant names,
+    documents or figures (admins have no case access)."""
+    user = _target(conn, user_id)
+    by_status = {r.status: r.n for r in conn.execute(
+        text("SELECT status, count(*) AS n FROM cases WHERE created_by = :u GROUP BY status"),
+        {"u": user_id})}  # fmt: skip
+    by_band = {r.band: r.n for r in conn.execute(
+        text("""SELECT band, count(*) AS n FROM cases
+                WHERE created_by = :u AND band IS NOT NULL GROUP BY band"""), {"u": user_id})}  # fmt: skip
+    actions = {r.action: r.n for r in conn.execute(
+        text("SELECT action, count(*) AS n FROM officer_actions WHERE officer_id = :u GROUP BY action"),
+        {"u": user_id})}  # fmt: skip
+    precedents = {r.status: r.n for r in conn.execute(
+        text("SELECT status, count(*) AS n FROM precedents WHERE proposed_by = :u GROUP BY status"),
+        {"u": user_id})}  # fmt: skip
+    recent = conn.execute(
+        text("""SELECT case_no, loan_type, status, band, recommendation, updated_at FROM cases
+                WHERE created_by = :u ORDER BY updated_at DESC LIMIT 10"""),
+        {"u": user_id},
+    )
+    last_login = conn.execute(
+        text("SELECT max(at) FROM audit_log WHERE actor_id = :u AND action = 'login'"),
+        {"u": user_id},
+    ).scalar()
+    return {
+        "user": _row(user), "last_login": last_login, "cases_total": sum(by_status.values()),
+        "cases_by_status": by_status, "cases_by_band": by_band,
+        "confirmed": actions.get("confirm", 0), "overridden": actions.get("override", 0),
+        "precedents_by_status": precedents,
+        "recent_cases": [{"case_no": r.case_no, "loan_type": r.loan_type, "status": r.status,
+                          "band": r.band, "recommendation": r.recommendation,
+                          "updated_at": r.updated_at} for r in recent],
+    }  # fmt: skip
+
+
 @router.post("/users", status_code=201)
 def create_user(
     body: UserCreateIn, admin: User = Depends(admin_only), conn: Connection = Depends(get_conn)
