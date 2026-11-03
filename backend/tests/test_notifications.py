@@ -289,12 +289,14 @@ def test_messages_are_private_to_their_officer_and_closed_to_the_admin(
     assert client.get(url, headers=ben).status_code == 404
     assert client.put(url, headers=ben, json={"body": "x"}).status_code == 404
     assert client.post(f"{url}/send", headers=ben, json={"second_click": True}).status_code == 404
+    assert client.delete(url, headers=ben).status_code == 404
     assert client.get("/api/v1/messages", headers=ben).json() == []
     assert draft(client, ben, case_id).status_code == 404  # not their case
     assert client.get(f"/api/v1/cases/{case_id}/messages", headers=ben).status_code == 404
     for path in ("/messages", f"/messages/{m['id']}", "/messages/templates"):
         assert client.get(f"/api/v1{path}", headers=ada).status_code == 403
     assert draft(client, ada, case_id).status_code == 403
+    assert client.delete(url, headers=ada).status_code == 403
     assert client.get("/api/v1/messages").status_code == 401
 
 
@@ -440,3 +442,29 @@ def test_issue_routes_are_role_split(client: TestClient, engine: Engine) -> None
     assert "case" not in str(client.get("/api/v1/admin/issues", headers=ada).json()).replace(
         "case_ref", ""
     )
+
+
+@pytest.mark.db
+def test_a_draft_can_be_deleted_but_a_sent_or_failed_message_cannot(
+    client: TestClient,
+    engine: Engine,
+    flaky: Flaky,
+) -> None:
+    case_id, h = done_case(client, engine)
+    keep, drop = draft(client, h, case_id).json(), draft(client, h, case_id).json()
+
+    assert client.delete(f"/api/v1/messages/{drop['id']}", headers=h).status_code == 204
+    assert client.delete(f"/api/v1/messages/{drop['id']}", headers=h).status_code == 404
+    left = [i["id"] for i in client.get(f"/api/v1/cases/{case_id}/messages", headers=h).json()]
+    assert left == [keep["id"]]
+    assert "message_deleted" in actions(engine)
+
+    flaky.ok = True
+    assert client.post(f"/api/v1/messages/{keep['id']}/send", headers=h,
+                       json={"second_click": True}).status_code == 200  # fmt: skip
+    assert client.delete(f"/api/v1/messages/{keep['id']}", headers=h).status_code == 409
+
+    flaky.ok = False
+    failed = draft(client, h, case_id).json()
+    client.post(f"/api/v1/messages/{failed['id']}/send", headers=h, json={"second_click": True})
+    assert client.delete(f"/api/v1/messages/{failed['id']}", headers=h).status_code == 409

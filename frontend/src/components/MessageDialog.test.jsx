@@ -98,4 +98,28 @@ describe('MessageDialog', () => {
     await user.type(screen.getByLabelText('To'), 'typed@example.test')
     expect(screen.getByRole('button', { name: 'Review' })).toBeEnabled()
   })
+
+  it('reviews again after backing out: the saved draft is updated with put, not created twice', async () => {
+    const { user } = await open()
+    api.post.mockResolvedValueOnce(drafted())
+    api.put.mockResolvedValueOnce(drafted({ text: 'Updated' }))
+    await user.click(screen.getByRole('button', { name: 'Review' }))
+    await user.click(await screen.findByRole('button', { name: 'Back to edit' }))
+    await user.click(screen.getByRole('button', { name: 'Review' }))
+    expect(api.put).toHaveBeenCalledWith(
+      '/messages/m1',
+      expect.objectContaining({ body: expect.any(String) }),
+    )
+    expect(api.post).toHaveBeenCalledTimes(1)
+    expect(await screen.findByTestId('final-text')).toHaveTextContent('Updated')
+  })
+
+  it('tells the caller about a draft left behind when the dialog is closed', async () => {
+    const { user, onDone } = await open()
+    api.post.mockResolvedValueOnce(drafted())
+    await user.click(screen.getByRole('button', { name: 'Review' }))
+    await user.click(await screen.findByRole('button', { name: 'Back to edit' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onDone).toHaveBeenCalled()
+  })
 })

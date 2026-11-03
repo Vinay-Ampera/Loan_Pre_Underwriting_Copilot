@@ -7,6 +7,7 @@ import ApplicationForm, { stateFromCase } from '../components/ApplicationForm'
 import AuditTimeline from '../components/AuditTimeline'
 import CaseStepper from '../components/CaseStepper'
 import ConfirmBar from '../components/ConfirmBar'
+import ConfirmDialog from '../components/ConfirmDialog'
 import CustomerContact from '../components/CustomerContact'
 import DocumentChecklist from '../components/DocumentChecklist'
 import DocumentViewer from '../components/DocumentViewer'
@@ -56,6 +57,8 @@ export default function CaseWorkspacePage() {
   const [live, setLive] = useState([])
   const [actionError, setActionError] = useState(null)
   const [editing, setEditing] = useState(false)
+  const [docToRemove, setDocToRemove] = useState(null)
+  const [removingDoc, setRemovingDoc] = useState(false)
   const audit = useAsync(
     () => (tab === 'audit' ? api.get(`/cases/${id}/audit`) : Promise.resolve(null)),
     [id, tab, c?.status],
@@ -128,12 +131,17 @@ export default function CaseWorkspacePage() {
       setActionError(e.message)
     }
   }
-  async function removeDoc(docId) {
+  async function removeDoc() {
+    setRemovingDoc(true)
     try {
-      await api.del(`/cases/${id}/documents/${docId}`)
+      await api.del(`/cases/${id}/documents/${docToRemove.id}`)
+      setDocToRemove(null)
       reload()
     } catch (e) {
       setActionError(e.message)
+      setDocToRemove(null)
+    } finally {
+      setRemovingDoc(false)
     }
   }
   const missingKyc = c.checklist.filter((i) => i.kyc && !i.met)
@@ -258,7 +266,7 @@ export default function CaseWorkspacePage() {
                               <button
                                 type="button"
                                 className="btn btn-ghost"
-                                onClick={() => removeDoc(d.id)}
+                                onClick={() => setDocToRemove(d)}
                                 aria-label={`Remove ${d.name}`}
                               >
                                 Remove
@@ -415,6 +423,20 @@ export default function CaseWorkspacePage() {
           )}
         </aside>
       </div>
+      {docToRemove && (
+        <ConfirmDialog
+          title="Remove this document?"
+          confirmLabel="Yes, remove"
+          busy={removingDoc}
+          onClose={() => setDocToRemove(null)}
+          onConfirm={removeDoc}
+        >
+          <p>
+            <strong>{docToRemove.name}</strong> will be removed from this case. You can upload it
+            again before the assessment is submitted.
+          </p>
+        </ConfirmDialog>
+      )}
     </div>
   )
 }

@@ -1,8 +1,34 @@
 .customer-contact {
   display: flex;
   flex-direction: column;
+  gap: var(--s-3);
+  align-items: stretch;
+}
+.contact-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.contact-head h3,
+.contact-head p {
+  margin: 0;
+}
+.contact-write {
+  align-self: flex-start;
+}
+.contact-recent {
+  display: flex;
+  flex-direction: column;
   gap: var(--s-2);
-  align-items: flex-start;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line);
+}
+.contact-sub {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .contact-list {
   list-style: none;
@@ -10,12 +36,29 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--s-1);
-  width: 100%;
 }
 .contact-list li {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--s-2);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.contact-list li:last-child {
+  border-bottom: 0;
+}
+.contact-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.contact-label {
+  font-weight: 500;
+}
+.contact-all {
+  align-self: flex-start;
+}
+.choice-actions {
+  flex-wrap: wrap;
 }

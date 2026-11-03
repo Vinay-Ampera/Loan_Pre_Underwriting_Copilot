@@ -96,6 +96,12 @@ export default function MessageDialog({ caseId, recipient, existing, onClose, on
     }
   }
 
+  // Leaving with a saved draft: tell the caller so its list shows the draft that was left behind.
+  function leave() {
+    if (draft) onDone?.()
+    onClose()
+  }
+
   const blocked = draft?.status === 'blocked' ? draft.block_reason.split('; ') : []
 
   if (sent) {
@@ -117,7 +123,7 @@ export default function MessageDialog({ caseId, recipient, existing, onClose, on
   return (
     <Dialog
       title={step === 'edit' ? 'Contact the customer' : 'Send this message?'}
-      onClose={onClose}
+      onClose={leave}
       labelledBy="msg-title"
     >
       {!meta ? (
@@ -254,7 +260,7 @@ export default function MessageDialog({ caseId, recipient, existing, onClose, on
             </p>
           )}
           <div className="dialog-actions">
-            <button type="button" className="btn" onClick={onClose}>
+            <button type="button" className="btn" onClick={leave}>
               Cancel
             </button>
             <button

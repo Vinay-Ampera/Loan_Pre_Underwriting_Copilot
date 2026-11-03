@@ -197,6 +197,20 @@ def edit_draft(
     return _view_row(conn, _load(conn, message_id, user), user, settings)
 
 
+@router.delete("/messages/{message_id}", status_code=204)
+def delete_draft(
+    message_id: UUID, user: User = Depends(officer_only), conn: Connection = Depends(get_conn)
+) -> None:  # fmt: skip
+    """Only an unsent draft or a blocked message can be removed. Sent and failed rows are the
+    record of what was (or was tried to be) sent to a customer, so they stay."""
+    row = _load(conn, message_id, user, lock=True)
+    if row.status not in ("draft", "blocked"):
+        raise HTTPException(409, "Only a draft or a blocked message can be deleted.")
+    conn.execute(text("DELETE FROM outbox WHERE id = :i"), {"i": message_id})
+    write_audit(conn, user.id, "message_deleted", "message", message_id,
+                before={"status": row.status, "template": row.template})  # fmt: skip
+
+
 # --------------------------------------------------------------------------- send
 @router.post("/messages/{message_id}/send")
 def send_message(
