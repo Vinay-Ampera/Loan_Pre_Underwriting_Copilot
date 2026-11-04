@@ -128,6 +128,8 @@ class CaseIn(BaseModel):
     application_date: date | None = None  # default: today; not in the future
     loan_details: dict[str, Any] = Field(default_factory=dict)
     applicants: list[ApplicantIn] = Field(min_length=1, max_length=2)
+    # the officer's tick on identity details that were read from the PAN and Aadhaar cards
+    identity_confirmed: bool = False
 
     @model_validator(mode="after")
     def _shape(self) -> "CaseIn":
@@ -216,10 +218,14 @@ class MessageIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    template: Literal["general_contact", "contact_soon", "visit_branch", "blank"]
+    template: Literal["general_contact", "contact_soon", "visit_branch", "blank", "upload_link"]
     body: str | None = Field(default=None, max_length=2000)
     include_case_ref: bool = False
     recipient_email: str | None = Field(default=None, max_length=200, pattern=EMAIL_PATTERN)
+    # the upload-link template only: which link, and its token (held by the page since the link
+    # was created; it is checked here and never stored)
+    link_id: UUID | None = None
+    link_token: str | None = Field(default=None, min_length=20, max_length=100)
 
 
 class MessageEditIn(BaseModel):
@@ -234,6 +240,12 @@ class SendIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     second_click: bool = False
+
+
+class MessageSendIn(SendIn):
+    """Send a customer message. The upload-link template also needs the link's token again."""
+
+    link_token: str | None = Field(default=None, min_length=20, max_length=100)
 
 
 class IssueIn(BaseModel):

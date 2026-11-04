@@ -144,7 +144,24 @@ On release: full dev run plus one run on the held-out test split; results attach
 - **Frontend unit** (`npm test`): contrast of every text pairing for both themes against WCAG AA 4.5:1 (parsed from `tokens.css`), the system-dark block equals the dark block, unverified is not the brand purple, white panel text passes on the whole login gradient; theme read, apply, save and blocked storage; the three-way toggle; the stepper for draft, running, awaiting, confirmed and stopped (sign-off is never "done" by the system); tile counts; conditions and the 3C regrouping (no numbers added); the typing effect (full text always in the DOM, instant under reduced motion, once per view); the reduced-motion override in `base.css`; the Users screen (list, own account locked, password shown once, second click to disable, server message shown).
 - **Browser** (`npm run e2e`): one case per loan type to a confirmed recommendation; roles (admin reads cases but cannot create or upload, officer has no admin routes, including Users, summary and messages; the admin has no system-wide audit log; the auditor gets 403 on every case route and sees a static Cases table with no links); admin Users flow (create, duplicate refused, reset needs a second click and the new password works while the old one does not, disable blocks sign-in, enable restores it); login is the landing page with no signup; system, dark and light follow the OS and override it, the choice persists, no flash; every officer and admin screen in light and dark at desktop, tablet and phone widths with no side scrolling; tablet sidebar shows icons only; reduced motion turns animation off; tiles open the filtered list.
 
-## 8. Demo checks (Stage 10)
+## 7e. Stage 10 tests (Parts A to C built; Part D not started)
+
+Files: `backend/tests/test_archive.py` (17, pure), `test_inventory.py` (18, pure), `test_intake_desk.py` (HTTP, throwaway database), `test_upload_links.py` (HTTP), and frontend `IntakeDesk`, `BulkUpload`, `ApplicationForm`, `UploadLinksPage`, `ApplicantUploadPage`, `api/public` tests.
+
+- **Archive safety:** `../` and absolute paths (forward and back slashes, drive letters), symlink, password-protected zip, zip bomb (stopped while reading by the ratio, member and total byte budgets, not by the header sizes), nested zip (one level allowed, two refused), file-count cap across a zip and loose files, junk names, bad extensions listed as skipped. Over HTTP: an unsafe zip returns 422, writes no document row and no file anywhere under the upload folder, and leaves an `intake_upload_refused` audit row.
+- **Inventory against the answer key:** a zip, a folder and loose files give the same inventory; for one clean dev case per loan type (personal, home, education, business, vehicle) the type and the person of every file match `answer_key.json`, and with the applicant's employment stated nothing is missing, extra, unassigned or unrecognised. Education needs the two photographs filed by hand (E-55).
+- **Size:** an upload past what one case may hold is refused before it is all read into memory and writes nothing.
+- **Buckets:** received, missing (identity papers essential), extra, unrecognised, unassigned, rejected, repeats ignored; the officer's own correction survives later uploads; unknown types are refused.
+- **Read once:** a counter on `process_file` shows each of the case's files is read exactly once at the desk and **zero** times by Extraction. A case opened at the desk scores the same total, band and status as the same case entered form first with files one by one (guards "scores do not change").
+- **Prefill:** exactly the five identity fields; cards that disagree leave the field empty with a note; a low-confidence read is not offered; a value typed over is no longer "from documents"; the form is refused without the tick; a desk case with no form cannot be submitted; amount, tenure, purpose and employment are never filled from a document (the stored case has none until the officer or the request gives them).
+- **Upload link:** needs the second click to create and to disable (extend does not); the token is returned once, stored as a hash, and absent from `audit_log`, `outbox` and captured logs; unknown, expired, disabled and short tokens give identical 404 bodies; a token in a query string is ignored; the public page returns the same few keys and only checklist counts; the request is received, can be re-sent, and is locked when the officer saves the form (the correction is audited); after submit the link refuses with the neutral line and the refusal is on the case's audit trail; an unsafe zip is refused; per-link file cap and per-link and per-address rate limits answer 429.
+- **Roles:** another officer gets 404 and anonymous 401 on the inventory, files and links; the admin reads the inventory and the zip but writes nothing and cannot read the identity values (403); the auditor has no link access (403).
+- **Upload-link message:** drafted with a placeholder, sent only with the second click and the token again, a wrong token and another officer's or another case's link are refused, a typed second link is blocked, no other template may carry a link, and the database keeps no token.
+- **Second click (component tests):** create a link, disable a link, Proceed anyway, Ask the applicant, send the upload-link message, Send to the bank: each does nothing on the first click and Cancel records nothing. No dialog for: changing a type or person, stating employment, extending a link, copying a link, downloading the zip, choosing files.
+- **Regression:** the existing API, admin, auditor, notification, pipeline and migration tests pass unchanged (the sidebar test gained "Upload links").
+- **Bundle split (Part D):** not built; page-level label accuracy would be measured on synthetic bundles with the switch off leaving everything else unchanged.
+
+## 8. Demo checks (Stage 11)
 
 - Clean case per loan type completes with report.
 - Hard-fail case stops at the right stage with a short report.
@@ -153,6 +170,7 @@ On release: full dev run plus one run on the held-out test split; results attach
 - Forced model failure triggers fallback; case still completes.
 - Login, theme toggle, 5-stage stepper and admin Users screen shown (Stage 8).
 - A customer contact message is drafted, checked, sent and appears in Sent Items and the terminal (Stage 9).
+- A zip of a synthetic case is uploaded, the inventory shows what is missing, the identity fields are filled and confirmed; an upload link is created, used and disabled (Stage 10).
 
 ## Review-window additions (2026-11-03)
 

@@ -120,3 +120,15 @@ def check_message(
 # Issue reports (officer to admin): the personal-data patterns only; ordinary words are fine.
 def check_issue_text(text: str) -> list[str]:
     return [reason for reason, pattern in PERSONAL if pattern.search(text)]
+
+
+_URL = re.compile(r"https?://[^\s]+|www\.[^\s]+", re.I)
+
+
+def check_link_line(final_text: str, allowed_url: str | None) -> list[str]:
+    """The Upload link message may carry exactly one link, the case's own upload link, and
+    nothing else may look like a link. Every other message may carry none."""
+    found = _URL.findall(final_text)
+    if allowed_url is None:
+        return ["Contains a link"] if found else []
+    return [] if found == [allowed_url] else ["Contains a link other than the upload link"]

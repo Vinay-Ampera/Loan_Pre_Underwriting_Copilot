@@ -116,6 +116,7 @@ export const api = {
   get: (path) => request('GET', path),
   post: (path, json) => request('POST', path, { json }),
   put: (path, json) => request('PUT', path, { json }),
+  patch: (path, json) => request('PATCH', path, { json }),
   del: (path) => request('DELETE', path),
   upload: (path, form) => request('POST', path, { form }),
   /** A file behind the sign-in (document image, report PDF) as a blob. */

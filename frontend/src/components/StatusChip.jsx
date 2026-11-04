@@ -26,6 +26,7 @@ export default function StatusChip({ tone = 'neutral', children, title }) {
 const CASE_STATUS = {
   draft: ['neutral', 'Draft'],
   uploaded: ['neutral', 'Documents uploaded'],
+  applicant_submitted: ['info', 'Applicant submitted'],
   running: ['info', 'Assessing'],
   stopped: ['stopped', 'Stopped: needs correction'],
   confirmed: ['done', 'Confirmed by officer'],

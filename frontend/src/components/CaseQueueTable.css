@@ -55,3 +55,15 @@
     text-align: left;
   }
 }
+
+.from-applicant {
+  display: inline-block;
+  margin-left: var(--s-2);
+  padding: 0 var(--s-2);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  white-space: nowrap;
+}

@@ -20,6 +20,16 @@ Raw PAN and Aadhaar are synthetic. Full Aadhaar is never stored.
 **documents**
 `id, case_id, applicant_id, doc_type, file_path, original_name, mime, page_count, source_kind (digital_pdf|scanned_pdf|photo), sha256, upload_checks jsonb (blur_score, warnings), status (accepted|rejected), reject_reason, uploaded_at`
 
+Stage 10 (built, migrations 0014 and 0015) adds to `documents`: `role` (primary|co, null until the file is filed to a person; it replaces the old join through `applicants` and is what the pipeline reads), `role_source` (auto|officer), `classification` (what the local classifier found) with `type_source` (detected|officer) beside `doc_type` (what the officer sees), `duplicate_of` (the document it repeats) with `duplicate_kind` (exact|same_document|conflict). `status` also takes `ignored`: a repeat is a row with no stored file. `applicant_id` is now `ON DELETE SET NULL`: saving a corrected form replaces the applicant rows and used to delete every uploaded file's row through the cascade (a bug found while building the desk; files are filed by `role` and re-linked after the save).
+
+Next to each stored file the desk keeps a **read result** (`<file>.read.json`, behind the `FileStore` interface): the upload checks, the extracted fields, quality flags, tamper hints and missing fields, keyed by `sha256` and the application date. Extraction loads it instead of reading the file again. Raw page text is never stored. Not built (Part D, not started): `parent_document_id`, `page_from`/`page_to`.
+
+`cases.loan_amount` and `cases.tenure_months` may be empty for a case opened at the desk (their `> 0` checks still hold for a value). `cases.status` also takes `applicant_submitted`. Desk and applicant data that are not columns live in `form_data`: `origin` (`applicant` when it came through a link), `request` (the applicant's own statement: loan type, amount, tenure, purpose, employment, income, earner role), `request_locked`, `applicant_sent` (`at`, `incomplete`, `reference`), `upload_link_id`, `intake` (`employment` per person, `co`, `proceeded`), `from_documents` (per person, the identity fields still exactly as the cards gave them) and `identity_confirmed`.
+
+**upload_links** (built)
+`id, token_hash (unique), officer_id → users, created_by → users, loan_type (nullable preset), case_id (nullable until the applicant sends the request; set at once for a link made from a case), created_at, expires_at, disabled_at, disabled_by, last_used_at, files_count, bytes_total`
+The token (192 random bits) is never stored, only its SHA-256. `outbox` gains the template `upload_link` and `link_id` (which link a message carried, never its token). Both tables are granted to `app_rw` and `migrator` like the others.
+
 **extracted_fields**
 `id, document_id, field_name, value_masked, value_local (nullable, encrypted at rest later), confidence, source_page, needs_review bool`
 

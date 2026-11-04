@@ -146,3 +146,16 @@
   background: var(--unverified-bg);
   color: var(--unverified);
 }
+
+.files-title {
+  margin-top: var(--s-4);
+}
+.label-yourself {
+  margin-top: var(--s-3);
+}
+.label-yourself summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: var(--s-3);
+}

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 BANK = "Pramaan"
 SUBJECT = f"{BANK}: please contact your loan officer"
+LINK_SUBJECT = f"{BANK}: your secure upload link"
 FOOTER = (
     "Important: this message is from an unmonitored address, so please do not reply to it. "
     "Pramaan staff will never ask you for your OTP, PIN or password, by phone, email or message. "
@@ -36,6 +37,10 @@ TEMPLATES: dict[str, Template] = {t.code: t for t in (
              f"Dear customer, we would like you to visit your {BANK} branch about your enquiry. "
              "Please contact the officer named below to arrange a convenient time."),
     Template("blank", "Blank (write your own)", ""),
+    # Stage 10: carries only the link (added by code, never typed) and the usual footer
+    Template("upload_link", "Upload link",
+             f"Dear customer, to take your enquiry with {BANK} forward, please use the secure link "
+             "below. It stays open for a limited time, and you can open it again to add more."),
 )}  # fmt: skip
 
 
@@ -52,11 +57,14 @@ def contact_lines(
     return lines
 
 
-def compose(body: str, contact: list[str], case_ref: str | None) -> str:
-    """The text the customer receives: body, optional case reference, contact lines, footer."""
+def compose(body: str, contact: list[str], case_ref: str | None, link: str | None = None) -> str:
+    """The text the customer receives: body, optional case reference, the upload link (only for
+    the upload-link template, added by code), contact lines, footer."""
     parts = [body.strip()]
     if case_ref:
         parts.append(f"Reference: {case_ref}")
+    if link:
+        parts.append(f"Upload link: {link}")
     parts.append("\n".join(contact))
     parts.append(FOOTER)
     return "\n\n".join(p for p in parts if p)

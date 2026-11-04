@@ -86,3 +86,7 @@
   color: var(--ink);
   font-family: var(--mono);
 }
+
+.source-tag {
+  color: var(--refer);
+}

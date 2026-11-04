@@ -126,7 +126,7 @@ def user_activity(
         "admin_corrected": corrected, "precedents_by_status": precedents,
         "cases": [{"id": r.id, "case_no": r.case_no, "loan_type": r.loan_type, "status": r.status,
                    "band": r.band, "recommendation": r.recommendation, "applicant": r.applicant,
-                   "loan_amount": float(r.loan_amount), "corrected": r.corrected,
+                   "loan_amount": None if r.loan_amount is None else float(r.loan_amount), "corrected": r.corrected,
                    "updated_at": r.updated_at} for r in cases],
     }  # fmt: skip
 

@@ -4,11 +4,13 @@ import { loanLabel } from './LoanTypePicker'
 import './CaseQueueTable.css'
 
 const money = (n) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(n)
+  n == null
+    ? '–'
+    : new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0,
+      }).format(n)
 
 export default function CaseQueueTable({ cases }) {
   return (
@@ -32,8 +34,15 @@ export default function CaseQueueTable({ cases }) {
                 <Link to={`/cases/${c.id}`} className="mono">
                   {c.case_no}
                 </Link>
+                {c.origin === 'applicant' && (
+                  <span className="from-applicant" title="Sent in through an upload link">
+                    From applicant
+                  </span>
+                )}
               </td>
-              <td data-label="Applicant">{c.applicant}</td>
+              <td data-label="Applicant">
+                {c.applicant || <span className="muted">Details not entered yet</span>}
+              </td>
               <td data-label="Loan">
                 {loanLabel(c.loan_type)} <span className="muted">{money(c.loan_amount)}</span>
               </td>

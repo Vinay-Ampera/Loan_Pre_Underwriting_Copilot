@@ -1,0 +1,11 @@
+.desk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.desk-actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}

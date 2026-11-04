@@ -28,6 +28,9 @@ select = ["E", "F", "I", "B", "UP", "SIM", "N"]
 # generator: dense data-building code with long literal rows
 "data/synthetic/*" = ["E501", "N806", "SIM108"]
 "backend/tests/*" = ["E501"]
+# these reuse the API tests' client and engine fixtures by importing them
+"backend/tests/test_intake_desk.py" = ["F811"]
+"backend/tests/test_upload_links.py" = ["F811"]
 # intake: dense label tables and messages
 "backend/app/intake/*" = ["E501"]
 # agents: long prompt-feedback strings and SQL

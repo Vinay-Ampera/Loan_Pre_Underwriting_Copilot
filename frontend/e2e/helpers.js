@@ -61,6 +61,7 @@ export async function createCase(page, caseId, loanLabel) {
   const app = application(caseId)
   await page.getByRole('link', { name: 'New case' }).first().click()
   await page.getByRole('radio', { name: new RegExp(loanLabel) }).click()
+  await page.getByRole('radio', { name: /Fill in the form first/ }).click()
   await page.locator('#f-amount').fill(String(app.loan_amount))
   await page.locator('#f-tenure').fill(String(app.tenure_months))
   await page.locator('#f-purpose').fill(app.purpose)
@@ -86,6 +87,8 @@ export async function createCase(page, caseId, loanLabel) {
 
 /** Add every file of the case one by one, each with its own result row. */
 export async function uploadAll(page, caseId) {
+  const labelled = page.locator('.label-yourself')
+  if (!(await labelled.getAttribute('open'))) await labelled.locator('summary').click()
   const kinds = await page.locator('#up-kind option').evaluateAll((os) => os.map((o) => o.value))
   for (const role of ['primary', 'co']) {
     const dir = path.join(OUTPUT, 'cases', caseId, 'documents', role)

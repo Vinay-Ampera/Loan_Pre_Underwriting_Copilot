@@ -50,6 +50,8 @@ const AGENTS = [
 
 const OFFICER = [
   ['start', 'Create a case', 'plus'],
+  ['desk', 'Start with the documents', 'cases'],
+  ['links', 'Ask the applicant to upload', 'link'],
   ['stages', 'The five stages', 'cases'],
   ['report', 'Reading the report', 'precedent'],
   ['confirm', 'Confirm or override', 'shield'],
@@ -60,6 +62,7 @@ const OFFICER = [
 ]
 const ADMIN = [
   ['users', 'Add and disable users', 'users'],
+  ['adm-links', 'Upload links for officers', 'link'],
   ['reset', 'Reset a password', 'shield'],
   ['adm-case', 'Open and correct a case', 'cases'],
   ['adm-reassign', 'Reassign a case', 'users'],
@@ -131,17 +134,82 @@ function OfficerGuide() {
     <>
       <HelpSection id="start" icon="plus" title="Create a case and upload documents">
         <ol className="help-steps">
-          <li>Choose New case, pick the loan type and fill in the application form.</li>
+          <li>Choose New case and pick the loan type.</li>
+          <li>
+            Choose how to start: with the documents (recommended), or by filling in the form first.
+          </li>
           <li>
             For a home loan you may add a co-applicant; for an education loan one is required.
           </li>
-          <li>
-            Select Create case and add documents, then upload each file with its document kind.
-          </li>
-          <li>When every file is in, start the assessment.</li>
+          <li>When every file is in and the form is saved, submit for assessment.</li>
         </ol>
         <Callout tone="info" title="Synthetic data only">
           Never enter real customer information. This is a sample bank.
+        </Callout>
+      </HelpSection>
+
+      <HelpSection id="desk" icon="cases" title="Start with the documents">
+        <ol className="help-steps">
+          <li>
+            Drop a zip, choose a folder, or pick the files. Each file is checked and read once, then
+            filed to a person (the applicant or the co-applicant).
+          </li>
+          <li>
+            The inventory shows what is received, still missing, extra, not recognised, not
+            accepted, and repeats that were ignored. Change a type or a person from its list; it
+            saves at once.
+          </li>
+          <li>
+            State the employment type (salaried or self-employed) if you know it. Until then the
+            items that depend on it are listed apart and not counted as missing.
+          </li>
+          <li>
+            If something is missing choose <strong>Ask the applicant</strong> or{' '}
+            <strong>Proceed anyway</strong>. Both ask you to confirm. The identity papers are always
+            needed.
+          </li>
+          <li>
+            In the application form, the name, date of birth, PAN, Aadhaar last four and address are
+            filled from the PAN and Aadhaar cards and marked <em>from documents</em>. Check them
+            against the cards and tick the box. If the two cards disagree, the field is left empty
+            for you.
+          </li>
+        </ol>
+        <Callout tone="info" title="Only identity is filled in">
+          The loan amount, tenure, purpose, employment, income and contact details are the
+          applicant&apos;s claims. They are never read from a document. The report says when a match
+          was against the same card a value was read from: that is not an independent check.
+        </Callout>
+      </HelpSection>
+
+      <HelpSection id="links" icon="link" title="Ask the applicant to upload">
+        <ol className="help-steps">
+          <li>
+            Open Upload links and choose Create a link. Confirm, then copy the address. It is shown
+            once.
+          </li>
+          <li>
+            The applicant opens it with no account, states the request and adds documents. They see
+            a checklist and nothing else: no score, status or outcome. They get a reference number.
+          </li>
+          <li>
+            The case appears in your list marked <em>From applicant</em>. Their request is their own
+            statement; you can correct it in the form. Once you save the form the request is locked
+            and the link takes files only.
+          </li>
+          <li>
+            From the inventory, <strong>Ask the applicant</strong> makes a link for that case; you
+            can send it as the <em>Upload link</em> message, which holds only the link and the usual
+            warning.
+          </li>
+          <li>
+            A link lasts 7 days. Extend it, or disable it at any time (you confirm). Files already
+            received stay on the case. Once you submit the case, the link stops taking files.
+          </li>
+        </ol>
+        <Callout tone="warn" title="Never share a link in public">
+          Anyone with the address can add files to that case until it ends. Disable it if it went to
+          the wrong place.
         </Callout>
       </HelpSection>
 
@@ -252,6 +320,14 @@ function OfficerGuide() {
 function AdminGuide() {
   return (
     <>
+      <HelpSection id="adm-links" icon="link" title="Upload links for officers">
+        <p>
+          On Upload links you can create a link for an officer (choose the officer), see every link
+          with its state and the case it led to, and disable any link. You do not receive the
+          applicant&apos;s files unless you open the case, which you can do as for any case.
+        </p>
+      </HelpSection>
+
       <HelpSection id="users" icon="users" title="Add and disable users">
         <ul>
           <li>Open Users and choose the option to add a user. Give a name, an email and a role.</li>

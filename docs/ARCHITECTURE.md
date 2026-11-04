@@ -63,6 +63,24 @@ START → supervisor → extraction → gate_E → kyc → gate_K ─┬─ hard
 
 A small `notifications` module (`app/notifications/`: `templates.py`, `check.py`, `sender.py`) with routes in `app/api/messages.py` (and issue reports in `app/api/issues.py`) on the API side, outside the agent graph and never an input to scoring. Parts: templates in code, a content checker, a `Sender` interface with the console sender as the only v1 implementation, outbox rows, and routes to draft, check, send and list. Flow: the officer opens a draft after confirm, override or a stopped run; the server runs the content check; a second confirmation sends; the console sender prints the message in the backend terminal; the outbox row and audit log record it. No model is called, so masking does not apply to the message text, and the message never contains case data by design. See `SECURITY.md` section 4b. The sender is chosen by `NOTIFICATION_SENDER` (only `console` in v1) and held on `app.state.sender`, so tests can inject a failing sender. Optional `BRANCH_CONTACT_EMAIL` and `BRANCH_CONTACT_PHONE` add branch lines to every message. Issue reports (officer to admin) share the content check's personal-data patterns and the audit helper but are a separate table and router.
 
+## 3d. Intake desk and upload link (Stage 10, Parts A to C built)
+
+Everything here runs **before** Submit and ends in the same `Submission` the graph already reads; the graph, scoring and gates are unchanged.
+
+```
+zip / folder / files / applicant link
+  -> safe unpack (intake/archive.py, in memory) -> upload checks -> read once (text layer or OCR) + classify + local extract
+  -> read result saved next to the file (intake/readcache.py) -> duplicate rules -> person assignment (intake/inventory.py)
+  -> inventory (received / missing / extra / unassigned / unrecognised / rejected / duplicate)
+  -> identity prefill from PAN + Aadhaar (intake/prefill.py, officer ticks) -> claims by applicant request or officer -> Submit
+```
+
+- `api/ingest.py` is the one upload step for both doors (officer route `api/intake.py`, applicant route `api/public.py`). `api/filestore.py` is the `FileStore` interface (local disk now); files are served only by authenticated routes.
+- Extraction (`agents/assemble.py`, `_early_read`) loads the saved read result when its hash and application date match and reads the file again only when the model pass needs the page text (never saved) or the date differs. No second OCR otherwise.
+- The public routes (`/api/v1/public/*`) have no session. The token travels in the `X-Upload-Token` header and the page keeps it in the URL fragment (`/u#token`), which a browser never sends to a server, so it is in no access log. `api/ratelimit.py` limits per link and per address.
+- `api/links.py` creates, lists, extends and disables links (officer for their own, admin naming an officer). "Ask the applicant" makes a link bound to a case. The "Upload link" message (Stage 9 outbox) carries the link added by code; the page holds the token in memory for the two calls and the server keeps only a placeholder.
+- Part D (bundle PDF split, `intake/bundle.py`) is not built.
+
 ## 4. Model routing
 
 | Agent | Primary | Why |
@@ -124,7 +142,7 @@ All via `.env` and the rules file; nothing secret in git.
 ## 9. Deployment
 
 - **Development:** run API, frontend and worker directly on the laptop; Neon is hosted.
-- **Final stage (Stage 10):** Docker Compose with frontend, API (graph runner inside), optional local Langfuse, Prometheus, Loki, Tempo, Grafana. Optional local Postgres service for offline use.
+- **Final stage (Stage 11):** Docker Compose with frontend, API (graph runner inside), optional local Langfuse, Prometheus, Loki, Tempo, Grafana. Optional local Postgres service for offline use.
 - **Later:** hosted file storage, Celery plus Redis if concurrency demands it, real API integrations behind the mock interfaces.
 
 ## 10. Failure behaviour

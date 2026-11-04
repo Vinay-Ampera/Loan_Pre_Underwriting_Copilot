@@ -4,7 +4,9 @@ import { api } from '../api/client'
 import { useSession } from '../App'
 import { useAsync } from '../hooks/useAsync'
 import { usePolling } from '../hooks/usePolling'
-import ApplicationForm, { stateFromCase } from '../components/ApplicationForm'
+import ApplicationForm, { stateFromCase, stateFromDesk } from '../components/ApplicationForm'
+import ApplicantRequest from '../components/ApplicantRequest'
+import IntakeDesk from '../components/IntakeDesk'
 import AdminChanges from '../components/AdminChanges'
 import AdminCorrection from '../components/AdminCorrection'
 import AuditTimeline from '../components/AuditTimeline'
@@ -64,6 +66,9 @@ export default function CaseWorkspacePage() {
   const [editing, setEditing] = useState(false)
   const [docToRemove, setDocToRemove] = useState(null)
   const [removingDoc, setRemovingDoc] = useState(false)
+  const [step, setStep] = useState('desk') // desk | form: where a case opened at the desk is
+  const [inventory, setInventory] = useState(null)
+  const [offer, setOffer] = useState(null)
   const audit = useAsync(
     () => (tab === 'audit' ? api.get(`/cases/${id}/audit`) : Promise.resolve(null)),
     [id, tab, c?.status, c?.admin_actions?.length, c?.officer],
@@ -87,6 +92,23 @@ export default function CaseWorkspacePage() {
   useEffect(() => {
     if (c && tab === null) setTab(c.report ? 'report' : 'documents')
   }, [c, tab])
+  // the inventory belongs to every case that is still being put together, and is read-only for
+  // the admin; the identity values the cards offer are the officer's, for the form
+  const deskCase = c && !c.report && !['running'].includes(c.status)
+  useEffect(() => {
+    if (!c || !deskCase) return
+    api
+      .get(`/cases/${id}/inventory`)
+      .then((inv) => setInventory(inv?.counts ? inv : null))
+      .catch(() => setInventory(null))
+  }, [id, c?.documents?.length, c?.status, deskCase]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!c || isAdmin || !(step === 'form' || editing)) return
+    api
+      .get(`/cases/${id}/prefill`)
+      .then(setOffer)
+      .catch(() => setOffer(null))
+  }, [id, step, editing, isAdmin, c?.documents?.length]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (c?.report && !running)
       setTab((t) =>
@@ -99,8 +121,10 @@ export default function CaseWorkspacePage() {
   if (!c) return null
 
   const fixStop = c.status === 'stopped' && c.stop_class === 'fix'
-  const editable = !isAdmin && (['draft', 'uploaded'].includes(c.status) || fixStop)
-  const roles = c.applicants.map((a) => a.role)
+  const BEFORE = ['draft', 'uploaded', 'applicant_submitted']
+  const editable = !isAdmin && (BEFORE.includes(c.status) || fixStop)
+  const roles = c.people ?? c.applicants.map((a) => a.role)
+  const first = c.applicants[0]
   const report = c.report
   const recommendation = c.recommendation
 
@@ -120,6 +144,17 @@ export default function CaseWorkspacePage() {
     try {
       await api.post(`/cases/${id}/submit`)
       setLive([])
+      await reload()
+    } catch (e) {
+      setActionError(e.message)
+    }
+  }
+  async function saveForm(body) {
+    setActionError(null)
+    try {
+      await api.put(`/cases/${id}/form`, body)
+      setEditing(false)
+      setStep('desk')
       await reload()
     } catch (e) {
       setActionError(e.message)
@@ -159,7 +194,7 @@ export default function CaseWorkspacePage() {
             <span className="mono">{c.case_no}</span>
           </h1>
           <p className="muted">
-            {loanLabel(c.loan_type)} · {c.applicants[0].full_name}
+            {loanLabel(c.loan_type)} · {first ? first.full_name : 'details not entered yet'}
             {c.applicants.length > 1 && ` with ${c.applicants[1].full_name}`}
             {isAdmin && c.officer && ` · officer ${c.officer}`}
           </p>
@@ -200,10 +235,11 @@ export default function CaseWorkspacePage() {
                   fields: { [c.loan_type]: c.loan_fields },
                   co_applicant: { [c.loan_type]: c.co_applicant },
                 }}
-                initial={stateFromCase(c)}
+                initial={{ ...stateFromCase(c), identityConfirmed: Boolean(c.identity?.confirmed) }}
                 editing
-                submitLabel="Save and resume assessment"
-                onSubmit={(body) => resume({ case: body })}
+                offer={offer}
+                submitLabel={fixStop ? 'Save and resume assessment' : 'Save the form'}
+                onSubmit={(body) => (fixStop ? resume({ case: body }) : saveForm(body))}
                 serverError={actionError}
               />
               <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}>
@@ -229,65 +265,125 @@ export default function CaseWorkspacePage() {
 
               {tab === 'documents' && (
                 <div className="tab-body">
-                  {editable && (
+                  {c.origin === 'applicant' && <ApplicantRequest c={c} />}
+                  {c.intake_stage && step === 'form' && !isAdmin ? (
+                    <div className="card edit-card">
+                      <h2>Application form</h2>
+                      {offer ? (
+                        <ApplicationForm
+                          key={`desk-${c.documents.length}-${Boolean(offer)}`}
+                          loanType={c.loan_type}
+                          meta={{
+                            fields: { [c.loan_type]: c.loan_fields },
+                            co_applicant: { [c.loan_type]: c.co_applicant },
+                          }}
+                          initial={stateFromDesk(c, offer, inventory)}
+                          offer={offer}
+                          submitLabel="Save the form"
+                          onSubmit={saveForm}
+                          serverError={actionError}
+                        />
+                      ) : (
+                        <Skeleton lines={4} />
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setStep('desk')}
+                      >
+                        Back to the documents
+                      </button>
+                    </div>
+                  ) : inventory ? (
+                    <>
+                      <IntakeDesk
+                        caseId={id}
+                        inventory={inventory}
+                        setInventory={setInventory}
+                        docTypes={c.doc_types}
+                        editable={editable}
+                        recipient={first?.email}
+                        onContinue={c.intake_stage && editable ? () => setStep('form') : undefined}
+                        onChanged={reload}
+                      />
+                      {editable && (
+                        <details className="label-yourself">
+                          <summary>Add one file and label it yourself</summary>
+                          <UploadZone
+                            caseId={id}
+                            roles={roles}
+                            docTypes={c.doc_types}
+                            onUploaded={reload}
+                          />
+                        </details>
+                      )}
+                    </>
+                  ) : editable ? (
                     <UploadZone
                       caseId={id}
                       roles={roles}
                       docTypes={c.doc_types}
                       onUploaded={reload}
                     />
-                  )}
-                  {c.documents.length === 0 ? (
-                    <p className="muted">No files yet.</p>
-                  ) : (
-                    <ul className="doc-list card">
-                      {c.documents.map((d) => (
-                        <li key={d.id}>
-                          <div>
-                            <p>
-                              <strong>{d.name}</strong>{' '}
-                              <span className="muted">
-                                {d.role === 'co' ? 'co-applicant' : 'applicant'} ·{' '}
-                                {d.doc_type.replaceAll('_', ' ')}
-                              </span>
-                            </p>
-                            {d.status === 'rejected' ? (
-                              <StatusChip tone="reject">
-                                Rejected{d.message ? `: ${d.message}` : ''}
-                              </StatusChip>
-                            ) : d.warnings.length ? (
-                              <StatusChip tone="refer">Accepted with a warning</StatusChip>
-                            ) : (
-                              <StatusChip tone="approve">Accepted</StatusChip>
-                            )}
-                          </div>
-                          <div className="doc-actions">
-                            {d.status === 'accepted' && (
-                              <button
-                                type="button"
-                                className="btn"
-                                onClick={() => {
-                                  setSelected(d.id)
-                                  setTab('fields')
-                                }}
-                              >
-                                View
-                              </button>
-                            )}
-                            {editable && (
-                              <button
-                                type="button"
-                                className="btn btn-ghost"
-                                onClick={() => setDocToRemove(d)}
-                                aria-label={`Remove ${d.name}`}
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                  ) : null}
+                  {c.documents.length > 0 && (
+                    <>
+                      <h3 className="files-title">All files</h3>
+                      <ul className="doc-list card">
+                        {c.documents.map((d) => (
+                          <li key={d.id}>
+                            <div>
+                              <p>
+                                <strong>{d.name}</strong>{' '}
+                                <span className="muted">
+                                  {d.role === 'co'
+                                    ? 'co-applicant'
+                                    : d.role === 'primary'
+                                      ? 'applicant'
+                                      : 'no person yet'}{' '}
+                                  · {d.doc_type.replaceAll('_', ' ')}
+                                </span>
+                              </p>
+                              {d.status === 'rejected' ? (
+                                <StatusChip tone="reject">
+                                  Rejected{d.message ? `: ${d.message}` : ''}
+                                </StatusChip>
+                              ) : d.status === 'ignored' ? (
+                                <StatusChip tone="neutral">Repeat, ignored</StatusChip>
+                              ) : d.warnings.length ? (
+                                <StatusChip tone="refer">Accepted with a warning</StatusChip>
+                              ) : (
+                                <StatusChip tone="approve">Accepted</StatusChip>
+                              )}
+                            </div>
+                            <div className="doc-actions">
+                              {d.status === 'accepted' && (
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  onClick={() => {
+                                    setSelected(d.id)
+                                    setTab('fields')
+                                  }}
+                                >
+                                  View
+                                </button>
+                              )}
+                              {editable && (
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  onClick={() => setDocToRemove(d)}
+                                  aria-label={`Remove ${d.name}`}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
                   )}
                 </div>
               )}
@@ -378,16 +474,27 @@ export default function CaseWorkspacePage() {
             </div>
           )}
 
-          {!isAdmin && ['draft', 'uploaded'].includes(c.status) && (
+          {!isAdmin && BEFORE.includes(c.status) && (
             <div className="ws-actions">
+              {!c.intake_stage && (
+                <button type="button" className="btn" onClick={() => setEditing(true)}>
+                  Edit the application form
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={!c.kyc_ready}
+                disabled={!c.kyc_ready || c.intake_stage}
                 onClick={submit}
               >
                 Submit for assessment
               </button>
+              {c.intake_stage && (
+                <p className="small muted">
+                  Fill in the application form first. Use “Continue to the application form” on the
+                  Documents tab.
+                </p>
+              )}
               {!c.kyc_ready && (
                 <p className="small muted">
                   Add the KYC documents first:{' '}
@@ -434,7 +541,7 @@ export default function CaseWorkspacePage() {
           {isAdmin && <AdminCorrection c={c} onDone={reload} />}
 
           {!isAdmin && ['confirmed', 'overridden', 'stopped'].includes(c.status) && (
-            <CustomerContact caseId={id} recipient={c.applicants[0].email} />
+            <CustomerContact caseId={id} recipient={first?.email} />
           )}
         </aside>
       </div>

@@ -6,11 +6,9 @@ endpoints return; it computes nothing (scores, bands and stop decisions come fro
 """
 
 import json
-import os
-import uuid
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -22,7 +20,7 @@ from starlette.concurrency import run_in_threadpool
 from app.agents import store
 from app.agents.state import DB_STAGES
 from app.agents.submission import DocumentRef, Submission
-from app.api import display
+from app.api import display, identity
 from app.api.decisions import admin_actions, decision_in_force, override_block
 from app.api.deps import (
     User,
@@ -33,17 +31,20 @@ from app.api.deps import (
     officer_only,
     write_audit,
 )
+from app.api.filestore import FileStore, LocalFileStore
 from app.api.reportpdf import build_report_pdf
 from app.api.runner import Runner
 from app.api.schemas import CO_APPLICANT, LOAN_FIELDS, CaseIn, OfficerActionIn, ResumeIn
 from app.core.config import REPO_ROOT, Settings
+from app.intake.inventory import ONE_FILE_COVERS_MANY
 from app.intake.upload import check_case_size, check_upload
 from app.scoring.facts import applicable_requirements
 from app.scoring.rules import RuleSet
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
-UPLOADABLE = ("draft", "uploaded", "stopped")
+UPLOADABLE = ("draft", "uploaded", "stopped", "applicant_submitted")
+SUBMITTABLE = ("draft", "uploaded", "applicant_submitted")
 MIN_OVERRIDE_REASON = 15
 DECISION_OF = {"recommend_approve": "approve", "refer": "refer", "recommend_reject": "reject"}
 EXT = {"application/pdf": ".pdf", "image/jpeg": ".jpg", "image/png": ".png"}
@@ -63,6 +64,10 @@ def _runner(request: Request) -> Runner:
 def upload_root(settings: Settings) -> Path:
     root = settings.upload_dir
     return root if root.is_absolute() else REPO_ROOT / root
+
+
+def file_store(settings: Settings) -> FileStore:
+    return LocalFileStore(upload_root(settings))
 
 
 def get_case(conn: Connection, case_id: UUID, user: User, *, lock: bool = False) -> Any:
@@ -102,6 +107,7 @@ def build_submission(conn: Connection, row: Any) -> Submission:
         "application_date": form["application_date"], "loan_amount": float(row.loan_amount),
         "tenure_months": row.tenure_months, "purpose": row.purpose,
         "applicants": form["applicants"], "loan_details": form.get("loan_details", {}),
+        "from_documents": form.get("from_documents", {}),  # identity fields read from the cards
     }  # fmt: skip
     return Submission(
         case_id=row.case_no, application=application, documents=_doc_refs(conn, row.id)
@@ -110,22 +116,44 @@ def build_submission(conn: Connection, row: Any) -> Submission:
 
 def _doc_refs(conn: Connection, case_id: UUID) -> list[DocumentRef]:
     rows = conn.execute(
-        text("""SELECT d.file_path, d.original_name, a.role FROM documents d
-                JOIN applicants a ON a.id = d.applicant_id
+        text("""SELECT d.file_path, d.original_name, d.role FROM documents d
+                JOIN applicants a ON a.case_id = d.case_id AND a.role = d.role
                 WHERE d.case_id = :c AND d.status = 'accepted' AND d.file_path IS NOT NULL
                 ORDER BY d.uploaded_at"""), {"c": case_id})  # fmt: skip
     return [DocumentRef(role=r.role, path=r.file_path, name=r.original_name) for r in rows]
 
 
+def people_of(row: Any, docs: list[Any]) -> dict[str, str | None]:
+    """The people on a case and their employment type. Once the form is saved they come from the
+    form. At the intake desk, before the form exists, the primary applicant is always there, a
+    co-applicant is there when the loan type needs one (or allows one and the officer added one
+    or a file was filed to one), and employment is whatever the officer or the applicant's
+    request said (a claim, so it can be unknown)."""
+    form = _case_form(row)
+    if form.get("applicants"):
+        return {a["role"]: a["employment_type"] for a in form["applicants"]}
+    intake = form.get("intake", {})
+    emp = intake.get("employment", {})
+    rule = CO_APPLICANT[row.loan_type]
+    roles = ["primary"]
+    if rule == "required" or (
+        rule == "optional" and (intake.get("co") or any(d.role == "co" for d in docs))
+    ):
+        roles.append("co")
+    return {r: emp.get(r) for r in roles}
+
+
 def _checklist(rs: RuleSet, row: Any, docs: list[Any]) -> list[dict[str, Any]]:
     form = _case_form(row)
-    employment = {a["role"]: a["employment_type"] for a in form["applicants"]}
+    employment = people_of(row, docs)
     out: list[dict[str, Any]] = []
-    for req in applicable_requirements(rs, row.loan_type, employment, form.get("loan_details", {})):
+    for req in applicable_requirements(
+        rs, row.loan_type, cast(Any, employment), form.get("loan_details", {})
+    ):
         roles = [r for r in ("primary", "co") if r in employment] if req.kyc else [req.applicant]
         types = req.any_of or [req.type]
         # one statement file covers many months: the pipeline counts months, the checklist files
-        needed = 1 if types == ["bank_statement"] else req.min_count
+        needed = 1 if set(types) <= ONE_FILE_COVERS_MANY else req.min_count
         for role in roles:
             if role not in employment:
                 continue
@@ -137,19 +165,22 @@ def _checklist(rs: RuleSet, row: Any, docs: list[Any]) -> list[dict[str, Any]]:
     return out
 
 
-def _accepted_types(rs: RuleSet, row: Any) -> set[str]:
+def _accepted_types(rs: RuleSet, row: Any, docs: list[Any]) -> set[str]:
     form = _case_form(row)
-    employment = {a["role"]: a["employment_type"] for a in form["applicants"]}
-    reqs = applicable_requirements(rs, row.loan_type, employment, form.get("loan_details", {}))
+    employment = people_of(row, docs)
+    reqs = applicable_requirements(
+        rs, row.loan_type, cast(Any, employment), form.get("loan_details", {})
+    )
     return {t for r in reqs for t in (r.any_of or [r.type])} | {"other"}
 
 
 def _documents(conn: Connection, case_id: UUID) -> list[Any]:
     return list(conn.execute(
         text("""SELECT d.id, d.doc_type, d.original_name, d.mime, d.status, d.reject_reason, d.page_count,
-                       d.upload_checks, d.uploaded_at, a.role
-                FROM documents d LEFT JOIN applicants a ON a.id = d.applicant_id
-                WHERE d.case_id = :c ORDER BY a.role DESC, d.uploaded_at"""), {"c": case_id}))  # fmt: skip
+                       d.upload_checks, d.uploaded_at, d.role, d.role_source, d.classification,
+                       d.type_source, d.duplicate_kind
+                FROM documents d
+                WHERE d.case_id = :c ORDER BY d.role DESC NULLS LAST, d.uploaded_at"""), {"c": case_id}))  # fmt: skip
 
 
 def _fields(conn: Connection, case_id: UUID) -> dict[UUID, list[dict[str, Any]]]:
@@ -215,7 +246,8 @@ def _last_failure(conn: Connection, case_id: UUID, status: str) -> dict[str, Any
 def _summary(row: Any) -> dict[str, Any]:
     return {
         "id": row.id, "case_no": row.case_no, "loan_type": row.loan_type, "status": row.status,
-        "loan_amount": float(row.loan_amount), "tenure_months": row.tenure_months,
+        "loan_amount": None if row.loan_amount is None else float(row.loan_amount),
+        "tenure_months": row.tenure_months,
         "purpose": row.purpose, "total_score": None if row.total_score is None else float(row.total_score),
         "band": row.band, "recommendation": row.recommendation, "stopped_stage": row.stopped_stage,
         "stop_class": row.stop_class, "created_at": row.created_at, "updated_at": row.updated_at,
@@ -233,6 +265,8 @@ def list_cases(
         text("""SELECT c.*, u.name AS officer_name,
                        (SELECT a.full_name FROM applicants a WHERE a.case_id = c.id AND a.role = 'primary') AS applicant,
                        EXISTS (SELECT 1 FROM admin_actions x WHERE x.case_id = c.id) AS corrected,
+                       COALESCE(c.form_data ->> 'origin', 'officer') AS origin,
+                       (c.form_data ? 'applicant_sent') AS applicant_sent,
                        floor(extract(epoch FROM (now() - c.created_at)) / 86400)::int AS age_days
                 FROM cases c JOIN users u ON u.id = c.created_by
                 WHERE (CAST(:all AS boolean) OR c.created_by = :u)
@@ -245,7 +279,8 @@ def list_cases(
         {"u": user.id, "all": everyone, "st": status or None, "lt": loan_type or None, "q": (q or "").strip() or None},
     )  # fmt: skip
     return [{**_summary(r), "applicant": r.applicant, "officer": r.officer_name,
-             "age_days": r.age_days, "admin_corrected": r.corrected} for r in rows]  # fmt: skip
+             "age_days": r.age_days, "admin_corrected": r.corrected, "origin": r.origin,
+             "applicant_sent": r.applicant_sent} for r in rows]  # fmt: skip
 
 
 def _insert_applicants(conn: Connection, case_id: UUID, body: CaseIn) -> None:
@@ -262,6 +297,11 @@ def _insert_applicants(conn: Connection, case_id: UUID, body: CaseIn) -> None:
              "biz": a.employer_or_business, "inc": a.declared_monthly_income,
              "rel": a.relationship_to_primary, "email": a.email},
         )  # fmt: skip
+    conn.execute(  # files are filed by role; point them at the new applicant rows
+        text("""UPDATE documents d SET applicant_id = a.id FROM applicants a
+                WHERE d.case_id = :c AND a.case_id = d.case_id AND a.role = d.role"""),
+        {"c": case_id},
+    )
 
 
 def _is_masked(a: Any) -> bool:
@@ -305,11 +345,24 @@ def _merge_masked(
             a.email = stored_emails[a.role]
 
 
-def _form_data(case_no: str, body: CaseIn, application_date: str) -> str:
+KEPT_FORM_KEYS = ("origin", "request", "request_locked", "intake", "upload_link_id")
+
+
+def _form_data(
+    case_no: str, body: CaseIn, application_date: str, keep: dict[str, Any] | None = None,
+    from_documents: dict[str, list[str]] | None = None,
+) -> str:  # fmt: skip
+    """The case form as stored. Keys that belong to the desk or the applicant's request are
+    carried over when the form is saved again. `from_documents` lists, per person, the identity
+    fields that are still exactly what the PAN or Aadhaar card gave."""
+    kept = {k: v for k, v in (keep or {}).items() if k in KEPT_FORM_KEYS}
+    marks = from_documents or {}
     return json.dumps({
-        "external_id": case_no, "application_date": application_date,
+        **kept, "external_id": case_no, "application_date": application_date,
         "loan_details": body.loan_details,
         "applicants": [_applicant_dict(a.model_dump(mode="python")) for a in body.applicants],
+        "from_documents": marks,
+        "identity_confirmed": bool(marks) and body.identity_confirmed,
     }, default=str)  # fmt: skip
 
 
@@ -357,6 +410,7 @@ def read_case(
     report = _latest_report(conn, case_id)
     form = _case_form(row)
     emails = _emails(conn, case_id)
+    intake_stage = not form.get("applicants")
     applicants = [
         {"role": a["role"], "email": display.display_text(emails.get(a["role"]) or "") or None, "full_name": a["full_name"], "dob": a["dob"],
          "pan": display.mask_pan(a["pan"]), "aadhaar": display.mask_aadhaar_last4(a["aadhaar_last4"]),
@@ -364,7 +418,7 @@ def read_case(
          "employment_type": a["employment_type"], "employer_or_business": a.get("employer_or_business"),
          "declared_monthly_income": a.get("declared_monthly_income"),
          "relationship_to_primary": a.get("relationship_to_primary")}
-        for a in form["applicants"]
+        for a in form.get("applicants", [])
     ]  # fmt: skip
     runner = _runner(request)
     out = {
@@ -374,13 +428,15 @@ def read_case(
         "documents": [
             {"id": d.id, "role": d.role, "doc_type": d.doc_type, "name": d.original_name,
              "mime": d.mime, "status": d.status, "reject_reason": d.reject_reason,
+             "type_changed": d.type_source == "officer", "person_changed": d.role_source == "officer",
+             "detected_type": d.classification, "duplicate_kind": d.duplicate_kind,
              "warnings": (d.upload_checks or {}).get("warnings", []),
              "message": (d.upload_checks or {}).get("message", ""),
              "fields": fields.get(d.id, [])}
             for d in docs
         ],
         "checklist": checklist,
-        "doc_types": sorted(_accepted_types(_ruleset(request), row)),
+        "doc_types": sorted(_accepted_types(_ruleset(request), row, docs)),
         "kyc_ready": all(c["met"] for c in checklist if c["kyc"]) and bool(checklist),
         "co_applicant": CO_APPLICANT[row.loan_type],
         "stages": _stage_rows(conn, case_id),
@@ -392,6 +448,14 @@ def read_case(
         "decision_in_force": decision_in_force(conn, case_id),
         "last_failure": _last_failure(conn, case_id, row.status),
         "loan_fields": LOAN_FIELDS[row.loan_type],
+        "intake_stage": intake_stage,  # True until the application form has been saved
+        "people": list(people_of(row, docs)),
+        "origin": form.get("origin", "officer"),  # "applicant" when it came in through a link
+        "request": form.get("request"),  # the applicant's own statement, a claim to be checked
+        "request_locked": bool(form.get("request_locked")),
+        "applicant_sent": form.get("applicant_sent"),  # {at, incomplete, reference} once sent
+        "identity": {"from_documents": form.get("from_documents", {}),
+                     "confirmed": bool(form.get("identity_confirmed"))},  # fmt: skip
     }  # fmt: skip
     if user.role != "admin":
         return out
@@ -433,7 +497,7 @@ def case_audit(
 def _editable(row: Any) -> None:
     if row.status == "stopped" and row.stop_class == "fix":
         return
-    if row.status not in ("draft", "uploaded"):
+    if row.status not in SUBMITTABLE:
         raise HTTPException(
             409, "Files can be changed only before assessment, or to fix a stopped case."
         )
@@ -448,22 +512,19 @@ def upload_documents(
 ) -> dict[str, Any]:  # fmt: skip
     row = get_case(conn, case_id, user, lock=True)
     _editable(row)
-    form = _case_form(row)
-    if role not in {a["role"] for a in form["applicants"]}:
+    existing = _documents(conn, case_id)
+    if role not in people_of(row, existing):
         raise HTTPException(422, f"This case has no {role} applicant.")
-    if doc_type not in _accepted_types(_ruleset(request), row):
+    if doc_type not in _accepted_types(_ruleset(request), row, existing):
         raise HTTPException(422, "Unknown document type for this loan.")
     applicant_id = conn.execute(
-        text("SELECT id FROM applicants WHERE case_id = :c AND role = :r"), {"c": case_id, "r": role}
-    ).scalar_one()  # fmt: skip
-    folder = upload_root(settings) / str(case_id)
-    used = sum(os.path.getsize(p) for p in folder.glob("*")) if folder.exists() else 0
+        text("SELECT id FROM applicants WHERE case_id = :c AND role = :r"),
+        {"c": case_id, "r": role},
+    ).scalar()  # None before the form is saved: the file is filed by `role` and linked later
+    store = file_store(settings)
+    used = store.case_bytes(case_id)
     max_bytes = settings.max_upload_mb * 1024 * 1024
-    names = {
-        d.original_name
-        for d in _documents(conn, case_id)
-        if d.role == role and d.status == "accepted"
-    }
+    names = {d.original_name for d in existing if d.role == role and d.status == "accepted"}
     results: list[dict[str, Any]] = []
     for f in files:
         name = Path(f.filename or "file").name[:200]
@@ -483,15 +544,14 @@ def upload_documents(
                 shown = f"{stem} ({n}).{ext}" if dot else f"{name} ({n})"
             name = shown
             names.add(name)
-            folder.mkdir(parents=True, exist_ok=True)
-            path = folder / f"{uuid.uuid4().hex}{EXT[check.mime or 'application/pdf']}"
-            path.write_bytes(data)
+            path = Path(store.put(case_id, data, EXT[check.mime or "application/pdf"]))
             used += len(data)
         doc_id = conn.execute(
-            text("""INSERT INTO documents (case_id, applicant_id, doc_type, file_path, original_name, mime,
-                        page_count, upload_checks, status, reject_reason)
-                    VALUES (:c, :a, :t, :p, :n, :m, :pc, CAST(:chk AS jsonb), :st, :rej) RETURNING id"""),
-            {"c": case_id, "a": applicant_id, "t": doc_type, "p": str(path) if path else None, "n": name,
+            text("""INSERT INTO documents (case_id, applicant_id, role, role_source, type_source, doc_type,
+                        file_path, original_name, mime, page_count, upload_checks, status, reject_reason)
+                    VALUES (:c, :a, :role, 'officer', 'officer', :t, :p, :n, :m, :pc, CAST(:chk AS jsonb),
+                            :st, :rej) RETURNING id"""),
+            {"c": case_id, "a": applicant_id, "role": role, "t": doc_type, "p": str(path) if path else None, "n": name,
              "m": check.mime or "application/octet-stream", "pc": len(check.pages) or None,
              "chk": json.dumps({"warnings": check.warnings, "blur_score": check.blur_score,
                                 "message": check.message}),
@@ -517,7 +577,7 @@ def upload_documents(
 @router.delete("/{case_id}/documents/{doc_id}", status_code=204)
 def delete_document(
     case_id: UUID, doc_id: UUID, user: User = Depends(officer_only),
-    conn: Connection = Depends(get_conn),
+    conn: Connection = Depends(get_conn), settings: Settings = Depends(get_settings_dep),
 ) -> Response:  # fmt: skip
     row = get_case(conn, case_id, user, lock=True)
     _editable(row)
@@ -527,7 +587,7 @@ def delete_document(
         raise HTTPException(404, "Document not found.")
     conn.execute(text("DELETE FROM documents WHERE id = :d"), {"d": doc_id})
     if d.file_path:
-        Path(d.file_path).unlink(missing_ok=True)
+        file_store(settings).delete(d.file_path)
     write_audit(
         conn, user.id, "document_removed", "case", case_id, after={"document_id": str(doc_id)}
     )
@@ -552,8 +612,15 @@ def document_file(
 def _prepare_submit(engine: Engine, request: Request, case_id: UUID, user: User) -> Submission:
     with engine.begin() as conn:
         row = get_case(conn, case_id, user, lock=True)
-        if row.status not in ("draft", "uploaded"):
+        if row.status not in SUBMITTABLE:
             raise HTTPException(409, "This case has already been submitted.")
+        form = _case_form(row)
+        if not form.get("applicants"):
+            raise HTTPException(422, "Fill in the application form before submitting.")
+        if form.get("from_documents") and not form.get("identity_confirmed"):
+            raise HTTPException(
+                422, "Confirm the identity details that were read from the cards before submitting."
+            )
         docs = _documents(conn, case_id)
         checklist = _checklist(_ruleset(request), row, docs)
         missing = [
@@ -561,6 +628,13 @@ def _prepare_submit(engine: Engine, request: Request, case_id: UUID, user: User)
         ]
         if missing:
             raise HTTPException(422, "KYC documents are missing: " + ", ".join(missing) + ".")
+        gaps = [c for c in checklist if not c["met"]]
+        if form.get("intake") and gaps and not form["intake"].get("proceeded"):
+            raise HTTPException(
+                409,
+                "Some documents are still missing. Ask the applicant for them, or choose "
+                "Proceed anyway on the inventory.",
+            )
         sub = build_submission(conn, row)
         conn.execute(text("UPDATE cases SET status = 'running', updated_at = now() WHERE id = :c"),
                      {"c": case_id})  # fmt: skip
@@ -584,7 +658,8 @@ async def submit_case(
 
 
 def _prepare_resume(
-    engine: Engine, request: Request, case_id: UUID, user: User, body: ResumeIn
+    engine: Engine, request: Request, case_id: UUID, user: User, body: ResumeIn,
+    settings: Settings,
 ) -> tuple[dict[str, Any], list[DocumentRef]]:  # fmt: skip
     with engine.begin() as conn:
         row = get_case(conn, case_id, user, lock=True)
@@ -600,7 +675,15 @@ def _prepare_resume(
                 _emails(conn, case_id),
             )
             kept = body.case.application_date or _case_form(row)["application_date"]
-            form = json.loads(_form_data(row.case_no, body.case, str(kept)))
+            offered = identity.offer(conn, file_store(settings), case_id)
+            marks = identity.marks(
+                offered, [a.model_dump(mode="json") for a in body.case.applicants]
+            )
+            if marks and not body.case.identity_confirmed:
+                raise HTTPException(
+                    422, "Confirm the identity details that were read from the cards."
+                )
+            form = json.loads(_form_data(row.case_no, body.case, str(kept), _case_form(row), marks))
             conn.execute(
                 text("""UPDATE cases SET loan_amount = :a, tenure_months = :t, purpose = :p,
                             form_data = CAST(:f AS jsonb) WHERE id = :c"""),
@@ -621,9 +704,10 @@ def _prepare_resume(
 async def resume_case(
     case_id: UUID, request: Request, body: ResumeIn | None = None,
     user: User = Depends(officer_only), engine: Engine = Depends(get_engine),
+    settings: Settings = Depends(get_settings_dep),
 ) -> dict[str, Any]:  # fmt: skip
     application, documents = await run_in_threadpool(
-        _prepare_resume, engine, request, case_id, user, body or ResumeIn()
+        _prepare_resume, engine, request, case_id, user, body or ResumeIn(), settings
     )
     _runner(request).resume_after_fix(case_id, application=application, documents=documents)
     return {"status": "running"}

@@ -1,0 +1,65 @@
+.ap-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.ap-top {
+  padding: var(--s-4) var(--s-6);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.ap-main {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  flex: 1;
+}
+.ap-card {
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s-3);
+}
+.ap-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.ap-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.ap-list li {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+}
+.ap-list .met {
+  color: var(--approve);
+}
+.ap-list .missing {
+  color: var(--refer);
+}
+.ap-who {
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.ap-warn {
+  color: var(--refer);
+}
+.ap-foot {
+  padding: var(--s-4) var(--s-6);
+  border-top: 1px solid var(--line);
+  text-align: center;
+}

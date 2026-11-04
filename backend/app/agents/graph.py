@@ -28,7 +28,7 @@ from app.agents.decision import run_decision
 from app.agents.kyc import KycResult, run_kyc_agent
 from app.agents.policy import PROMPT_VERSION as POLICY_PROMPT_VERSION
 from app.agents.policy import run_policy_agent
-from app.agents.report import Report
+from app.agents.report import Report, mark_from_documents
 from app.agents.results import checks_for
 from app.agents.risk import RiskResult, run_risk_agent
 from app.agents.runtime import AgentContext
@@ -312,6 +312,10 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             )
         models["decision"] = asked.model
         report.versions["models"] = models
+        mark_from_documents(
+            report,
+            Submission.model_validate(state["submission"]).application.get("from_documents") or {},
+        )
         new_evals = evals.decision_evals(
             report, score, set(meta["known_ids"]) | {c.clause_id for c in report.citations}
         )

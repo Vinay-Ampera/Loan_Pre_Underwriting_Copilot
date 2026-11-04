@@ -1,0 +1,18 @@
+.bulk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.bulk-buttons {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.bulk-summary {
+  margin-bottom: var(--s-2);
+}
+.ur-ignored {
+  background: var(--stopped-bg);
+  color: var(--muted);
+}

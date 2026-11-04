@@ -19,13 +19,23 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 7 Learning loop, evaluation, observability | Built, committed (`babe29b`) | Open items updated 2026-11-02: OI-1, OI-2, OI-5, OI-6 resolved; OI-3 values, OI-4 live Langfuse check and OI-7 targets wait for the real-model baseline run |
 | 8 UI revamp (Pramaan) | Built, committed (`25e6ad6`, `ff177fa`) | 2026-11-02. Tokens and bundled fonts, light/dark/system, login landing, sidebar shell, Home screens, stepper, score ring, 3C strip, Conditions, admin Users (new endpoints, audited). See "Stage 8 build notes". No migration, no scoring change |
 | 9 Customer notifications and issue reports | **Built, exit criteria pass (not committed)** | 2026-11-02. Migration 0010 (outbox, issue_reports, `users.phone`, `applicants.email`), `app/notifications/`, message and issue routes, Sent items, draft dialog, Report a problem, admin Issues. See "Stage 9 build notes". Run `python -m app.db.migrate` first |
-| 10 Hardening, Docker and demo | **Planned, not started** | Was Stage 8; renumbered 2026-11-02. Starts only after Stages 8 and 9 and the review window (see the plan) |
+| 10 Intake desk and applicant upload link | **Parts A, B, C built (2026-11-04, not committed); Part D not started** | Migrations 0014 and 0015; `intake/archive.py`, `readcache.py`, `inventory.py`, `prefill.py`; `api/ingest.py`, `intake.py`, `links.py`, `public.py`, `filestore.py`, `ratelimit.py`; desk, form tick, links page and applicant page in the UI. See "Stage 10 build notes". Run `python -m app.db.migrate` first. Part D (bundle PDF split) waits for the user |
+| 11 Hardening, Docker and demo | **Planned, not started** | Was Stage 10 (before that Stage 8); renumbered 2026-11-04 |
 
-Next: the user commits Stage 9 and applies migration 0010 on Neon, then the review window (additions and corrections), then Stage 10. Do not start Stage 10 until the user says so.
+Next: the user's review of Stage 10 Parts A to C and the decision on Part D, then Stage 11 (hardening and Docker). Do not start Part D or Stage 11 until the user says so.
 
 ---
 
 ## Decisions log
+
+### 2026-11-04: Stage 10 planned, Docker becomes Stage 11 (changes locked decisions 16 and 18, amends E-31)
+Three automation items from the review window, agreed with the user in conversation. Docs only; no code written.
+- **Intake desk:** the officer uploads a zip, folder or files; each file is read once (cached by hash, so no second OCR in Extraction), classified and assigned; an inventory shows received, missing (essential marked), extra, unrecognised, rejected and duplicate. Missing items: "Ask the applicant" or "Proceed anyway" (second click). Cross-case duplicate detection is **out of v1** (E-44).
+- **Form filling (middle path, partly reverses E-31):** only name, date of birth, PAN, Aadhaar last four and address are filled from the PAN and Aadhaar cards, marked "from documents", empty when the cards disagree, confirmed by a tick. Loan amount, tenure, purpose, employment and income, mobile, email, residential status, loan-type fields and the relationship are claims entered by the applicant (on the link) or the officer; the system never decides the amount. Scoring is unchanged.
+- **Applicant upload link:** a one-time, 7-day, revocable link bound to one officer (created by the officer, or the admin naming one). No applicant account, no status tracking in v1 (a coarse status may come later, never a score or outcome hint). The page shows the checklist; missing items are shown there, never in the Stage 9 message. Locked decision 16 ("no public page") is relaxed for this one page family only. Files stay on local disk behind a `FileStore` interface.
+- **Bundle PDF split:** in the same stage, built last, behind `BUNDLE_SPLIT_ENABLED`; the stage can close without it.
+- **Second click** on: create/send link, disable link, Send to the bank, Proceed anyway, send "Upload link" message, confirm split (plus the existing ones). None for type/person changes, split moves, drafts, filters, copying or downloading.
+- **Numbering:** Stage 10 is this work; hardening and Docker is Stage 11 and stays last.
 
 ### 2026-11-03 (later): Auditor reshaped, admin reads and corrects cases (changes locked decision 9 again)
 
@@ -79,10 +89,54 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 - [x] Stage 8 UI revamp (2026-11-02)
 - [x] Stage 8 follow-ups: login page trim and contact-admin sentence, in-app footer, Help page `/help` (built 2026-11-02; frontend only, no migration, no backend change; tests added; not committed)
 - [x] Stage 9 Customer notifications and issue reports (2026-11-02; migration 0010; not committed)
-- [ ] Review window: additions and corrections collected by the user before Stage 10
-- [ ] Stage 10 Hardening, Docker and demo
+- [ ] Review window: additions and corrections collected by the user before Stage 11
+- [x] Stage 10 Part A intake desk, Part B identity from the cards, Part C applicant upload link (built 2026-11-04; migrations 0014, 0015; not committed)
+- [ ] Stage 10 Part D several documents in one PDF (not started; may be cut)
+- [ ] Stage 11 Hardening, Docker and demo
 
 ---
+
+## Stage 10 build notes (Parts A, B, C: 2026-11-04)
+
+Built in the order A, B, C as asked; Part D was not started (the user said to go with A, B and C first). One migration per door: **0014** (documents: `role`, `role_source`, `classification`, `type_source`, `duplicate_of`, `duplicate_kind`, status `ignored`; `cases.loan_amount` and `tenure_months` nullable; `documents.applicant_id` now `ON DELETE SET NULL`) and **0015** (`upload_links`, case status `applicant_submitted`, outbox template `upload_link` and `link_id`). Both apply and roll back (`test_migrations`). Run `python -m app.db.migrate`.
+
+**What exists**
+- Part A: `intake/archive.py` (in-memory safe unpack), `intake/readcache.py` (read result saved next to the file, no raw text), `intake/inventory.py` (person assignment, inventory), `api/ingest.py` (the one upload step), `api/intake.py` (start a case from documents, bulk upload, inventory, correct a file, state employment, Proceed anyway, files zip), `api/filestore.py` (`FileStore` interface, local disk). UI: New case asks how to start; `BulkUpload`, `Inventory`, `IntakeDesk`, `AskApplicantDialog`.
+- Part B: `intake/prefill.py` (five identity fields only), `api/identity.py` (offer and marks), `PUT /cases/{id}/form`, the tick in `ApplicationForm`, `Report.identity_from_documents` and an `evidence.source_note` on identity findings (E-48). Scoring, weights and bands are untouched.
+- Part C: `api/links.py`, `api/public.py`, `api/ratelimit.py`; the `/u` applicant page, the Upload links page (officer and admin), the "From applicant" badge and status, `ApplicantRequest`, the "Upload link" message (`SendLinkDialog`). Help page sections added.
+
+**Differences from the plan, and why** (none changes a locked decision)
+1. **Token in the URL fragment and a header, 192 bits.** The plan said 128 bits or more; a path token would land in uvicorn's access log, which the plan forbids. `/u#token` never reaches a server.
+2. **Read result is a JSON sidecar on the `FileStore`, not a database column,** and Extraction reuses it only if the hash and the application date match; it reads again when the model pass needs the page text (raw text is never saved) or when the date differs (E-59). The synthetic runs use `--no-llm`, so they never read twice.
+3. **Photographs with two people are not matched** (no text to match, E-55); the officer drops each on a person. Folder or file names are not used to seat anyone. For education the PAN whose income papers are asked only from the co-applicant is the co-applicant, because a folder arrives alphabetically.
+4. **Desk and applicant data live in `form_data`** (origin, request, request_locked, applicant_sent, intake, from_documents, identity_confirmed), not in new `cases` columns; only the status needed a constraint change.
+5. **The applicant's request is not echoed back** by the public page ("can never read anything back except the checklist counts"); re-sending it replaces the old one until the officer saves the form.
+6. **A link made from a case** ("Ask the applicant") is bound to that case; an open link creates the case when the request arrives (status `draft`, shown to the officer as "From applicant · applicant is still preparing"), and Send to the bank moves it to `applicant_submitted`.
+7. **The identity values for the form (`/prefill`) are the owning officer's only** (admin 403), because they include the full PAN.
+8. **One file covers many months** for bank statements and GST returns (E-57).
+9. **`POST /cases/intake` takes an optional application date** so a dated (synthetic) case reads its files against the right date (E-59).
+10. **Console sender prints the upload link in the terminal** (the v1 stand-in for email); the database keeps a placeholder (E-58).
+11. Not added in 0014 because they belong to Part D or were not needed: `parent_document_id`, `page_from`, `page_to`, `documents.origin`, `class_confidence`, `class_source`, `source_archive`.
+
+**A bug found on the way (E-56):** saving a corrected form deleted every uploaded file's row (foreign key cascade). It also affected "Correct details" on a fix-stopped case. Fixed in 0014 and covered by the desk tests.
+
+**Exit criteria (Stage 10, Parts A to C; Part D has none built)**
+
+| Criterion | Result |
+|---|---|
+| A zip, a folder and loose files give the same inventory | Same inventory for the clean personal dev case in all three forms (`test_a_zip_a_folder_and_loose_files_give_the_same_inventory`) |
+| Inventory correct against the answer key for all 5 loan types | Type and person of every file match `answer_key.json` for one clean dev case per loan type; nothing missing, extra, unassigned or unrecognised once employment is stated. Education's two photographs are filed by the officer (E-55) |
+| Unsafe archives refused, nothing written outside the case folder | `../`, absolute, symlink, password, zip bomb, nested zip, too many files, oversize: 17 unit tests, and over HTTP no row and no file is written and `intake_upload_refused` is audited |
+| A file is read once | Counter test: 7 files read at the desk, 0 by Extraction; the case then scores the same total, band and status as the same case entered form first |
+| Identity fields only from the cards; disagreement leaves the field empty; no claim filled; mismatch still hard-fails | Prefill unit tests; HTTP test that the stored desk case has no amount, tenure, purpose or applicants until given; the mixed-cards case (a stranger's PAN card among the applicant's documents) offers no name or date of birth and still stops at KYC with CM-KYC-03 |
+| Scores, weights, bands and the 40-case results unchanged | `app.scoring.replay --verbose` output is **byte-identical** to the Stage 9 commit for the dev split (60) and the held-out test split (40), checked against a `git archive` of HEAD; `app.eval.run --split dev` gate passes. `app/scoring/` was not edited. The test split's `failed_rules_exact` is 0.775 (below the dev floor of 0.95); it was the same before this stage |
+| A link works, stops at expiry and when disabled, same answer for an unknown token, never shows case data, token in no log or audit row | `test_upload_links.py` (15 tests) |
+| Roles | Another officer 404, anonymous 401, auditor 403 on links; the admin reads the inventory and the zip but not the identity values (403) and writes nothing |
+| Every second-click action needs it; the no-dialog ones do not | Component tests (`IntakeDesk`, `UploadLinksPage`, `ApplicantUploadPage`) |
+| Browser | Playwright (`e2e/intake-desk.spec.js`): folder upload, inventory, identity from the cards, tick, submit, report note; and a link used from a fresh browser context with no sign-in, shown in the queue, disabled, then a dead end. Both pass in real Chrome. The five form-first loan-type specs use the unchanged path with one extra click |
+| Migrations | 0014 and 0015 apply, roll back to 0013 with data present and apply again (`test_stage_10_migrations_...`). **The configured dev database was at 0013**; run `python -m app.db.migrate` |
+| Lint, types, frontend | `ruff check`, `ruff format --check`, `mypy` (134 files), `eslint`, `prettier --check` clean; Vitest 220 of 220 |
+
 
 ## Stage 9 build notes (2026-11-02)
 
@@ -92,7 +146,7 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 - **Behaviour worth knowing:** the draft is created after confirm, override or stop (409 otherwise); the server composes the text (body, optional case reference, contact lines, fixed footer) and checks it on create, edit and send; a blocked or failed send is returned (422 or 502) with its status and audit row committed; sending needs `second_click: true`; a sent message is final. The check also blocks the customer's name, amounts, links and other email addresses, which the plan did not list (a phishing and leak guard). Audit rows never hold message text.
 - **Frontend:** `MessageDialog` (two steps, the second shows the exact text), `CustomerContact` card on the case page, `SentItemsPage`, `IssuesPage`, `AdminIssuesPage`, sidebar links, an Open issues tile on admin Home, a customer email field on the application form, and new Help sections. Details in `DESIGN_SYSTEM.md` 9.1.
 - **Measured:** results are in `TESTING.md` section 7d.
-- **Not done / left for the review window:** real email or SMS (out of scope for v1); a browser (Playwright) test of the message flow, which is listed in the Stage 10 demo checks; the template wording review.
+- **Not done / left for the review window:** real email or SMS (out of scope for v1); a browser (Playwright) test of the message flow, which is listed in the Stage 11 demo checks; the template wording review.
 
 ## Stage 8 build notes (2026-11-02)
 

@@ -133,6 +133,13 @@ class CaseDocuments:
             doc.quality_flags.append("duplicate_ignored")
         return decision
 
+    def remember(self, label: str, sha256: str, doc: ExtractedDocument | None) -> None:
+        """Record a file already accepted earlier (rebuilding the registry for a case that
+        already has files). Nothing is judged and the document is not changed."""
+        self._seen.append(
+            Seen(label, sha256, document_key(doc) if doc else None, amounts(doc) if doc else {})
+        )
+
     def unique_count(self, doc_type: DocType | None = None) -> int:
         """Documents that count towards completeness: duplicates never fill a missing slot."""
         return len({s.key or s.sha256 for s in self._seen

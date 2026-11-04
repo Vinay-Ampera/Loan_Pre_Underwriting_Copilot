@@ -80,6 +80,28 @@ class Report(BaseModel):
     documents: list[dict[str, Any]] = Field(default_factory=list)
     versions: dict[str, Any]
     awaiting: str = AWAITING
+    # identity fields of the form that were read from the PAN and Aadhaar cards, per person
+    # (Stage 10, Part B). A match against those same cards is not an independent check.
+    identity_from_documents: dict[str, list[str]] = Field(default_factory=dict)
+
+
+FROM_DOCUMENT_NOTE = "from document, not an independent check"
+# which identity rules compare a form field with the card it may have been read from
+_RULE_FIELD = {"CM-KYC-03": "full_name", "CM-KYC-11": "full_name", "CM-KYC-04": "dob",
+               "CM-KYC-12": "address"}  # fmt: skip
+
+
+def mark_from_documents(report: "Report", marks: dict[str, list[str]]) -> None:
+    """Say, on the report, which form values came from the cards. Scoring is not touched: the
+    other documents are still compared with the form, and a match against the source card is only
+    labelled so the officer does not read it as proof."""
+    marks = {role: sorted(fields) for role, fields in marks.items() if fields}
+    report.identity_from_documents = marks
+    for f in report.findings:
+        fields = marks.get(f.role or "", [])
+        wanted = _RULE_FIELD.get(f.rule_id or "")
+        if f.rule_id == "CM-KYC-10" and fields or (wanted and wanted in fields):
+            f.evidence = {**f.evidence, "source_note": FROM_DOCUMENT_NOTE}
 
 
 def stage_rows(score: ScoreReport) -> list[StageScoreRow]:

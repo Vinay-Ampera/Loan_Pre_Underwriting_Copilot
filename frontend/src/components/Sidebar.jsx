@@ -8,6 +8,7 @@ const NAV = {
     ['/', 'Home', 'home', true],
     ['/cases', 'Cases', 'cases', true],
     ['/cases/new', 'New case', 'plus', true],
+    ['/links', 'Upload links', 'link', false],
     ['/messages', 'Sent items', 'mail', false],
     ['/problems', 'Report a problem', 'flag', false],
     ['/help', 'Help', 'help', false],
@@ -22,6 +23,7 @@ const NAV = {
   admin: [
     ['/', 'Home', 'home', true],
     ['/admin/precedents', 'Precedents', 'precedent', false],
+    ['/admin/links', 'Upload links', 'link', false],
     ['/admin/messages', 'Messages', 'mail', false],
     ['/admin/issues', 'Issues', 'flag', false],
     ['/admin/users', 'Users', 'users', false],

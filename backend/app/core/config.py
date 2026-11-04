@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     upload_dir: Path = Path("./data/uploads")
     max_upload_mb: int = 10  # per file
     max_case_upload_mb: int = 60  # per case
+    max_files_per_upload: int = 60  # files in one bulk upload, zip contents included (Stage 10)
 
     # API (Stage 6)
     llm_enabled: bool = True  # False = no model calls; code writes the report text (browser tests)
@@ -44,6 +45,13 @@ class Settings(BaseSettings):
     login_max_failures: int = 5
     login_lock_minutes: int = 15
     cors_origins: str = ""  # comma separated; empty = same origin (dev server proxies /api)
+
+    # Applicant upload link (Stage 10, Part C)
+    upload_link_days: int = 7  # how long a new link stays open; an officer can extend it
+    public_base_url: str = "http://localhost:5173"  # where the applicant page is served
+    link_max_files: int = 80  # files one link may add in total
+    link_rate_per_minute: int = 30  # requests per link per minute (public routes)
+    address_rate_per_minute: int = 90  # requests per client address per minute (public routes)
 
     # Customer messages (Stage 9): v1 delivers to the backend terminal only
     notification_sender: str = "console"

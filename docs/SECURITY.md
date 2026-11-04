@@ -66,6 +66,20 @@ Decided with the user: short tokens that renew by themselves while the person wo
 - A blocked send is returned (422) with the status and audit row committed. A failed send returns 502, is saved as `failed` and can be retried by the same officer with a second click.
 - Issue reports: refused (and audited as `issue_blocked`, without the text) when they contain PAN, Aadhaar, phone, account number or email patterns; the case reference is plain text, so the admin inbox never joins to case data.
 
+## 4c. Applicant upload link (Stage 10, Part C built 2026-11-04)
+
+The one public surface. Locked decision 16 ("no public page, no signup") is relaxed for this page family only; there is still no applicant account and no sign-in.
+
+- **Token:** 192 random bits (`secrets.token_urlsafe(24)`), shown once, stored only as a SHA-256 hash. The link id (not the token) is what logs and the audit log carry. The token is never in a log, trace, error message or metric label. It rides in the **URL fragment** (`/u#token`), which a browser never sends to a server, so it is in no access log or Referer header, and the page sends it to the API in the `X-Upload-Token` header, never in a path or query string (a query-string token is ignored). Tests: token absent from `audit_log`, `outbox` and captured logs.
+- **Lifetime:** 7 days by default (`UPLOAD_LINK_DAYS`); the officer can extend it; the officer or admin can disable it at any moment (second click). A disabled or expired link stops new files at the next request; files already accepted stay.
+- **What the page can do:** state the loan request, see the checklist counts for this link, add files, finish with "Send to the bank". **What it can never do:** read a file back, list names of other cases, or show a score, status or outcome. A wrong, expired or revoked token returns the same generic answer.
+- **Abuse limits:** rate limit per link (`LINK_RATE_PER_MINUTE`, 30) and per address (`ADDRESS_RATE_PER_MINUTE`, 90, in memory, one process) and a slower limit on failed guesses; a file-count cap per link (`LINK_MAX_FILES`, 80) and the per-case size cap; the same upload checks as officers (section 6), neutral refusal once the case is running. The applicant's request is an untrusted claim, flagged as such to the officer, and goes through the same validation as the officer's form.
+- **Limits that hold:** the limiter is in memory (one process) and keys on the connection address, so behind a reverse proxy every caller would look like the proxy until forwarded headers are trusted: a Stage 11 item. A request is read into memory only up to what one case may hold (`MAX_CASE_UPLOAD_MB`), then refused; the file-count and byte budgets of an archive are enforced while it is read.
+- **Access to the files:** only the assigned officer and the admin, through the authenticated API (the `FileStore` interface; no public file URLs). The auditor and other officers get 404/403. Unpacked archive contents never leave the case folder.
+- **Delivery:** v1 has no real email. The officer copies the link or sends the "Upload link" message through the Stage 9 outbox. The link is added to the message by code (never typed), the content check blocks any link in the typed text and requires the final text to hold exactly the case's own link. The page keeps the token in memory for the two calls (prepare, send); the server checks it against the stored hash and keeps only a placeholder in `outbox.final_text`. **Known limit:** the v1 console sender prints the real text, token included, in the backend terminal because that print *is* the delivery; a real sender must not log it.
+- **What the applicant's page shows of the officer's work:** nothing. The request is not echoed back; the checklist shows item names and counts only; a refusal after the case is running is the same neutral line, and the refusal is audited on the case so the officer sees it.
+- **Raw identifiers:** the identity values offered for the form (`GET /cases/{id}/prefill`) include the full PAN, so that route is the owning officer's only (the admin gets 403).
+
 ## 5. Secrets and logging
 
 - **E. API keys and secrets in `.env`, never in git.** `.env.example` has placeholders only. Pre-commit secret scanning.
@@ -83,6 +97,8 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 - Strip active content from PDFs; never execute anything from uploads.
 - Store files under generated names; keep original names as metadata only.
 - Rejected files are deleted immediately.
+- **Archives (Stage 10):** unpack to the case folder only; refuse `..`, absolute paths and symlinks; one nesting level; cap file count, total bytes and compression ratio while reading (a zip bomb is stopped by the byte budget, not after extraction); skip `__MACOSX`, `.DS_Store`, `Thumbs.db`; allow-listed extensions only; every inner file gets the checks above. An archive that breaks a limit writes nothing.
+- **Bundle PDFs (Stage 10, Part D):** the original is kept untouched; each cut-out piece is a new file that follows the same checks.
 
 ## 7. Retention and privacy
 
@@ -114,6 +130,8 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | Bad precedent poisons future cases | Hard-rule check in code, admin approval, expiry, hard rules cannot be overridden |
 | Credential leak | `.env`, secret scanning, key rotation |
 | Malicious upload | Type and signature checks, size limits, no execution |
+| Zip bomb, path traversal or symlink in an uploaded archive (Stage 10) | Safe unpacking with byte and ratio budgets, one nesting level, no path outside the case folder, nothing written when a limit breaks |
+| Upload link guessed, shared or left open (Stage 10) | 192-bit hashed token kept in the URL fragment, 7-day expiry, disable at any time, generic answer for bad tokens, upload-only page, rate limits, token never logged |
 | Customer message leaks data or enables phishing (Stage 9) | No-data templates, server-side content check on every message including blank, fixed fraud footer, second confirmation, audit |
 | Officer reads another officer's messages (Stage 9) | Per-officer outbox access, 404 on others; the admin reads sent messages only (D4) |
 | An admin changes a decision to approve over a hard rule, or decides before the officer (2026-11-03) | Server refuses a correction on a case with a hard-rule finding and on any case the officer has not decided (409); a correction never becomes a precedent; every change keeps the officer's row, a reason and an audit row |

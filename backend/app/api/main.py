@@ -22,7 +22,19 @@ from sqlalchemy import Engine, create_engine
 from app.agents.checkpoint import postgres_saver
 from app.agents.graph import Pipeline
 from app.agents.runtime import AgentContext, Services
-from app.api import admin, admin_cases, auditor, auth, cases, issues, messages, users
+from app.api import (
+    admin,
+    admin_cases,
+    auditor,
+    auth,
+    cases,
+    intake,
+    issues,
+    links,
+    messages,
+    public,
+    users,
+)
 from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
@@ -95,6 +107,7 @@ def create_app(
                            allow_headers=["Authorization", "Content-Type"])  # fmt: skip
     for r in (
         auth.router,
+        intake.router,  # before cases: /cases/intake must not be read as a case id
         cases.router,
         admin.router,
         admin_cases.router,
@@ -103,6 +116,8 @@ def create_app(
         users.router,
         messages.router,
         issues.router,
+        links.router,
+        public.router,
     ):
         app.include_router(r, prefix="/api/v1")
 

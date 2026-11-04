@@ -1,16 +1,19 @@
 # Implementation Plan
 
-Ten stages. Each stage ends with something runnable and a test gate. Do not start a stage until the previous exit criteria pass. No dates yet (deadline not fixed); effort is S (≈1 day), M (2-3 days), L (4-6 days) for a solo developer.
+Eleven stages. Each stage ends with something runnable and a test gate. Do not start a stage until the previous exit criteria pass. No dates yet (deadline not fixed); effort is S (≈1 day), M (2-3 days), L (4-6 days) for a solo developer.
 
 Trainer approval of the documents comes first. Nothing below starts before that.
 
 ```
 1 Foundation   2 Intake & parsers   3 Rules & scoring   4 RAG & Policy
 5 Agent pipeline   6 API & frontend   7 Learning, eval, observability
-8 UI revamp (Pramaan)   9 Customer notifications   10 Hardening & Docker
+8 UI revamp (Pramaan)   9 Customer notifications   10 Intake desk & applicant link
+11 Hardening & Docker
 ```
 
-Stages 8 and 9 were added on 2026-11-02 (the old Stage 8 is now Stage 10). Stage 8 was built first (2026-11-02). After both, there is a **review window**: the user collects additions and corrections, and they are done before Stage 10 starts. Docker is always last.
+Stages 8 and 9 were added on 2026-11-02 (the old Stage 8 is now Stage 11). Stage 8 was built first (2026-11-02). After both, there is a **review window**: the user collects additions and corrections, and they are done before Stage 11 starts. Docker is always last.
+
+Stage 10 (intake desk and applicant upload link) was added on 2026-11-04 from the review window; the hardening and Docker stage is now **Stage 11**.
 
 **Where progress is recorded:** this file says what each stage builds and when it is done. Status, build notes, measured results and decisions live in `PROGRESS.md`. Do not add build notes here.
 
@@ -229,7 +232,64 @@ Risks: the blank option lets the officer type a leak. Mitigation: the code check
 
 ---
 
-## Stage 10: Hardening, Docker and demo (M)
+## Stage 10: Intake desk and applicant upload link (L), planned 2026-11-04, Parts A to C built 2026-11-04
+
+**Goal:** the officer no longer labels files one by one or types the identity fields, and an applicant can send documents through a one-time link. The pipeline order, scoring, weights, bands and the human confirmation do not change. Everything here happens **before** Submit and ends in the same `Submission` the pipeline already reads.
+
+**Status (2026-11-04):** Parts A, B and C are built and tested; Part D (bundle PDF split) is not started and may be cut. Differences from this text are listed in `PROGRESS.md` ("Stage 10 build notes"): the token rides in the URL fragment and a header (192 bits), the read result is a sidecar file, two photographs are filed by the officer, and the identity values for the form are offered to the owning officer only. The exit-criteria results are in the same notes.
+
+Decisions behind it are in `PROGRESS.md` (2026-11-04) and `EDGE_CASES.md` E-31 (amended) and E-42 to E-54. Build in this order; each part is usable on its own, and the last part may be cut.
+
+**Part A: Intake desk (bulk upload and inventory)**
+1. **Read once, early.** The upload step runs the existing read (text layer or OCR), classification and local field extraction as soon as a file is accepted and caches the result against the file hash. Extraction reuses the cache and does not read the file again (no second OCR). If a cache entry is missing, Extraction reads the file as it does today.
+2. **Bulk input.** One request accepts a zip, a folder (browser folder picker) or many files. `intake/archive.py` unpacks safely: no path outside the case folder, no symlinks, nested zips only one level, file-count and total-size limits, junk names (`__MACOSX`, `.DS_Store`, `Thumbs.db`) skipped, allowed extensions only, a zip bomb stopped by a size-ratio and byte budget while reading. Every inner file then goes through the normal upload checks (signature, size, password, active content, blur, crop). Original names are metadata only.
+3. **Classify and assign.** Each file gets a document type (existing classifier, local) and a person (primary or co-applicant): the first KYC set is the primary; a second distinct PAN proposes the co-applicant; other documents are matched to a person by name and PAN with the existing matching code; no match means "unassigned" and the officer picks.
+4. **Inventory screen.** One table per person: **received** (type, person, file, which checklist item and which fields it feeds), **still missing** (essential items marked), **extra** (not needed for this loan), **unrecognised**, **rejected** (with the reason), and **duplicate, ignored** (with the file it matches). The officer can change a type or person from a dropdown (no confirmation needed; it is easy to change back).
+5. **Gate.** Missing items offer two actions: "Ask the applicant" (Part C) or "Proceed anyway" (second click; the pipeline then stops with its normal fix-type result if a required document is absent). The existing Submit gate (E-29) still blocks submission without the KYC documents.
+6. **Duplicates in bulk (E-43, E-44).** Same hash anywhere in the case is ignored and listed; same content key (type, person, period) is ignored; same key with different amounts is kept and raised as `DUPLICATE_CONFLICT`; duplicates never fill a checklist slot (E-03). A cross-case duplicate check is **out of v1**.
+
+**Part B: Identity fields filled from documents (partly reverses E-31)**
+7. After the inventory, the form opens with **name, date of birth, PAN, Aadhaar last four and address** filled from the PAN card and the Aadhaar card, each marked "from documents". If the two disagree on a field, it is left empty with a note (E-47). The officer must tick "I confirmed these" before Submit (a tick, not a dialog).
+8. **Claims stay manual:** loan type, loan amount, tenure, purpose, employment type, employer or business, declared income, months in job, experience, mobile, email, residential status, every loan-type field and the co-applicant relationship are never read from a document. They come from the applicant's request (Part C) or the officer.
+9. **Scoring does not change.** The report marks a form value that was taken from a document as "from document, not an independent check" next to the match finding; a test shows a PAN card that disagrees with the Aadhaar card still fails the identity rule.
+
+**Part C: Applicant upload link**
+10. **Link.** The officer (or the admin, naming an officer) creates a link for one officer. Token: at least 128 bits, random, stored only as a hash, shown once for copying. Valid for **7 days** by default (`UPLOAD_LINK_DAYS`), an officer can extend it, and the officer or admin can **disable it at any time** (second click). The link opens a case-independent page; the case is created when the applicant sends the request.
+11. **Applicant page** (public, no account, no sign-in, only this one page family): step 1 the request (loan type if the officer did not preset it, amount, tenure, purpose, employment type, declared income; all marked as the applicant's own statement); step 2 a live checklist for that loan type and file upload (zip, folder or files, same safe unpacking); a warning when items are missing, but sending is allowed ("incomplete" is flagged to the officer); step 3 "Send to the bank" with a second confirming click and a reference number. The page can never read anything back except the checklist counts for this link. It shows no score, status or outcome.
+12. **Officer inbox.** The case appears in that officer's queue as **From applicant** with an "applicant submitted" status, opens on the inventory (Part A), and the applicant's request is shown as a claim the officer can correct (audited). Once the officer has opened and edited the form, the request is locked and the link accepts files only (E-52).
+13. **Asking for the rest.** From the inventory, "Ask the applicant" keeps the same link open (or extends it). The applicant reopens it and sees what is still needed. The Stage 9 message stays free of missing items (decision 17); a new template "Upload link" carries only the link and the usual footer and needs the second click. The content check allows exactly that link and nothing else.
+14. **Storage.** Local disk plus a database row, behind a small `FileStore` interface (a later object store or a Docker volume swaps in). Files are served only through the authenticated API; the assigned officer and the admin can open them; the auditor and other officers cannot. A zip of the case's files is built on demand for the officer.
+15. **Abuse limits.** Rate limit per link and per address, file-count and size caps per link, the same upload checks, a generic answer for a wrong, expired or revoked token, no token in logs or the audit log (only the link id), uploads refused with a neutral message once the case is running (E-51).
+
+**Part D: Several documents in one PDF (build last; the stage can close without it)**
+16. Each page of a bundle PDF is read and classified. A page with a recognised title starts a new document; a page without one continues the previous document; an unrecognised first page is "unrecognised". The proposed split (for example pages 1-2 PAN, 3 Aadhaar, 4-6 statement) is shown for the officer to move, merge or relabel and confirm. The original PDF stays untouched; each piece is cut into its own file linked to it (`parent_document_id`, page range) and then follows the normal path and the duplicate rules.
+17. Bundle limits are separate from the single-document limit (more pages, every scanned page checked for blur, not only a sample). Password-protected bundles are rejected as today.
+18. Switch `BUNDLE_SPLIT_ENABLED`. If the measured split accuracy is poor, the switch stays off and the officer splits nothing; the other parts are unaffected.
+
+**Docs and tests**
+19. Update `PRD.md` (sections 3, 4, 5, 7, 9.1 and a new 9.8), `DATABASE.md`, `SECURITY.md`, `ARCHITECTURE.md`, `TESTING.md`, `DESIGN_SYSTEM.md`, `EDGE_CASES.md`, `CLAUDE.md` (decisions 16 and 19) and the Help page.
+20. Migrations (next numbers after 0013): documents (classification, duplicate, parent, page range, origin), `upload_links`, case origin and the new status. Run `python -m app.db.migrate` before using it.
+
+**Second click (confirmation dialog):** create and send an upload link, disable a link, "Send to the bank" on the applicant page, "Proceed anyway" with missing items, send of the "Upload link" message, confirm bundle split, plus the existing ones (submit, delete a document, confirm, override, admin correction, reassign, send message). **No dialog:** changing a type or person, moving a split, saving a draft, filtering, viewing, copying a link, downloading the zip.
+
+Deliverables: migrations, `intake/archive.py`, inventory and link routes, public applicant routes, `FileStore`, officer screens (bulk upload, inventory, link manager, prefill confirmation, From applicant badge), the applicant page, synthetic bundle fixtures, tests, docs.
+
+Exit criteria
+- A zip, a folder and loose files of a synthetic case produce the same inventory; the inventory lists received, missing, extra, unrecognised, rejected and ignored duplicates correctly against the answer key for all 5 loan types.
+- Unsafe archives (path traversal, symlink, zip bomb, nested zip beyond one level, too many files) are refused and nothing is written outside the case folder (tests).
+- A file is read once: Extraction on a case uploaded through the desk makes no second OCR call (test with a counter).
+- Identity fields are filled only from the PAN and Aadhaar cards; a disagreement leaves the field empty; no claim field is ever filled from a document (test); the identity-mismatch case still hard-fails.
+- Scores, weights, bands and the 40-case results are unchanged against the Stage 9 baseline (replay).
+- A link works once created, stops at expiry and when disabled, gives the same generic answer for an unknown token, never shows case data, status or outcome, and the token is never in a log or audit row (tests).
+- Roles: another officer, the auditor and anonymous callers cannot read a file or the inventory; the admin can.
+- Every second-click action above needs the second click (component tests); the no-dialog ones do not.
+- Part D, if built: split accuracy on the synthetic bundles is measured and recorded (page-level label accuracy); with the switch off nothing else changes.
+
+Risks: the classifier misses unusual titles, so many files land in "unrecognised". Mitigation: the dropdown, a measured classification rate on the dev split, and no guessing. A public page invites abuse. Mitigation: item 15, a token that opens nothing but its own checklist, and a short expiry. Scope: Part D can be cut first, then the "Upload link" message template.
+
+---
+
+## Stage 11: Hardening, Docker and demo (M)
 
 **Goal:** a reproducible package and a smooth demo.
 
@@ -238,7 +298,7 @@ Tasks
 2. Docker Compose: frontend, API (with graph runner), local Langfuse if used, Prometheus, Loki, Tempo, Grafana. The Stage 9 sender stays the console sender; a real mail or SMS service is not part of v1. Postgres stays on Neon, with an optional local Postgres service for offline use.
 3. Grafana dashboards: applications per day, time to decision, override-rate trend, tokens and cost per case, latency per agent.
 4. Model versions and policy versions tagged on releases.
-5. Run the 40 test cases once, record final results. Fold in the additions and corrections from the review window.
+5. Run the 40 test cases once, record final results. Fold in the additions and corrections from the review window. Include a demo of the intake desk and the upload link (Stage 10).
 6. Demo script, a short README, and a clean `.env.example`.
 7. Update all docs to match what was built.
 

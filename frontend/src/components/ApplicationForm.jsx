@@ -44,8 +44,52 @@ export function stateFromCase(c) {
   }
 }
 
+/**
+ * The five identity fields a PAN or Aadhaar card may fill in. A value is "from documents" only
+ * while it is exactly what the card gave; typing over it makes it the officer's own.
+ */
+export const IDENTITY_FIELDS = ['full_name', 'dob', 'pan', 'aadhaar_last4', 'address']
+export function isFromDocument(field, typed, offered) {
+  if (offered == null || offered === '' || typed == null || typed === '') return false
+  const a = String(typed).trim()
+  const b = String(offered).trim()
+  return field === 'pan' ? a.toUpperCase() === b.toUpperCase() : a === b
+}
+
+/** Rebuild form state for a case opened at the desk: identity from the cards, claims from the
+ * applicant's request (if there was one) and the employment the officer stated. Nothing else. */
+export function stateFromDesk(c, offer, inventory) {
+  const req = c.request || {}
+  const employment = Object.fromEntries(
+    (inventory?.people || []).map((p) => [p.role, p.employment]),
+  )
+  const people = {}
+  for (const role of c.people || ['primary']) {
+    const base = blankPerson(role)
+    const earner = req.earner_role === role
+    const student = c.loan_type === 'education' && role === 'primary'
+    people[role] = {
+      ...base,
+      ...(offer?.[role]?.values || {}),
+      employment_type: student
+        ? 'student'
+        : employment[role] || (earner && req.employment_type) || 'salaried',
+      declared_monthly_income:
+        earner && req.declared_monthly_income != null ? String(req.declared_monthly_income) : '',
+    }
+  }
+  return {
+    loan_amount: c.loan_amount ?? '',
+    tenure_months: c.tenure_months ?? '',
+    purpose: c.purpose || '',
+    application_date: '',
+    details: {},
+    people,
+  }
+}
+
 /** `required` is always passed: a field shows either a * or "(optional)", never neither. */
-function Field({ id, label, required, error, hint, children }) {
+function Field({ id, label, required, error, hint, tag, children }) {
   return (
     <div className="field">
       <label htmlFor={id}>
@@ -58,6 +102,7 @@ function Field({ id, label, required, error, hint, children }) {
         ) : (
           <span className="opt"> (optional)</span>
         )}
+        {tag && <span className="from-doc"> from documents</span>}
       </label>
       {children}
       {hint && !error && <span className="small muted">{hint}</span>}
@@ -70,8 +115,11 @@ function Field({ id, label, required, error, hint, children }) {
   )
 }
 
-function Person({ p, set, errors, editing, prefix }) {
+function Person({ p, set, errors, editing, prefix, offer }) {
   const idOf = (n) => `${prefix}-${n}`
+  // what the cards offered: a tag while the value is still theirs, a note where they could not
+  const tagOf = (n) => isFromDocument(n, p[n], offer?.values?.[n])
+  const noteOf = (n) => (!p[n] && offer?.notes?.[n]) || undefined
   const bind = (n) => ({
     id: idOf(n),
     value: p[n],
@@ -82,10 +130,24 @@ function Person({ p, set, errors, editing, prefix }) {
   const student = p.employment_type === 'student'
   return (
     <div className="form-grid">
-      <Field id={idOf('full_name')} label="Full name (as on PAN)" required error={errors.full_name}>
+      <Field
+        id={idOf('full_name')}
+        label="Full name (as on PAN)"
+        required
+        error={errors.full_name}
+        tag={tagOf('full_name')}
+        hint={noteOf('full_name')}
+      >
         <input className="input" {...bind('full_name')} autoComplete="off" />
       </Field>
-      <Field id={idOf('dob')} label="Date of birth" required error={errors.dob}>
+      <Field
+        id={idOf('dob')}
+        label="Date of birth"
+        required
+        error={errors.dob}
+        tag={tagOf('dob')}
+        hint={noteOf('dob')}
+      >
         <input className="input" type="date" {...bind('dob')} />
       </Field>
       <Field
@@ -93,10 +155,11 @@ function Person({ p, set, errors, editing, prefix }) {
         label="PAN"
         required
         error={errors.pan}
+        tag={tagOf('pan')}
         hint={
           editing
             ? 'Shown masked. Leave as it is to keep it, or type the corrected PAN.'
-            : undefined
+            : noteOf('pan')
         }
       >
         <input className="input mono" {...bind('pan')} maxLength={10} autoComplete="off" />
@@ -106,6 +169,8 @@ function Person({ p, set, errors, editing, prefix }) {
         label="Aadhaar (last four digits)"
         required
         error={errors.aadhaar_last4}
+        tag={tagOf('aadhaar_last4')}
+        hint={noteOf('aadhaar_last4')}
       >
         <input
           className="input mono"
@@ -135,7 +200,14 @@ function Person({ p, set, errors, editing, prefix }) {
           <input className="input" type="email" {...bind('email')} autoComplete="off" />
         </Field>
       )}
-      <Field id={idOf('address')} label="Address" required error={errors.address}>
+      <Field
+        id={idOf('address')}
+        label="Address"
+        required
+        error={errors.address}
+        tag={tagOf('address')}
+        hint={noteOf('address')}
+      >
         <input className="input" {...bind('address')} autoComplete="off" />
       </Field>
       <Field
@@ -298,6 +370,8 @@ export default function ApplicationForm({
   submitLabel,
   onSubmit,
   serverError,
+  offer,
+  claimNote,
 }) {
   const rule = meta.co_applicant[loanType]
   const [s, setS] = useState(
@@ -315,20 +389,28 @@ export default function ApplicationForm({
   )
   const [errs, setErrs] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [tick, setTick] = useState(Boolean(initial?.identityConfirmed))
 
   const setTop = (n, v) => setS((x) => ({ ...x, [n]: v }))
   const setPerson = (role) => (n, v) =>
     setS((x) => ({ ...x, people: { ...x.people, [role]: { ...x.people[role], [n]: v } } }))
   const setDetail = (n, v) => setS((x) => ({ ...x, details: { ...x.details, [n]: v } }))
 
+  // identity values still exactly as the cards gave them need the officer's tick
+  const roles = hasCo ? ['primary', 'co'] : ['primary']
+  const fromCards = roles.some((r) =>
+    IDENTITY_FIELDS.some((n) => isFromDocument(n, s.people[r][n], offer?.[r]?.values?.[n])),
+  )
+
   async function submit(e) {
     e.preventDefault()
     const { errors, bad } = validate(loanType, meta, s, hasCo, editing)
+    if (fromCards && !tick) errors.tick = 'Tick the box to confirm the details read from the cards.'
     setErrs(errors)
-    if (bad) return
+    if (bad || errors.tick) return
     setBusy(true)
     try {
-      await onSubmit(toBody(loanType, meta, s, hasCo))
+      await onSubmit({ ...toBody(loanType, meta, s, hasCo), identity_confirmed: fromCards && tick })
     } finally {
       setBusy(false)
     }
@@ -351,6 +433,15 @@ export default function ApplicationForm({
           tested against it. Phone, PAN and Aadhaar are masked before any AI service sees them. Use
           synthetic data only. Never enter a real person&apos;s details.
         </p>
+        {offer && (
+          <p>
+            Fields marked <span className="from-doc">from documents</span> were read from the PAN
+            and Aadhaar cards. Check them against the cards and tick the box before you save.
+            Amount, tenure, purpose, employment, income and contact details are never read from a
+            document.
+          </p>
+        )}
+        {claimNote}
       </aside>
       <fieldset className="card">
         <legend>Loan</legend>
@@ -455,6 +546,7 @@ export default function ApplicationForm({
           errors={e.people.primary}
           editing={editing}
           prefix="p"
+          offer={offer?.primary}
         />
       </fieldset>
 
@@ -481,11 +573,30 @@ export default function ApplicationForm({
               errors={e.people.co}
               editing={editing}
               prefix="c"
+              offer={offer?.co}
             />
           )}
         </fieldset>
       )}
 
+      {fromCards && (
+        <div className="field identity-tick">
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={tick}
+              onChange={(ev) => setTick(ev.target.checked)}
+              aria-describedby={e.tick ? 'tick-err' : undefined}
+            />
+            I confirmed the details marked “from documents” against the cards.
+          </label>
+          {e.tick && (
+            <span className="field-error" id="tick-err">
+              {e.tick}
+            </span>
+          )}
+        </div>
+      )}
       {serverError && (
         <p className="field-error" role="alert">
           {serverError}

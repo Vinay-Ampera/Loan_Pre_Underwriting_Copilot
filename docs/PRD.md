@@ -24,7 +24,7 @@ Underwriters manually review payslips, bank statements and credit policy for eve
 
 ## 3. Users and roles
 
-The users are **bank staff**, not applicants. Applicants never log in.
+The users are **bank staff**, not applicants. Applicants never log in and have no account. From Stage 10 an applicant may open one **time-limited upload link** (section 9.8) to send documents; that page can only add files and see a checklist.
 
 | Role | What they do |
 |---|---|
@@ -48,10 +48,14 @@ The users are **bank staff**, not applicants. Applicants never log in.
 - Evaluation, guardrails, observability, token and cost tracking.
 - A refreshed UI (Stage 8): Pramaan brand, light, dark and system themes, the 5-stage underwriting stepper, a Credit / Capacity / Collateral display strip, admin Users screen.
 - Customer contact messages (Stage 9): the officer sends a short no-reply message with no confidential data; v1 logs it in the terminal and a Sent Items screen.
-- Synthetic data only. Docker Compose at the final stage (Stage 10).
+- Intake desk (Stage 10): upload a zip, folder or many files at once; the system reads and classifies each file once, shows what is received, missing, extra, unrecognised and duplicate, and fills the identity fields of the form from the PAN and Aadhaar cards for the officer to confirm. A single PDF holding several documents is split by page (built last, switchable).
+- Applicant upload link (Stage 10): a 7-day, revocable, one-case link on which the applicant states the request and uploads documents; the case lands in the chosen officer's queue as "From applicant".
+- Synthetic data only. Docker Compose at the final stage (Stage 11).
 
 **Out of v1**
 
+- Applicant accounts, logins and a status-tracking page (a coarse status on the same link may come later, never a score or outcome hint).
+- Finding the same file in a different case (cross-case duplicate check, E-44).
 - Real customer data or real PII anywhere.
 - Real UIDAI, NSDL, GST, Udyam or CIBIL calls (mocked with synthetic records, replaceable later).
 - Automatic approval or rejection without a human.
@@ -66,8 +70,8 @@ The users are **bank staff**, not applicants. Applicants never log in.
 ## 5. End-to-end workflow
 
 1. Loan officer logs in and opens the case queue.
-2. Creates a case: picks loan type, fills the application form (section 7).
-3. Uploads documents all at once or one by one. **Upload-time checks** run per file (section 9.1).
+2. Creates a case: picks loan type, enters the request, then uploads (or an applicant sends documents and the request through a link, section 9.8 and Stage 10).
+3. Uploads a zip, folder or files all at once (or one by one); the intake desk shows what is received, missing, extra and duplicate; the identity fields of the form are filled from the PAN and Aadhaar cards and the officer confirms them, then fills the claim fields (section 7). **Upload-time checks** run per file (section 9.1).
 4. Clicks **Submit for assessment**. The pipeline starts.
 5. Pipeline runs (section 8). A hard failure stops it early; a short report is still produced.
 6. Report is shown with stage scores, findings, citations and a recommendation worded "recommended, awaiting your confirmation".
@@ -172,6 +176,7 @@ Entered by the officer at case creation. The system checks documents against the
 - **Vehicle:** make, model, new or used, on-road price, dealer.
 - **Co-applicant:** same identity and income fields plus relationship.
 - **Required and optional (changed 2026-11-01):** the form marks required fields with `*` and optional ones with "(optional)", and opens with a short note saying what each means. Optional fields: mobile number, employer or business, months in current job, total experience, residential status (defaults to resident), purpose, application date, relationship (co-applicant); home: property address, seller or builder, owner name; education: institution, course duration; business: Udyam number. No scoring rule reads the loan-type ones. An empty optional field is simply skipped; a filled one is compared with the documents like any other. Everything else is required.
+- **Filled from documents (Stage 10, Part B built 2026-11-04, partly reverses E-31):** name, date of birth, PAN, Aadhaar last four and address are filled from the PAN and Aadhaar cards, marked "from documents", left empty when the two cards disagree, and confirmed by the officer with a tick before Submit. Everything else is a **claim** and is never read from a document: loan type, amount, tenure, purpose, employment type, employer, declared income, months in job, experience, mobile, email, residential status, the loan-type fields and the co-applicant relationship. The applicant states the loan request on the upload link, or the officer enters it; the system never decides the amount.
 - **Customer email (Stage 9):** optional field on the primary applicant, used only as the recipient of a contact message. Synthetic values only; masked in lists and in any model input.
 - **Also collected (added in Stage 1, needed by the rules):** residential status; months in current employment (stability rules); total work experience in months (personal loan only); collateral offered and margin amount (education).
 
@@ -206,6 +211,11 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-8 Validate with code: formats, totals (net pay = gross minus deductions), dates, statement running balances.
 - FR-9 Tamper hints: PDF metadata showing an editing tool, round-number or arithmetic-inconsistent salary, PF out of line with pay, salary slip with no matching recurring bank credit, odd-date credits from individual accounts with no TDS.
 - FR-10 Bank statements: start with digital statements in 3-4 synthetic bank styles (SBI-like, HDFC-like, ICICI-like, one scanned). More scanned formats later.
+
+- FR-28 (Stage 10, built) A zip, a folder or many files can be uploaded at once. Archives are unpacked safely (no paths outside the case folder, no symlinks, one nesting level, count, size and ratio limits, junk files skipped) and every inner file gets the normal upload checks.
+- FR-29 (Stage 10, built) Each accepted file is read once (OCR only where needed), classified and assigned to a person; the result is cached against the file hash and reused by Extraction, so nothing is read twice.
+- FR-30 (Stage 10, built) An inventory shows, per person, what is received, still missing (essential items marked), extra, unrecognised, rejected and duplicate-ignored. The officer can correct a type or person.
+- FR-31 (Stage 10, Part D, not built) A PDF holding several documents is split by page into separate files linked to the original; the officer confirms the split.
 
 ### 9.2 ID validation (offline functions, no real lookups)
 
@@ -249,6 +259,14 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - Input: upload checks, prompt-injection scan (document text is data, never instructions), PII masking with regex rules (PAN, Aadhaar, phone, account numbers, email).
 - Output: strict JSON schema (Pydantic), citations required, banned terms and protected attributes blocked, "recommend" wording enforced.
 - Failed check: retry once, then mark unverified. Custom code in v1; NeMo Guardrails or Guardrails AI later if needed.
+
+### 9.8 Applicant upload link (Stage 10, Part C built 2026-11-04)
+
+- FR-32 (built) The officer, or the admin naming an officer, creates a link for one officer. It is valid for 7 days (configurable), the officer can extend it, and the officer or admin can disable it at any time with a second click. The token is random (128 bits or more), stored only as a hash and shown once.
+- FR-33 (built) The applicant page needs no account. It collects the request (loan type if not preset, amount, tenure, purpose, employment type, declared income) as the applicant's own statement, shows a live checklist for the loan type, accepts a zip, folder or files, warns when items are missing but allows sending as "incomplete", and finishes with "Send to the bank" behind a second click and a reference number.
+- FR-34 (built) The page never reads back a file, a score, a status or an outcome. A wrong, expired or revoked token gets one generic answer. Rate limits and size caps apply per link and per address.
+- FR-35 (built) The case appears in the chosen officer's queue as "From applicant". The officer can correct the request (audited) until they open and edit the form; after that the link accepts files only. Missing items are shown to the applicant on the same link; the Stage 9 message never lists them. A new "Upload link" template carries only the link and the usual footer.
+- FR-36 (built) Uploaded files stay on local disk with a database reference behind a `FileStore` interface; only the assigned officer and the admin can open them, through the authenticated API.
 
 ## 10. Evaluation
 
@@ -331,4 +349,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built (Stage 9 awaits the user's commit). Stage 10 (hardening, Docker, demo) is planned and approved and not started; a review window comes before it. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 Parts A, B and C (intake desk, identity from the cards, applicant upload link) are built (2026-11-04); Part D (several documents in one PDF) is not started and may be cut. Stage 11 (hardening, Docker, demo) follows it. Status is tracked in `PROGRESS.md`.

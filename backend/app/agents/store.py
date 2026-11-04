@@ -93,10 +93,11 @@ def save_documents(
     kept_inputs = iter(inp.documents)
     for s in summaries:
         doc_id = conn.execute(
-            text("""INSERT INTO documents (case_id, applicant_id, doc_type, file_path, original_name, mime,
-                        sha256, upload_checks, status, reject_reason)
-                    VALUES (:c, :a, :t, :p, :n, :m, :sha, CAST(:chk AS jsonb), :st, :rej) RETURNING id"""),
-            {"c": case_id, "a": applicants[s.role][0], "t": s.doc_type or "unknown",
+            text("""INSERT INTO documents (case_id, applicant_id, role, doc_type, file_path, original_name,
+                        mime, sha256, upload_checks, status, reject_reason)
+                    VALUES (:c, :a, :role, :t, :p, :n, :m, :sha, CAST(:chk AS jsonb), :st, :rej)
+                    RETURNING id"""),
+            {"c": case_id, "a": applicants[s.role][0], "role": s.role, "t": s.doc_type or "unknown",
              "p": paths.get((s.role, s.name)), "n": s.name,
              "m": mimetypes.guess_type(s.name)[0] or "application/octet-stream",
              "sha": s.sha256 or None, "chk": _j({"flags": s.quality_flags, "issues": s.issues}),

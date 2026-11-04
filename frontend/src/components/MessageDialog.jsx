@@ -150,11 +150,13 @@ export default function MessageDialog({ caseId, recipient, existing, onClose, on
               data-autofocus
               disabled={Boolean(existing)}
             >
-              {meta.templates.map((t) => (
-                <option key={t.code} value={t.code}>
-                  {t.label}
-                </option>
-              ))}
+              {meta.templates
+                .filter((t) => t.code !== 'upload_link')
+                .map((t) => (
+                  <option key={t.code} value={t.code}>
+                    {t.label}
+                  </option>
+                ))}
             </select>
           </div>
           <div className="field">

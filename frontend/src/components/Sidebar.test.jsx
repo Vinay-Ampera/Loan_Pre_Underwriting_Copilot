@@ -19,9 +19,23 @@ describe('Sidebar', () => {
     expect(links('auditor')).toEqual(['Overview', 'Cases', 'Audit log', 'Users', 'Help'])
   })
 
+  it('gives the officer upload links next to sent items', () => {
+    const items = links('officer')
+    expect(items.indexOf('Upload links')).toBeGreaterThan(items.indexOf('New case'))
+    expect(items).toContain('Sent items')
+  })
+
   it('gives the admin messages but no audit log, case list or creating', () => {
     const items = links('admin')
-    expect(items).toEqual(['Home', 'Precedents', 'Messages', 'Issues', 'Users', 'Help'])
+    expect(items).toEqual([
+      'Home',
+      'Precedents',
+      'Upload links',
+      'Messages',
+      'Issues',
+      'Users',
+      'Help',
+    ])
     expect(items).not.toContain('New case')
   })
 })

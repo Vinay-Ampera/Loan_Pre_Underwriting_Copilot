@@ -14,7 +14,7 @@ EXPECTED_TABLES = {
     "rule_results", "reports", "eval_scores", "llm_calls", "officer_actions", "precedents",
     "audit_log", "policy_documents", "policy_chunks", "rules", "rule_set_versions",
     "mock_identity", "mock_bureau", "mock_gst", "mock_udyam", "test_cases",
-    "fairness_attributes", "admin_actions",
+    "fairness_attributes", "admin_actions", "upload_links",
 }  # fmt: skip
 
 
@@ -168,4 +168,70 @@ def test_admin_action_needs_a_reason_and_a_real_decision(clean_db_url: str) -> N
             conn.execute(insert, {"c": case, "u": uid, "f": final, "r": reason})
     with engine.begin() as conn:
         conn.execute(insert, {"c": case, "u": uid, "f": "reject", "r": "a real reason"})
+    engine.dispose()
+
+
+def test_stage_10_migrations_apply_roll_back_and_keep_what_the_old_shape_can_hold(
+    clean_db_url: str,
+) -> None:  # fmt: skip
+    """0014 and 0015 on a database that already holds cases: files keep their person, a case with
+    no amount and a case sent by an applicant exist only in the new shape, the files survive
+    their applicant row being replaced, and going back to 0013 removes exactly what 0013 cannot
+    hold, then forward again."""
+    cfg = alembic_config(clean_db_url)
+    command.upgrade(cfg, "0013")
+    engine = create_engine(clean_db_url)
+    with engine.begin() as conn:
+        officer = conn.execute(
+            text(
+                "INSERT INTO users (name, email, password_hash, role) VALUES ('o', 'o@example.test', 'x', 'officer') RETURNING id"
+            )
+        ).scalar_one()
+        case = conn.execute(text("INSERT INTO cases (case_no, loan_type, created_by, loan_amount, tenure_months) VALUES ('CASE-2026-0001', 'personal', :u, 1000, 12) RETURNING id"), {"u": officer}).scalar_one()  # fmt: skip
+        applicant = conn.execute(text("INSERT INTO applicants (case_id, role, full_name, dob) VALUES (:c, 'co', 'A B', '1990-01-01') RETURNING id"), {"c": case}).scalar_one()  # fmt: skip
+        conn.execute(text("INSERT INTO documents (case_id, applicant_id, doc_type, original_name, mime, status) VALUES (:c, :a, 'pan_card', 'p.pdf', 'application/pdf', 'accepted')"), {"c": case, "a": applicant})  # fmt: skip
+
+    command.upgrade(cfg, "head")
+    with engine.begin() as conn:
+        # the old row was given the person it already had
+        assert conn.execute(text("SELECT role FROM documents")).scalar_one() == "co"
+        # a desk case has no amount yet; an applicant's case has the new status
+        conn.execute(
+            text(
+                "INSERT INTO cases (case_no, loan_type, created_by) VALUES ('CASE-2026-0002', 'home', :u)"
+            ),
+            {"u": officer},
+        )
+        conn.execute(text("INSERT INTO cases (case_no, loan_type, created_by, status, loan_amount, tenure_months) VALUES ('CASE-2026-0003', 'home', :u, 'applicant_submitted', 5, 5)"), {"u": officer})  # fmt: skip
+        # a repeat is a row with no file; a value outside the allowed kinds is refused
+        conn.execute(text("INSERT INTO documents (case_id, doc_type, original_name, mime, status, duplicate_kind) VALUES (:c, 'pan_card', 'again.pdf', 'application/pdf', 'ignored', 'exact')"), {"c": case})  # fmt: skip
+        # replacing the applicant rows no longer deletes the files
+        conn.execute(text("DELETE FROM applicants WHERE case_id = :c"), {"c": case})
+        assert (
+            conn.execute(
+                text("SELECT count(*) FROM documents WHERE case_id = :c"), {"c": case}
+            ).scalar_one()
+            == 2
+        )
+    with pytest.raises(DBAPIError), engine.begin() as conn:
+        conn.execute(text("UPDATE documents SET role = 'stranger'"))
+    with pytest.raises(DBAPIError), engine.begin() as conn:
+        conn.execute(text("INSERT INTO upload_links (token_hash, officer_id, created_by, expires_at) VALUES ('h', :u, :u, now()), ('h', :u, :u, now())"), {"u": officer})  # fmt: skip
+
+    command.downgrade(cfg, "0013")
+    with engine.connect() as conn:
+        assert [r[0] for r in conn.execute(text("SELECT case_no FROM cases ORDER BY case_no"))] == [
+            "CASE-2026-0001",
+            "CASE-2026-0003",
+        ]
+        assert (
+            conn.execute(
+                text("SELECT status FROM cases WHERE case_no = 'CASE-2026-0003'")
+            ).scalar_one()
+            == "draft"
+        )
+        assert (
+            conn.execute(text("SELECT count(*) FROM documents")).scalar_one() == 1
+        )  # the repeat row is gone
+    command.upgrade(cfg, "head")
     engine.dispose()

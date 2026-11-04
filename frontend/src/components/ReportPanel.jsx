@@ -117,6 +117,37 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction, rea
 
       <AtAGlance report={report} />
 
+      {Object.keys(report.identity_from_documents || {}).length > 0 && (
+        <aside
+          className="card report-block source-note"
+          aria-label="Where the form values came from"
+        >
+          <h3>Identity details read from the cards</h3>
+          <p className="muted">
+            Some identity details on the form were read from the applicant&apos;s PAN and Aadhaar
+            cards and confirmed by the officer:{' '}
+            {Object.entries(report.identity_from_documents)
+              .map(
+                ([role, fields]) =>
+                  `${role === 'co' ? 'co-applicant' : 'applicant'}: ${fields
+                    .map(
+                      (f) =>
+                        ({
+                          full_name: 'name',
+                          dob: 'date of birth',
+                          aadhaar_last4: 'Aadhaar last four',
+                        })[f] || f,
+                    )
+                    .join(', ')}`,
+              )
+              .join('; ')}
+            . A match against those same cards is{' '}
+            <strong>from document, not an independent check</strong>. The other documents were still
+            compared with the form.
+          </p>
+        </aside>
+      )}
+
       <section className="card report-block">
         <h3>Summary</h3>
         <p>

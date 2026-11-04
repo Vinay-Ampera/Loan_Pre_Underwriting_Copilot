@@ -31,6 +31,8 @@ import AuditorCasesPage from './pages/AuditorCasesPage'
 import AuditorUsersPage from './pages/AuditorUsersPage'
 import AdminMessagesPage from './pages/AdminMessagesPage'
 import HelpPage from './pages/HelpPage'
+import ApplicantUploadPage from './pages/ApplicantUploadPage'
+import UploadLinksPage from './pages/UploadLinksPage'
 import SentItemsPage from './pages/SentItemsPage'
 import IssuesPage from './pages/IssuesPage'
 import AdminIssuesPage from './pages/AdminIssuesPage'
@@ -129,6 +131,23 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminOfficerPage />
+          </Shell>
+        }
+      />
+      <Route path="/u" element={<ApplicantUploadPage />} />
+      <Route
+        path="/links"
+        element={
+          <Shell role="officer">
+            <UploadLinksPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/links"
+        element={
+          <Shell role="admin">
+            <UploadLinksPage />
           </Shell>
         }
       />

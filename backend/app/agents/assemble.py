@@ -20,7 +20,8 @@ from pydantic import BaseModel, Field
 from app.agents.runtime import AgentContext, to_record
 from app.agents.state import Flag, LLMCallRecord
 from app.agents.submission import DocumentRef, Submission
-from app.intake.duplicates import CaseDocuments, Verdict, document_key
+from app.intake import readcache
+from app.intake.duplicates import CaseDocuments, Verdict, document_key, sha256_hex
 from app.intake.masker import Masker
 from app.intake.models import DocType
 from app.intake.pipeline import IntakeResult, enrich, process_file
@@ -84,6 +85,9 @@ def _tie_out(doc_type: str, issue_codes: list[str]) -> bool | None:
 async def _read_one(ctx: AgentContext, ref: DocumentRef, as_of: date) -> IntakeResult | None:
     """Intake for one file, off the event loop. One retry, then the file is reported unreadable."""
     data = await asyncio.to_thread(Path(ref.path).read_bytes)
+    early = await asyncio.to_thread(_early_read, ctx, ref.path, data, as_of)
+    if early is not None:  # read once at the intake desk: nothing is read again (E-54)
+        return early
     cached = _cache_path(ctx, data, ref.name, as_of)
     if cached is not None and cached.exists():
         cached_result: IntakeResult = pickle.loads(cached.read_bytes())  # noqa: S301 - our own file
@@ -98,6 +102,21 @@ async def _read_one(ctx: AgentContext, ref: DocumentRef, as_of: date) -> IntakeR
             cached.write_bytes(pickle.dumps(res))
         return res
     return None
+
+
+def _early_read(ctx: AgentContext, path: str, data: bytes, as_of: date) -> IntakeResult | None:
+    """The result saved when the file was accepted at the desk, if it still fits these bytes and
+    this application date. The model pass needs the page text, which is never saved, so a file
+    that pass would work on is read again; every other file is not."""
+    sidecar = Path(path + readcache.READ_SUFFIX)
+    if not sidecar.is_file():
+        return None
+    saved = readcache.load(sidecar.read_bytes(), sha256_hex(data), as_of)
+    if saved is None or saved.document is None:
+        return None
+    if ctx.router is not None and (saved.missing or saved.document.doc_type is DocType.UNKNOWN):
+        return None
+    return saved
 
 
 def _cache_path(ctx: AgentContext, data: bytes, name: str, as_of: date) -> Path | None:

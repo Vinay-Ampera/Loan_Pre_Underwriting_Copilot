@@ -24,6 +24,9 @@ function Finding({ f, clauses }) {
           {f.role && <span className="finding-role"> {ROLE[f.role]}</span>}
         </p>
         {f.explanation && <p className="muted">{f.explanation}</p>}
+        {f.evidence?.source_note && (
+          <p className="small source-tag">The form value here is {f.evidence.source_note}.</p>
+        )}
         <p className="finding-ids small">
           {f.rule_id && <code>{f.rule_id}</code>}
           {f.points_lost > 0 && <span className="muted"> −{f.points_lost} pts</span>}
