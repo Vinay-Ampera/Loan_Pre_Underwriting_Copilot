@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDraft } from '../lib/drafts'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import Dialog from './Dialog'
@@ -52,12 +53,23 @@ function useAction(path, onDone, onClose) {
 }
 
 function OverrideDialog({ caseId, inForce, onClose, onDone }) {
-  const [decision, setDecision] = useState('')
-  const [reason, setReason] = useState('')
-  const { busy, error, run } = useAction(`/admin/cases/${caseId}/override`, onDone, onClose)
+  const [decision, setDecision, dropDecision] = useDraft('admin-decision')
+  const [reason, setReason, dropReason] = useDraft('admin-reason')
+  const drop = () => {
+    dropDecision()
+    dropReason()
+  }
+  const { busy, error, run } = useAction(`/admin/cases/${caseId}/override`, onDone, () => {
+    drop()
+    onClose()
+  })
+  const cancel = () => {
+    drop()
+    onClose()
+  }
   const valid = decision && decision !== inForce && reason.trim().length >= MIN_REASON
   return (
-    <Dialog title="Change the decision" onClose={onClose} labelledBy="admin-override-title">
+    <Dialog title="Change the decision" onClose={cancel} labelledBy="admin-override-title">
       <p>
         The decision in force is <strong>{inForce}</strong>. Your change is kept next to the
         officer&apos;s decision; nothing is removed.
@@ -86,7 +98,7 @@ function OverrideDialog({ caseId, inForce, onClose, onDone }) {
         </p>
       )}
       <div className="dialog-actions">
-        <button type="button" className="btn" onClick={onClose}>
+        <button type="button" className="btn" onClick={cancel}>
           Cancel
         </button>
         <button

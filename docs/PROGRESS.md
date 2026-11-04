@@ -182,6 +182,17 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 
 ---
 
+## Session handling build notes (2026-11-04)
+
+- **Decided with the user:** access token 15 minutes, renewed silently while the person works; idle sign-out after 30 minutes with a two-minute "Still there?" warning; hard stop 12 hours after sign-in with a 15-minute notice; nothing typed is lost; banks need safety, so the server enforces every limit. Replaces the old single 60-minute token (changes only the token lifetime in `.env.example`; no locked decision changes).
+- **Migration 0013:** `user_sessions`. **Run `cd backend && ../.venv/bin/python -m app.db.migrate` before using it.** Old tokens carry no session id, so everyone signs in once more after the update.
+- **Backend:** `/auth/login` creates the session and sets the HttpOnly cookie; new `/auth/refresh` (rotation, 10-second second-tab grace, reuse closes the session), `/auth/ping`, `/auth/logout`; `deps.current_user` checks the session (revoked, idle, 12 hours). New settings `IDLE_TIMEOUT_MINUTES`, `IDLE_WARNING_MINUTES`, `SESSION_MAX_HOURS`, `REFRESH_GRACE_SECONDS`; `LOGIN_LOCK_MINUTES` unchanged (15).
+- **Frontend:** `api/client.js` renews on 401 and retries once; `SessionGuard` (activity, ping, silent renewal, idle and 12-hour dialogs); `lib/drafts.js` (`useDraft`) used by both override dialogs and the problem report; the sign-in page shows why the session ended; the same person returns to the page they left.
+- **Scope note:** instead of a re-login pop-up that replays the failed action, an ended session returns the person to the same page after sign-in with their typed text restored. Say if the pop-up is wanted.
+- **Verified:** see the commit summary for the test results.
+
+---
+
 ## Review-window additions (2026-11-03)
 
 - **Report:** an "At a glance" card above the Summary (score ring, top 3 reasons ranked hard fail, cap, biggest point loss, and the next step; all taken from existing findings, nothing computed in the UI). The Policy citations block has a text search and a "cited by stage" filter.

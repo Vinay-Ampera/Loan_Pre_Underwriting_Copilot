@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useDraft } from '../lib/drafts'
 import Dialog from './Dialog'
 import './OverrideDialog.css'
 
@@ -16,13 +16,19 @@ export default function OverrideDialog({
   onSubmit,
 }) {
   const system = WORD[recommendation]
-  const [decision, setDecision] = useState('')
-  const [reason, setReason] = useState('')
+  const [decision, setDecision, dropDecision] = useDraft('override-decision')
+  const [reason, setReason, dropReason] = useDraft('override-reason')
   const trimmed = reason.trim()
   const valid = decision && decision !== system && trimmed.length >= MIN_REASON
+  // Cancel throws the draft away; a session that ends keeps it for the next sign-in.
+  const cancel = () => {
+    dropDecision()
+    dropReason()
+    onClose()
+  }
 
   return (
-    <Dialog title="Override the recommendation" onClose={onClose}>
+    <Dialog title="Override the recommendation" onClose={cancel}>
       <p>
         The system recommended: <strong>{system}</strong>.{' '}
         <span className="muted">{recommendationText}.</span>
@@ -66,7 +72,7 @@ export default function OverrideDialog({
         </p>
       )}
       <div className="dialog-actions">
-        <button type="button" className="btn" onClick={onClose}>
+        <button type="button" className="btn" onClick={cancel}>
           Cancel
         </button>
         <button

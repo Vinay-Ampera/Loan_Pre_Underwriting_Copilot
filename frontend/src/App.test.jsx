@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('./api/client', () => ({
   api: { get: vi.fn(), post: vi.fn(), del: vi.fn(), blob: vi.fn() },
   login: vi.fn(),
+  ping: vi.fn(),
+  logout: vi.fn(),
+  renewSession: vi.fn(),
 }))
 
 import { api } from './api/client'

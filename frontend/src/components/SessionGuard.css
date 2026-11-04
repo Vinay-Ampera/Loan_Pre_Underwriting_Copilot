@@ -1,0 +1,5 @@
+/* The warnings reuse the shared dialog; nothing extra is needed beyond keeping the countdown steady. */
+#idle-title + p strong,
+#max-title + p strong {
+  font-variant-numeric: tabular-nums;
+}

@@ -64,6 +64,10 @@ Index: HNSW on `embedding`; btree on `(loan_type, status)`.
 `id, reported_by → users, case_ref (nullable text CASE-YYYY-NNNN, not a foreign key, so the admin inbox cannot reach case data), category (bug|wrong_result|access|other), body, status (open|read|closed), created_at, read_at, closed_at`
 Reports containing PAN, Aadhaar, phone, account number or email patterns are refused and never stored. Officers read their own rows; the admin reads all.
 
+**user_sessions** (migration 0013)
+`id, user_id → users (cascade), started_at, last_active, refresh_hash (SHA-256 of the current refresh secret), prev_refresh_hash, rotated_at, revoked_at, revoked_reason (logout|idle|max|reuse|inactive)`
+One row per sign-in (SECURITY.md 4a). `last_active` moves only on `POST /auth/ping`, never on polling. Rows older than two days are deleted at the next sign-in; the audit log keeps the history. `app_rw` has full access; `report_ro` has none.
+
 **audit_log**
 `id, actor_id, action, entity, entity_id, before jsonb, after jsonb, at`
 Append-only; no update or delete grants.

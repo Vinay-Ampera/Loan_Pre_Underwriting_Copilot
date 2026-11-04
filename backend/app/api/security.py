@@ -1,5 +1,7 @@
 """Password hashing (argon2) and short-lived JWTs. The secret comes from `Settings` only."""
 
+import hashlib
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -27,9 +29,18 @@ def verify_password(password: str, password_hash: str | None) -> bool:
         return False
 
 
-def create_token(settings: Settings, user_id: str, role: str) -> str:
+def new_refresh_secret() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def hash_refresh(secret: str) -> str:
+    """Only this hash is stored; the secret itself exists in the browser cookie alone."""
+    return hashlib.sha256(secret.encode()).hexdigest()
+
+
+def create_token(settings: Settings, user_id: str, role: str, sid: str) -> str:
     now = datetime.now(UTC)
-    claims = {"sub": user_id, "role": role, "iat": now,
+    claims = {"sub": user_id, "role": role, "sid": sid, "iat": now,
               "exp": now + timedelta(minutes=settings.access_token_minutes)}  # fmt: skip
     return jwt.encode(claims, settings.jwt_secret.get_secret_value(), algorithm=_ALGORITHM)
 

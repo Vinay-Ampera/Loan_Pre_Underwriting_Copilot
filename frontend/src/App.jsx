@@ -1,6 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { clearSession, loadSession, saveSession } from './api/session'
+import { logout } from './api/client'
+import {
+  clearSession,
+  loadSession,
+  saveSession,
+  sessionFrom,
+  setNotice,
+  setReturn,
+  takeReturn,
+} from './api/session'
+import { clearDrafts } from './lib/drafts'
+import SessionGuard from './components/SessionGuard'
 import Sidebar from './components/Sidebar'
 import UserMenu from './components/UserMenu'
 import ThemeToggle from './components/ThemeToggle'
@@ -190,32 +201,69 @@ function Routing() {
   )
 }
 
+const ENDED_NOTICE = {
+  idle: 'You were signed out after 30 minutes of no activity. What you typed is saved.',
+  max: 'Your 12-hour working session ended. Sign in again; what you typed is saved.',
+}
+
 function SessionProvider({ children }) {
   const [session, setSession] = useState(loadSession)
   const navigate = useNavigate()
 
-  const signIn = useCallback((res) => {
-    const next = { token: res.access_token, user: res.user }
-    saveSession(next)
-    setSession(next)
-  }, [])
+  const signIn = useCallback(
+    (res) => {
+      const next = sessionFrom(res)
+      saveSession(next)
+      setSession(next)
+      // Back to the page they were on, if the same person is signing in again.
+      const back = takeReturn(res.user.id)
+      if (back) navigate(back, { replace: true })
+    },
+    [navigate],
+  )
+
+  // The session ended on its own (idle, 12 hours, closed by the server): keep their typing and
+  // their place, say why on the sign-in page.
+  const endSession = useCallback(
+    (reason, message) => {
+      const who = loadSession()?.user.id
+      if (who) setReturn(who, window.location.pathname)
+      setNotice(ENDED_NOTICE[reason] || message || 'Your session ended. Sign in again.')
+      if (reason === 'idle' || reason === 'max') logout()
+      clearSession()
+      setSession(null)
+      navigate('/login')
+    },
+    [navigate],
+  )
+
+  // Deliberate sign-out: the server session ends and saved drafts are wiped.
   const signOut = useCallback(() => {
+    logout()
+    clearDrafts()
     clearSession()
     setSession(null)
     navigate('/login')
   }, [navigate])
 
   useEffect(() => {
-    const expired = () => {
+    const ended = (e) => {
+      setNotice(e.detail?.message || 'Your session ended. Sign in again.')
+      if (e.detail?.userId) setReturn(e.detail.userId, window.location.pathname)
       setSession(null)
       navigate('/login')
     }
-    window.addEventListener('lc:signed-out', expired)
-    return () => window.removeEventListener('lc:signed-out', expired)
+    window.addEventListener('lc:signed-out', ended)
+    return () => window.removeEventListener('lc:signed-out', ended)
   }, [navigate])
 
   const value = useMemo(() => ({ session, signIn, signOut }), [session, signIn, signOut])
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  return (
+    <SessionContext.Provider value={value}>
+      {children}
+      {session && <SessionGuard onEnd={endSession} />}
+    </SessionContext.Provider>
+  )
 }
 
 export default function App() {

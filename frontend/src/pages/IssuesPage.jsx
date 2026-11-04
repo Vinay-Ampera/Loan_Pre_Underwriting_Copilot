@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDraft } from '../lib/drafts'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import Callout from '../components/Callout'
@@ -26,12 +27,13 @@ export function IssueChip({ status }) {
 /** An officer reports a problem with the tool to the admin. No personal data may be pasted. */
 export default function IssuesPage() {
   const { data, loading, reload } = useAsync(() => api.get('/issues'), [])
-  const [form, setForm] = useState({ category: 'bug', case_ref: '', body: '' })
+  const [body, setBody, dropBody] = useDraft('issue-body')
+  const [form, setForm] = useState({ category: 'bug', case_ref: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [done, setDone] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-  const ready = form.body.trim().length >= 10
+  const ready = body.trim().length >= 10
 
   async function submit(e) {
     e.preventDefault()
@@ -42,9 +44,11 @@ export default function IssuesPage() {
       await api.post('/issues', {
         category: form.category,
         case_ref: form.case_ref.trim().toUpperCase() || null,
-        body: form.body.trim(),
+        body: body.trim(),
       })
-      setForm({ category: form.category, case_ref: '', body: '' })
+      setForm({ category: form.category, case_ref: '' })
+      setBody('')
+      dropBody()
       setDone(true)
       reload()
     } catch (err) {
@@ -94,12 +98,10 @@ export default function IssuesPage() {
             className="textarea"
             rows={5}
             maxLength={1000}
-            value={form.body}
-            onChange={set('body')}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
           />
-          <span className="small muted">
-            {form.body.trim().length}/1000 · at least 10 characters
-          </span>
+          <span className="small muted">{body.trim().length}/1000 · at least 10 characters</span>
         </div>
         {error && (
           <p className="field-error" role="alert">

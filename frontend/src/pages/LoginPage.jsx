@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login } from '../api/client'
+import { takeNotice } from '../api/session'
 import { useSession } from '../App'
 import BrandMark from '../components/BrandMark'
 import ThemeToggle from '../components/ThemeToggle'
@@ -44,6 +45,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [notice] = useState(takeNotice)
 
   async function submit(e) {
     e.preventDefault()
@@ -68,6 +70,11 @@ export default function LoginPage() {
         <form className="login-card card" onSubmit={submit}>
           <h2>Sign in</h2>
           <p className="muted">Staff accounts only. Your admin creates your account.</p>
+          {notice && (
+            <p className="login-notice" role="status">
+              {notice}
+            </p>
+          )}
           <div className="field">
             <label htmlFor="email">Email</label>
             <input

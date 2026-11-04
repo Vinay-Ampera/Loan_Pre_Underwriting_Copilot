@@ -36,7 +36,11 @@ class Settings(BaseSettings):
 
     # API (Stage 6)
     llm_enabled: bool = True  # False = no model calls; code writes the report text (browser tests)
-    access_token_minutes: int = 60
+    access_token_minutes: int = 15  # renewed in the background while the user is active
+    idle_timeout_minutes: int = 30  # no activity for this long = signed out
+    session_max_hours: int = 12  # hard limit from sign-in, however active
+    idle_warning_minutes: int = 2  # the browser warns this long before the idle sign-out
+    refresh_grace_seconds: int = 10  # a second tab may present the token a moment after rotation
     login_max_failures: int = 5
     login_lock_minutes: int = 15
     cors_origins: str = ""  # comma separated; empty = same origin (dev server proxies /api)

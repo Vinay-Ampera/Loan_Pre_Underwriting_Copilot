@@ -8,6 +8,7 @@ deactivated user or a changed role takes effect at once.
 import json
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -28,6 +29,7 @@ class User:
     name: str
     email: str
     role: str
+    sid: UUID | None = None  # the sign-in session this request belongs to
 
 
 def get_settings_dep(request: Request) -> Settings:
@@ -55,16 +57,33 @@ def current_user(
         raise HTTPException(401, "Sign in to continue.", headers={"WWW-Authenticate": "Bearer"})
     try:
         claims = decode_token(settings, creds.credentials)
-        user_id = UUID(claims["sub"])
+        user_id, sid = UUID(claims["sub"]), UUID(claims["sid"])
     except (jwt.PyJWTError, KeyError, ValueError):
         raise HTTPException(401, "Your session has expired. Sign in again.") from None
     with engine.connect() as conn:
         row = conn.execute(
-            text("SELECT id, name, email, role, active FROM users WHERE id = :i"), {"i": user_id}
+            text("""SELECT u.id, u.name, u.email, u.role, u.active,
+                           s.started_at, s.last_active, s.revoked_at
+                    FROM users u LEFT JOIN user_sessions s ON s.id = :s AND s.user_id = u.id
+                    WHERE u.id = :i"""),
+            {"i": user_id, "s": sid},
         ).first()
     if row is None or not row.active:
         raise HTTPException(401, "This account is not active.")
-    return User(id=row.id, name=row.name, email=row.email, role=row.role)
+    if row.started_at is None or row.revoked_at is not None or session_over(settings, row):
+        raise HTTPException(401, "Your session has ended. Sign in again.")
+    return User(id=row.id, name=row.name, email=row.email, role=row.role, sid=sid)
+
+
+def session_over(settings: Settings, row: Any, now: datetime | None = None) -> str | None:
+    """'max' or 'idle' when the session has run past a limit, else None. Both limits are
+    enforced here on the server; the browser's timers are only a courtesy warning."""
+    now = now or datetime.now(UTC)
+    if now - row.started_at > timedelta(hours=settings.session_max_hours):
+        return "max"
+    if now - row.last_active > timedelta(minutes=settings.idle_timeout_minutes):
+        return "idle"
+    return None
 
 
 def require_role(*roles: str) -> Callable[[User], User]:

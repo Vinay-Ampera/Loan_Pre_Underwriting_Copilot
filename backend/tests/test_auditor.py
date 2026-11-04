@@ -94,7 +94,8 @@ def test_auditor_gets_403_on_every_route_outside_the_auditor_ones(
     client: TestClient,
 ) -> None:
     h = login(client, "aud")
-    reads_ok = {"/auth/me", "/meta/loan-types"}
+    # the session routes act on the caller's own session (cookie or any signed-in role), no case data
+    reads_ok = {"/auth/me", "/meta/loan-types", "/auth/refresh", "/auth/ping", "/auth/logout"}
     checked = 0
     for full, methods in client.app.openapi()["paths"].items():  # type: ignore[attr-defined]
         path = full.removeprefix(V1)
