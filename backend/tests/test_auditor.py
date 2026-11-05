@@ -104,6 +104,7 @@ def test_auditor_gets_403_on_every_route_outside_the_auditor_ones(
             or path == "/auth/login"
             or path in reads_ok
             or path.startswith("/auditor/")
+            or path.startswith("/public/")  # token-gated applicant link, no role
         ):
             continue
         url = V1 + path

@@ -309,6 +309,7 @@ def test_templates_endpoint_and_officer_phone(client: TestClient, engine: Engine
         "contact_soon",
         "visit_branch",
         "blank",
+        "upload_link",
     ]
     assert t["footer"] == templates.FOOTER and t["phone_set"] is False
     assert (

@@ -92,11 +92,23 @@ def _income_owner_seat(pan: str, items: list[Item], needed_from: dict[str, set[s
     """'co' when the income papers carrying this PAN are asked only from the co-applicant (an
     education loan: the parent earns, the student does not). Folder order says nothing about who
     is who, so this is the one clue a loan with a required co-applicant gives. Otherwise None."""
-    owners: set[str] = set()
-    for it in items:
-        if it.doc_type in INCOME_TYPES and str(it.fields.get("pan") or "").upper() == pan:
-            owners |= needed_from.get(it.doc_type, set())
-    return "co" if owners == {"co"} else None
+
+    def co_only(number: str) -> bool:
+        owners: set[str] = set()
+        for it in items:
+            if it.doc_type in INCOME_TYPES and str(it.fields.get("pan") or "").upper() == number:
+                owners |= needed_from.get(it.doc_type, set())
+        return owners == {"co"}
+
+    if not co_only(pan):
+        return None
+    # if every PAN on a card carries income papers, the clue does not separate the people
+    others = {
+        str(it.fields.get("pan") or "").upper()
+        for it in items
+        if it.doc_type == "pan_card" and it.fields.get("pan")
+    } - {pan}
+    return None if any(co_only(o) for o in others) else "co"
 
 
 def assign_roles(
