@@ -75,8 +75,7 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
       {made.token ? (
         <>
           <p>
-            Copy this address now. It cannot be shown again, because only a scrambled form of it is
-            kept.
+            Copy this address. You can copy it again later from the Upload links page.
           </p>
           <input
             className="input mono"
@@ -106,8 +105,8 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
         <>
           <p>
             The applicant&apos;s link for this case is still open, and it has been extended. Its
-            address cannot be shown again. To share it again, disable it on the Upload links page
-            and ask again.
+            address cannot be shown here. Open the Upload links page to copy it or to make a new
+            address.
           </p>
           <div className="dialog-actions">
             <button type="button" className="btn btn-primary" onClick={onClose} data-autofocus>

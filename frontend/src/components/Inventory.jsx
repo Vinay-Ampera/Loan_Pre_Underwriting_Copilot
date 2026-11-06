@@ -206,7 +206,7 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
       ))}
 
       {inventory.depends_on_employment.length > 0 && (
-        <section className="card" aria-label="Waiting for employment type">
+        <section className="card inv-card" aria-label="Waiting for employment type">
           <h3>Depends on employment type</h3>
           <p className="muted">
             These are asked for once the employment type is stated above. They are not counted as
@@ -224,7 +224,7 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
       )}
 
       {(inventory.unassigned.length > 0 || inventory.unrecognised.length > 0) && (
-        <section className="card" aria-label="Needs your attention">
+        <section className="card inv-card" aria-label="Needs your attention">
           <h3>Needs your attention</h3>
           {inventory.unassigned.length > 0 && (
             <>
@@ -263,7 +263,7 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
       )}
 
       {inventory.conflicts.length > 0 && (
-        <section className="card" aria-label="Conflicting repeats">
+        <section className="card inv-card" aria-label="Conflicting repeats">
           <h3>Same document, different amounts</h3>
           <ul>
             {inventory.conflicts.map((d) => (
@@ -277,7 +277,7 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
       )}
 
       {inventory.rejected.length > 0 && (
-        <section className="card" aria-label="Not accepted">
+        <section className="card inv-card" aria-label="Not accepted">
           <h3>Not accepted</h3>
           <ul>
             {inventory.rejected.map((r) => (
@@ -290,7 +290,7 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
       )}
 
       {inventory.duplicates.length > 0 && (
-        <section className="card" aria-label="Repeats ignored">
+        <section className="card inv-card" aria-label="Repeats ignored">
           <h3>Repeats, ignored</h3>
           <ul>
             {inventory.duplicates.map((d) => (

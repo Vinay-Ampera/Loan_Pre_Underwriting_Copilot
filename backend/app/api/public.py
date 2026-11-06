@@ -13,9 +13,10 @@ import json
 import secrets
 from datetime import date
 from typing import Any, Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Connection, text
 
@@ -239,6 +240,8 @@ def add_files(
         {"n": len(results), "b": sum(len(d) for _, d in parts), "i": link.id})  # fmt: skip
     write_audit(conn, None, "applicant_files_received", "upload_link", link.id,
                 after={"files": len(results)})  # fmt: skip
+    conn.execute(text("UPDATE documents SET uploaded_via = 'applicant' WHERE id = ANY(:ids)"),
+                 {"ids": [r["id"] for r in results]})  # fmt: skip
     fresh = _case(conn, link)
     shown = {"accepted": "received", "warning": "received", "ignored": "already received",
              "rejected": "not accepted"}  # fmt: skip
@@ -248,6 +251,95 @@ def add_files(
                    "reason": r["message"] if r["status"] == "rejected" else ""} for r in results],
         "checklist": _counts(request, conn, fresh),
     }, headers=NO_CACHE)  # fmt: skip
+
+
+def _removable(case: Any) -> bool:
+    """The applicant may take a file back until they press Send to the bank or the officer takes
+    over the form; after that the officer works from what is there."""
+    form = case.form_data if case is not None else {}
+    return _open(case) and not form.get("request_locked") and not form.get("applicant_sent")
+
+
+def _own_file(conn: Connection, case: Any, doc_id: str) -> Any:
+    try:
+        UUID(doc_id)
+    except ValueError:
+        raise HTTPException(404, "File not found.", headers=NO_CACHE) from None
+    row = conn.execute(
+        text("""SELECT id, original_name, file_path, mime, status FROM documents
+                WHERE id = :d AND case_id = :c AND uploaded_via = 'applicant'"""),
+        {"d": doc_id, "c": case.id}).first()  # fmt: skip
+    if row is None:
+        raise HTTPException(404, "File not found.", headers=NO_CACHE)
+    return row
+
+
+@router.get("/my-files")
+def my_files(
+    request: Request, conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
+) -> JSONResponse:  # fmt: skip
+    """What this applicant sent through this link: name and plain result only (nothing the
+    bank read from it, no type, no score)."""
+    link = resolve(request, conn, settings)
+    case = _case(conn, link)
+    if case is None:
+        return JSONResponse({"files": [], "can_remove": False}, headers=NO_CACHE)
+    rows = conn.execute(
+        text("""SELECT id, original_name, status, (file_path IS NOT NULL) AS has_file FROM documents
+                WHERE case_id = :c AND uploaded_via = 'applicant' ORDER BY uploaded_at"""),
+        {"c": case.id})  # fmt: skip
+    shown = {"accepted": "received", "ignored": "already received", "rejected": "not accepted"}
+    return JSONResponse({
+        "files": [{"id": str(r.id), "name": r.original_name, "result": shown.get(r.status, "received"),
+                   "can_view": bool(r.has_file)} for r in rows],
+        "can_remove": _removable(case),
+    }, headers=NO_CACHE)  # fmt: skip
+
+
+@router.get("/files/{doc_id}")
+def view_file(
+    doc_id: str, request: Request, conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
+) -> Response:  # fmt: skip
+    link = resolve(request, conn, settings)
+    case = _case(conn, link)
+    if case is None:
+        raise HTTPException(404, "File not found.", headers=NO_CACHE)
+    row = _own_file(conn, case, doc_id)
+    store = file_store(settings)
+    if not row.file_path or not store.exists(row.file_path):
+        raise HTTPException(404, "File not available.", headers=NO_CACHE)
+    return Response(store.read(row.file_path), media_type=row.mime, headers={
+        "Content-Disposition": "inline", "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store"})  # fmt: skip
+
+
+@router.post("/files/{doc_id}/remove")
+def remove_file(
+    doc_id: str, body: SendIn, request: Request, conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
+) -> JSONResponse:  # fmt: skip
+    if not body.second_click:
+        raise HTTPException(422, "Please confirm to remove the file.", headers=NO_CACHE)
+    link = resolve(request, conn, settings)
+    case = _case(conn, link)
+    if case is None:
+        raise HTTPException(404, "File not found.", headers=NO_CACHE)
+    if not _removable(case):
+        raise HTTPException(
+            409, "Files can no longer be removed here. Please contact your loan officer.",
+            headers=NO_CACHE)  # fmt: skip
+    row = _own_file(conn, case, doc_id)
+    conn.execute(text("UPDATE documents SET duplicate_of = NULL WHERE duplicate_of = :d"),
+                 {"d": row.id})  # fmt: skip
+    conn.execute(text("DELETE FROM documents WHERE id = :d"), {"d": row.id})
+    if row.file_path:
+        file_store(settings).delete(row.file_path)
+    write_audit(conn, None, "applicant_file_removed", "case", case.id,
+                after={"link_id": str(link.id), "document_id": str(row.id)})  # fmt: skip
+    fresh = _case(conn, link)
+    return JSONResponse({"checklist": _counts(request, conn, fresh)}, headers=NO_CACHE)
 
 
 @router.post("/send")

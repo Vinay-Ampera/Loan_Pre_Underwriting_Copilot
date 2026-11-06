@@ -30,6 +30,7 @@ function setup(role = 'officer', list = [link()]) {
   who.role = role
   api.get.mockReset().mockImplementation(async (path) => {
     if (path === '/links') return list
+    if (path.endsWith('/address')) return { path: '/u#abc' }
     if (path === '/admin/users')
       return [{ id: 'o1', name: 'Ben Officer', role: 'officer', active: true }]
     return null
@@ -84,17 +85,20 @@ describe('UploadLinksPage', () => {
     expect(api.post).toHaveBeenCalledWith('/links/l1/disable', { second_click: true })
   })
 
-  it('extending needs no confirmation', async () => {
+  it('copy link fetches the address again', async () => {
     const user = setup()
-    await user.click(await screen.findByRole('button', { name: 'Extend' }))
-    expect(api.post).toHaveBeenCalledWith('/links/l1/extend', {})
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue() },
+      configurable: true,
+    })
+    await user.click(await screen.findByRole('button', { name: 'Copy link' }))
+    expect(api.get).toHaveBeenCalledWith('/links/l1/address')
   })
 
   it('a disabled link has no actions and an expired one cannot be disabled twice', async () => {
     setup('officer', [link({ state: 'disabled' })])
     await screen.findByText('Disabled')
-    expect(screen.queryByRole('button', { name: 'Extend' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Set days' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Disable' })).not.toBeInTheDocument()
   })
 })

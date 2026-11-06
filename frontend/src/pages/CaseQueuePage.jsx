@@ -12,6 +12,7 @@ const STATUSES = [
   ['', 'All statuses'],
   ['draft', 'Draft'],
   ['uploaded', 'Documents uploaded'],
+  ['applicant_submitted', 'Applicant submitted'],
   ['running', 'Assessing'],
   ['stopped', 'Stopped: needs correction'],
   ['awaiting_confirmation', 'Awaiting confirmation'],

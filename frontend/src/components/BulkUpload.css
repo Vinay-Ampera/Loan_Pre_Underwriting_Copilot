@@ -16,3 +16,15 @@
   background: var(--stopped-bg);
   color: var(--muted);
 }
+/* a camera button only helps on a phone or tablet; a folder picker only helps on a computer */
+.bulk-camera {
+  display: none;
+}
+@media (pointer: coarse) {
+  .bulk-camera {
+    display: inline-flex;
+  }
+  .bulk-folder {
+    display: none;
+  }
+}

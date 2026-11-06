@@ -34,11 +34,29 @@ async function call(method, path, token, { json, form } = {}) {
   return res.json()
 }
 
+/** The applicant's own file as a Blob. The token is a header, so a plain link cannot fetch it. */
+async function blob(path, token) {
+  let res
+  try {
+    res = await fetch(BASE + path, { headers: { 'X-Upload-Token': token }, cache: 'no-store' })
+  } catch {
+    throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.')
+  }
+  if (!res.ok) throw new ApiError(res.status, 'This file cannot be shown.')
+  return res.blob()
+}
+
 export const publicApi = {
   link: (token) => call('GET', '/link', token),
   request: (token, json) => call('POST', '/request', token, { json }),
   files: (token, form) => call('POST', '/files', token, { form }),
   send: (token) => call('POST', '/send', token, { json: { second_click: true } }),
+  myFiles: (token) => call('GET', '/my-files', token),
+  fileBlob: (token, id) => blob(`/files/${encodeURIComponent(id)}`, token),
+  removeFile: (token, id) =>
+    call('POST', `/files/${encodeURIComponent(id)}/remove`, token, {
+      json: { second_click: true },
+    }),
 }
 
 /** The token from the page address (`/u#TOKEN`). */

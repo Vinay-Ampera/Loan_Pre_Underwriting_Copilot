@@ -49,6 +49,109 @@ function Checklist({ checklist }) {
   )
 }
 
+/**
+ * What this applicant sent through this link, with a way to look at each file and to take it
+ * back. It shows the file's name and a plain result, nothing the bank read from it. Taking a file
+ * back needs the second click and is possible only until Send to the bank.
+ */
+function MyFiles({ token, refreshKey, onChanged }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+  const [toRemove, setToRemove] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    publicApi
+      .myFiles(token)
+      .then((d) => alive && setData(d))
+      .catch((e) => alive && setError(e.message))
+    return () => {
+      alive = false
+    }
+  }, [token, refreshKey])
+
+  async function view(f) {
+    setError(null)
+    const tab = window.open('', '_blank') // opened now, so a phone does not block it
+    try {
+      const url = URL.createObjectURL(await publicApi.fileBlob(token, f.id))
+      if (tab) tab.location.href = url
+      else window.location.href = url
+      setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000)
+    } catch (e) {
+      tab?.close()
+      setError(e.message)
+    }
+  }
+  async function remove() {
+    setBusy(true)
+    try {
+      const out = await publicApi.removeFile(token, toRemove.id)
+      setData((d) => ({ ...d, files: d.files.filter((x) => x.id !== toRemove.id) }))
+      onChanged(out.checklist)
+      setToRemove(null)
+    } catch (e) {
+      setError(e.message)
+      setToRemove(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!data || data.files.length === 0) return null
+  return (
+    <section className="card ap-card" aria-label="Your files">
+      <h2>Your files</h2>
+      <ul className="ap-files">
+        {data.files.map((f) => (
+          <li key={f.id}>
+            <div className="ap-file-name">
+              <strong>{f.name}</strong>
+              <span className="small muted">{f.result}</span>
+            </div>
+            <div className="ap-file-actions">
+              {f.can_view && (
+                <button type="button" className="btn" onClick={() => view(f)}>
+                  View<span className="sr-only"> {f.name}</span>
+                </button>
+              )}
+              {data.can_remove && (
+                <button type="button" className="btn btn-ghost" onClick={() => setToRemove(f)}>
+                  Remove<span className="sr-only"> {f.name}</span>
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {!data.can_remove && (
+        <p className="small muted">
+          Files can no longer be removed here. Please contact your loan officer if one is wrong.
+        </p>
+      )}
+      {error && (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      )}
+      {toRemove && (
+        <ConfirmDialog
+          title="Remove this file?"
+          confirmLabel="Yes, remove it"
+          busy={busy}
+          onClose={() => setToRemove(null)}
+          onConfirm={remove}
+        >
+          <p>
+            <strong>{toRemove.name}</strong> will be deleted. You can send a different one after.
+          </p>
+        </ConfirmDialog>
+      )}
+    </section>
+  )
+}
+
 function RequestForm({ view, onSent, token }) {
   const [f, setF] = useState({
     loan_type: view.loan_type || '',
@@ -195,6 +298,7 @@ export default function ApplicantUploadPage() {
   const [confirm, setConfirm] = useState(false)
   const [done, setDone] = useState(null)
   const [reopen, setReopen] = useState(false)
+  const [filesKey, setFilesKey] = useState(0)
 
   const load = useCallback(async () => {
     try {
@@ -211,6 +315,7 @@ export default function ApplicantUploadPage() {
   async function upload(form) {
     const res = await publicApi.files(token, form)
     setView((v) => ({ ...v, checklist: res.checklist, accepting_files: true }))
+    setFilesKey((k) => k + 1)
     return res.files.map((f) => ({
       name: f.name,
       status: MAP[f.result] || 'accepted',
@@ -323,14 +428,20 @@ export default function ApplicantUploadPage() {
             {view.accepting_files ? (
               <BulkUpload
                 upload={upload}
+                camera
                 intro="Drop a zip or your files here. Photos and scans must be sharp and show the whole page."
               />
             ) : (
               <p role="status">This link is not accepting files right now.</p>
             )}
           </section>
+          <MyFiles
+            token={token}
+            refreshKey={filesKey}
+            onChanged={(checklist) => setView((v) => ({ ...v, checklist }))}
+          />
           {view.accepting_files && (
-            <section className="card ap-card">
+            <section className="card ap-card ap-send">
               <h2>{view.request_open ? '3. Send to the bank' : 'Send to the bank'}</h2>
               {missing && (
                 <p className="ap-warn" role="status">

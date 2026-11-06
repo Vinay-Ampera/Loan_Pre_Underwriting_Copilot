@@ -26,13 +26,20 @@ export function summarise(results) {
  * [{ name, status, message }] (status: accepted | warning | rejected | ignored). The same box
  * serves the officer's desk and the applicant's page. Choosing files needs no confirmation.
  */
-export default function BulkUpload({ upload, onUploaded, disabled = false, intro }) {
+export default function BulkUpload({
+  upload,
+  onUploaded,
+  disabled = false,
+  intro,
+  camera = false,
+}) {
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [over, setOver] = useState(false)
   const files = useRef(null)
   const folder = useRef(null)
+  const photo = useRef(null)
 
   async function send(list) {
     if (!list.length || disabled) return
@@ -51,6 +58,7 @@ export default function BulkUpload({ upload, onUploaded, disabled = false, intro
       setBusy(false)
       if (files.current) files.current.value = ''
       if (folder.current) folder.current.value = ''
+      if (photo.current) photo.current.value = ''
     }
   }
 
@@ -74,7 +82,18 @@ export default function BulkUpload({ upload, onUploaded, disabled = false, intro
           <label className={`btn${busy || disabled ? ' disabled' : ''}`} htmlFor="bulk-files">
             {busy ? 'Checking files…' : 'Choose files or a zip'}
           </label>
-          <label className={`btn${busy || disabled ? ' disabled' : ''}`} htmlFor="bulk-folder">
+          {camera && (
+            <label
+              className={`btn bulk-camera${busy || disabled ? ' disabled' : ''}`}
+              htmlFor="bulk-photo"
+            >
+              Take a photo
+            </label>
+          )}
+          <label
+            className={`btn bulk-folder${busy || disabled ? ' disabled' : ''}`}
+            htmlFor="bulk-folder"
+          >
             Choose a folder
           </label>
         </div>
@@ -88,6 +107,18 @@ export default function BulkUpload({ upload, onUploaded, disabled = false, intro
           disabled={busy || disabled}
           onChange={(e) => send([...e.target.files])}
         />
+        {camera && (
+          <input
+            id="bulk-photo"
+            ref={photo}
+            type="file"
+            className="sr-only"
+            accept="image/*"
+            capture="environment"
+            disabled={busy || disabled}
+            onChange={(e) => send([...e.target.files])}
+          />
+        )}
         <input
           id="bulk-folder"
           ref={folder}

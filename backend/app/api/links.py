@@ -6,13 +6,16 @@ when the link is created and stored only as a SHA-256 hash; the id (never the to
 audit log and the listings carry. The public side of a link is in `public.py`.
 """
 
+import base64
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Connection, text
 
@@ -42,6 +45,26 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _fernet(settings: Settings) -> Fernet:
+    """The key is derived from the server secret, so no extra setting is needed. Changing
+    JWT_SECRET makes older copies unreadable; the officer then regenerates the link."""
+    raw = hashlib.sha256(b"upload-link-token:" + settings.jwt_secret.get_secret_value().encode())
+    return Fernet(base64.urlsafe_b64encode(raw.digest()))
+
+
+def seal_token(settings: Settings, token: str) -> str:
+    return _fernet(settings).encrypt(token.encode()).decode()
+
+
+def open_token(settings: Settings, sealed: str | None) -> str | None:
+    if not sealed:
+        return None
+    try:
+        return _fernet(settings).decrypt(sealed.encode()).decode()
+    except InvalidToken:
+        return None
+
+
 def link_path(token: str) -> str:
     """The token rides in the URL fragment: a fragment is never sent to a server, so it cannot
     land in an access log, a proxy log or a Referer header."""
@@ -61,6 +84,15 @@ class SecondClickIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     second_click: bool = False
+
+
+class ExpiryIn(BaseModel):
+    """Set how many days from now the link stays open (shorter or longer)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    days: int = Field(ge=1, le=MAX_DAYS)
+    second_click: bool = False  # needed when this shortens the link
 
 
 class ExtendIn(BaseModel):
@@ -101,10 +133,10 @@ def create_link(
     token = new_token()
     expires = datetime.now(UTC) + timedelta(days=days or settings.upload_link_days)
     link_id = conn.execute(
-        text("""INSERT INTO upload_links (token_hash, officer_id, created_by, loan_type, case_id,
-                    expires_at) VALUES (:h, :o, :b, :lt, :c, :e) RETURNING id"""),
-        {"h": hash_token(token), "o": officer_id, "b": created_by, "lt": loan_type,
-         "c": case_id, "e": expires},
+        text("""INSERT INTO upload_links (token_hash, token_enc, officer_id, created_by, loan_type,
+                    case_id, expires_at) VALUES (:h, :te, :o, :b, :lt, :c, :e) RETURNING id"""),
+        {"h": hash_token(token), "te": seal_token(settings, token), "o": officer_id,
+         "b": created_by, "lt": loan_type, "c": case_id, "e": expires},
     ).scalar_one()  # fmt: skip
     return link_id, token, expires
 
@@ -189,6 +221,63 @@ def extend(
     return _view(_load(conn, link_id, user))
 
 
+@router.post("/links/{link_id}/expiry")
+def set_expiry(
+    link_id: UUID, body: ExpiryIn, user: User = Depends(link_manager),
+    conn: Connection = Depends(get_conn),
+) -> dict[str, Any]:  # fmt: skip
+    """Open for this many more days, counted from now: longer or shorter. Shortening is the
+    second-click kind of change; a disabled link stays disabled."""
+    row = _load(conn, link_id, user)
+    if row.disabled_at is not None:
+        raise HTTPException(409, "This link was disabled. Create a new one.")
+    new_end = datetime.now(UTC) + timedelta(days=body.days)
+    if new_end < row.expires_at and not body.second_click:
+        raise HTTPException(422, "This needs a second confirmation click.")
+    conn.execute(text("UPDATE upload_links SET expires_at = :e WHERE id = :i"),
+                 {"e": new_end, "i": link_id})  # fmt: skip
+    write_audit(conn, user.id, "upload_link_expiry_set", "upload_link", link_id,
+                before={"expires_at": row.expires_at.isoformat()},
+                after={"expires_at": new_end.isoformat(), "days": body.days})  # fmt: skip
+    return _view(_load(conn, link_id, user))
+
+
+@router.get("/links/{link_id}/address")
+def link_address(
+    link_id: UUID, user: User = Depends(link_manager), conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
+) -> JSONResponse:  # fmt: skip
+    """The link's address again, for Copy. Only the officer it belongs to and the admin can ask
+    (`_load` makes anyone else's link look like it is not there); every look is audited."""
+    row = _load(conn, link_id, user)
+    token = open_token(settings, row.token_enc)
+    if row.disabled_at is not None or token is None:
+        raise HTTPException(
+            409, "This address cannot be shown. Regenerate the link to get a new one."
+        )
+    write_audit(conn, user.id, "upload_link_address_viewed", "upload_link", link_id)
+    return JSONResponse({"path": link_path(token)}, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/links/{link_id}/regenerate")
+def regenerate(
+    link_id: UUID, body: SecondClickIn, user: User = Depends(link_manager),
+    conn: Connection = Depends(get_conn), settings: Settings = Depends(get_settings_dep),
+) -> dict[str, Any]:  # fmt: skip
+    """A new address for the same link (same case, same expiry). The old address stops working
+    at once. Second click, because anyone holding the old address loses access."""
+    if not body.second_click:
+        raise HTTPException(422, "This needs a second confirmation click.")
+    row = _load(conn, link_id, user)
+    if row.disabled_at is not None:
+        raise HTTPException(409, "This link was disabled. Create a new one.")
+    token = new_token()
+    conn.execute(text("UPDATE upload_links SET token_hash = :h, token_enc = :te WHERE id = :i"),
+                 {"h": hash_token(token), "te": seal_token(settings, token), "i": link_id})  # fmt: skip
+    write_audit(conn, user.id, "upload_link_regenerated", "upload_link", link_id)
+    return {"id": link_id, "path": link_path(token), "expires_at": row.expires_at}
+
+
 @router.post("/cases/{case_id}/ask-applicant")
 def ask_applicant(
     case_id: UUID, body: SecondClickIn, request: Request, user: User = Depends(officer_only),
@@ -213,7 +302,15 @@ def ask_applicant(
                          {"e": new_end, "i": live.id})  # fmt: skip
         write_audit(conn, user.id, "applicant_asked", "case", case_id,
                     after={"link_id": str(live.id), "new_link": False})  # fmt: skip
-        return {"link_id": live.id, "token": None, "path": None, "new_link": False}
+        sealed = conn.execute(text("SELECT token_enc FROM upload_links WHERE id = :i"),
+                              {"i": live.id}).scalar()  # fmt: skip
+        again = open_token(settings, sealed)
+        return {
+            "link_id": live.id,
+            "token": again,
+            "path": link_path(again) if again else None,
+            "new_link": False,
+        }
     link_id, token, expires = create_link(conn, settings, officer_id=user.id, created_by=user.id,
                                           loan_type=case.loan_type, case_id=case_id)  # fmt: skip
     write_audit(conn, user.id, "upload_link_created", "upload_link", link_id,

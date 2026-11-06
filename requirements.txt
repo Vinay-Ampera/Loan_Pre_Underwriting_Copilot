@@ -43,6 +43,7 @@ uvicorn[standard]>=0.30
 python-multipart>=0.0.9
 pyjwt>=2.8
 argon2-cffi>=23.1
+cryptography>=43.0  # seals the upload-link token for the Copy button (Stage 10 review)
 httpx>=0.27  # FastAPI's test client
 
 # dev

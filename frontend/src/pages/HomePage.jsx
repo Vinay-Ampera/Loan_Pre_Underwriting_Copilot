@@ -34,6 +34,14 @@ export default function HomePage() {
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && (
         <>
+          {counts.applicant > 0 && (
+            <p className="corrected-note" role="status">
+              {counts.applicant === 1
+                ? 'An applicant has sent documents for you to review.'
+                : `${counts.applicant} applicants have sent documents for you to review.`}{' '}
+              <Link to="/cases?view=applicant">Review them</Link>
+            </p>
+          )}
           {counts.corrected > 0 && (
             <p className="corrected-note" role="status">
               An admin changed the decision on {counts.corrected} of your cases.{' '}

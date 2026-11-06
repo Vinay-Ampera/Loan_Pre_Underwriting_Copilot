@@ -10,6 +10,11 @@ export const VIEWS = {
     label: 'In progress',
     test: (c) => ['draft', 'uploaded', 'running'].includes(c.status),
   },
+  // not a tile: applicants who pressed Send to the bank and wait for the officer's review
+  applicant: {
+    label: 'From applicants, to review',
+    test: (c) => c.origin === 'applicant' && c.status === 'applicant_submitted',
+  },
   // not a tile: the notice on Home links here when an admin has changed one of the officer's cases
   corrected: { label: 'Changed by an admin', test: (c) => c.admin_corrected === true },
 }

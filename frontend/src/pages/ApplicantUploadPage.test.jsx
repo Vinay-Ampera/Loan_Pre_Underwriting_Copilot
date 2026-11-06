@@ -7,6 +7,9 @@ const pub = vi.hoisted(() => ({
   request: vi.fn(),
   files: vi.fn(),
   send: vi.fn(),
+  myFiles: vi.fn(),
+  fileBlob: vi.fn(),
+  removeFile: vi.fn(),
 }))
 vi.mock('../api/public', async (orig) => ({ ...(await orig()), publicApi: pub }))
 
@@ -38,6 +41,7 @@ const view = (over = {}) => ({
 
 beforeEach(() => {
   Object.values(pub).forEach((f) => f.mockReset())
+  pub.myFiles.mockResolvedValue({ files: [], can_remove: true })
   window.location.hash = '#a-long-enough-token-0123456789'
 })
 

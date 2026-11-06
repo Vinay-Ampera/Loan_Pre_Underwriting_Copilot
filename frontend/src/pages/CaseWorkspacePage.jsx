@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useSession } from '../App'
@@ -6,6 +6,7 @@ import { useAsync } from '../hooks/useAsync'
 import { usePolling } from '../hooks/usePolling'
 import ApplicationForm, { stateFromCase, stateFromDesk } from '../components/ApplicationForm'
 import ApplicantRequest from '../components/ApplicantRequest'
+import ApplicantReview from '../components/ApplicantReview'
 import IntakeDesk from '../components/IntakeDesk'
 import AdminChanges from '../components/AdminChanges'
 import AdminCorrection from '../components/AdminCorrection'
@@ -66,7 +67,8 @@ export default function CaseWorkspacePage() {
   const [editing, setEditing] = useState(false)
   const [docToRemove, setDocToRemove] = useState(null)
   const [removingDoc, setRemovingDoc] = useState(false)
-  const [step, setStep] = useState('desk') // desk | form: where a case opened at the desk is
+  const [step, setStep] = useState('desk') // review | desk | form: where a case opened at the desk is
+  const reviewed = useRef(false)
   const [inventory, setInventory] = useState(null)
   const [offer, setOffer] = useState(null)
   const audit = useAsync(
@@ -89,6 +91,21 @@ export default function CaseWorkspacePage() {
     1500,
   )
 
+  // an applicant's submission opens on its review screen, once, until the officer moves on
+  useEffect(() => {
+    if (
+      c &&
+      !reviewed.current &&
+      !isAdmin &&
+      c.origin === 'applicant' &&
+      c.applicant_sent &&
+      c.intake_stage &&
+      !c.request_locked
+    ) {
+      reviewed.current = true
+      setStep('review')
+    }
+  }, [c, isAdmin])
   useEffect(() => {
     if (c && tab === null) setTab(c.report ? 'report' : 'documents')
   }, [c, tab])
@@ -266,7 +283,27 @@ export default function CaseWorkspacePage() {
               {tab === 'documents' && (
                 <div className="tab-body">
                   {c.origin === 'applicant' && <ApplicantRequest c={c} />}
-                  {c.intake_stage && step === 'form' && !isAdmin ? (
+                  {step === 'review' && c.intake_stage && c.applicant_sent && !isAdmin ? (
+                    <ApplicantReview
+                      c={c}
+                      inventory={inventory}
+                      docTypes={c.doc_types}
+                      recipient={first?.email}
+                      onView={(docId) => {
+                        setSelected(docId)
+                        setTab('fields')
+                      }}
+                      onAccept={() => {
+                        const ready =
+                          inventory &&
+                          inventory.essential_missing === 0 &&
+                          (inventory.counts.missing === 0 || inventory.proceeded) &&
+                          inventory.depends_on_employment.length === 0
+                        setStep(ready ? 'form' : 'desk')
+                      }}
+                      onChanged={reload}
+                    />
+                  ) : c.intake_stage && step === 'form' && !isAdmin ? (
                     <div className="card edit-card">
                       <h2>Application form</h2>
                       {offer ? (

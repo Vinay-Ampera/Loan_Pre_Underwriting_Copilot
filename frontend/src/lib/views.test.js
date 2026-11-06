@@ -17,6 +17,7 @@ describe('home tiles', () => {
       referred: 1,
       stopped: 1,
       progress: 2,
+      applicant: 0,
       corrected: 1,
     })
   })
