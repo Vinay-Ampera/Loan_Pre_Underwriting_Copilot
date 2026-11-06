@@ -353,8 +353,12 @@ def test_ask_the_applicant_needs_the_second_click_and_keeps_the_same_link_open(
         first["new_link"]
         and first["token"]
         and second
-        == {"link_id": first["link_id"], "token": first["token"], "path": first["path"],
-            "new_link": False}  # the sealed copy lets the owner see the same address again
+        == {
+            "link_id": first["link_id"],
+            "token": first["token"],
+            "path": first["path"],
+            "new_link": False,
+        }  # the sealed copy lets the owner see the same address again
     )
     assert (
         client.post(

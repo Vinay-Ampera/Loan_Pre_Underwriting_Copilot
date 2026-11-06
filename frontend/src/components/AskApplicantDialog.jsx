@@ -74,9 +74,7 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
     <Dialog title="The applicant's link" onClose={onClose} labelledBy="ask-link-title">
       {made.token ? (
         <>
-          <p>
-            Copy this address. You can copy it again later from the Upload links page.
-          </p>
+          <p>Copy this address. You can copy it again later from the Upload links page.</p>
           <input
             className="input mono"
             readOnly
