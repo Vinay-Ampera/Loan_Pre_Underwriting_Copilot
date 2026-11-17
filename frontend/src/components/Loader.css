@@ -1,0 +1,92 @@
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  color: var(--primary);
+}
+.loader-mark path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.loader-track {
+  stroke: var(--line-strong);
+  stroke-width: 1.25;
+}
+/* resting state is the finished mark, so reduced motion (animation off) shows it complete */
+.loader-shield,
+.loader-tick {
+  stroke: currentColor;
+  stroke-dasharray: 100 101;
+  stroke-dashoffset: 0;
+}
+.loader-shield {
+  stroke-width: 1.75;
+  animation: loader-shield 2.2s var(--ease) infinite;
+}
+.loader-tick {
+  stroke-width: 2.4;
+  animation: loader-tick 2.2s var(--ease) infinite;
+}
+.loader-draw {
+  animation: loader-fade 2.2s var(--ease) infinite;
+}
+@keyframes loader-shield {
+  0% {
+    stroke-dashoffset: 101;
+  }
+  45%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes loader-tick {
+  0%,
+  42% {
+    stroke-dashoffset: 101;
+  }
+  66%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes loader-fade {
+  0%,
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.loader-label {
+  font-size: var(--fs-13);
+  color: var(--muted);
+}
+
+/* in the content area: waits a beat before showing, so a fast load never flashes it */
+.page-loader {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 55vh;
+  animation: loader-in var(--t-med) var(--ease) 180ms both;
+}
+.page-loader-full {
+  min-height: 100vh;
+}
+/* first load of the app: the whole screen is the loader until everything is ready */
+.boot-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+@keyframes loader-in {
+  from {
+    opacity: 0;
+  }
+}

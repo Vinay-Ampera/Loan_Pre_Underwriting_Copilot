@@ -4,6 +4,7 @@ import BrandMark from '../components/BrandMark'
 import BulkUpload from '../components/BulkUpload'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Icon from '../components/Icons'
+import { PageLoader } from '../components/Loading'
 import { LOAN_TYPES, loanLabel } from '../components/LoanTypePicker'
 import { docLabel } from '../lib/docLabels'
 import './ApplicantUploadPage.css'
@@ -361,12 +362,7 @@ export default function ApplicantUploadPage() {
         </p>
       </section>,
     )
-  if (!view)
-    return shell(
-      <p className="muted" aria-busy="true">
-        Opening…
-      </p>,
-    )
+  if (!view) return <PageLoader full label="Opening…" />
   if (done)
     return shell(
       <section className="card ap-card" aria-live="polite">

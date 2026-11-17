@@ -28,6 +28,9 @@ Next: the user's review of Stage 10 Parts A to C and the decision on Part D, the
 
 ## Decisions log
 
+### 2026-11-17 (later): one loader, screens appear all at once
+UI only (details in `DESIGN_SYSTEM.md` 8.13). New `Loader`, `Reveal`, `useBusy`; `useAsync` reports its first load, so every screen shows once, after all its data. First load after sign-in is full screen and waits for fonts. Also fixed a stale-inventory race on the documents desk. Unit tests 574 pass.
+
 ### 2026-11-17: Case page tidy, password toggle, two test fixes
 UI only, at the user's request after a review of the case page (details in `DESIGN_SYSTEM.md` 8.12): two-column case page, the score shown once, no stale "awaiting" text after a decision, readable finding sentences and dates, a slim stepper once done, a show/hide password button on sign-in, and a `TypedText` fix. `e2e/auditor.spec.js` now checks `/admin/users` and `/admin/recent-decisions` for 403 (the old `/admin/audit-log` no longer exists; the audit log moved to `/auditor/audit-log`). Unit tests 563 pass; all 29 browser tests pass.
 

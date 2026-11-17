@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { logout } from './api/client'
 import {
   clearSession,
@@ -16,6 +16,8 @@ import Sidebar from './components/Sidebar'
 import UserMenu from './components/UserMenu'
 import ThemeToggle from './components/ThemeToggle'
 import AppFooter from './components/AppFooter'
+import Loader from './components/Loader'
+import { LoadingProvider, Reveal, useBooted } from './components/Loading'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import CaseQueuePage from './pages/CaseQueuePage'
@@ -44,21 +46,30 @@ export const useSession = () => useContext(SessionContext)
 // role is one role, an array of roles, or 'any' (every role, e.g. Help)
 function Shell({ role, children }) {
   const { session, signOut } = useSession()
+  const booted = useBooted()
+  const { pathname } = useLocation()
   if (!session) return <Navigate to="/login" replace />
   if (role !== 'any' && ![role].flat().includes(session.user.role)) {
     return <Navigate to="/" replace />
   }
   return (
-    <div className="shell">
+    <div className={`shell${booted ? '' : ' shell-booting'}`}>
       <Sidebar user={session.user} />
       <div className="page-col">
         <header className="topbar">
           <ThemeToggle />
           <UserMenu user={session.user} onSignOut={signOut} />
         </header>
-        <main className="page">{children}</main>
+        <Reveal key={pathname}>
+          <main className="page">{children}</main>
+        </Reveal>
         <AppFooter />
       </div>
+      {!booted && (
+        <div className="boot-screen">
+          <Loader label="Getting your desk ready" />
+        </div>
+      )}
     </div>
   )
 }
@@ -288,9 +299,11 @@ function SessionProvider({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <SessionProvider>
-        <Routing />
-      </SessionProvider>
+      <LoadingProvider>
+        <SessionProvider>
+          <Routing />
+        </SessionProvider>
+      </LoadingProvider>
     </BrowserRouter>
   )
 }

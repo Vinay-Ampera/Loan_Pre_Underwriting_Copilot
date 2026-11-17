@@ -23,6 +23,7 @@ const LOOP_OK = [
   'components/StatusChip.css',
   'components/StageProgress.css',
   'components/States.css',
+  'components/Loader.css',
 ]
 
 describe('craft rules for every stylesheet', () => {

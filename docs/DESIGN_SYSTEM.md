@@ -200,6 +200,17 @@ Display only: no route, role, API, scoring or wording-rule change, and the keywo
 - **Header.** The status chip sits beside the case number.
 - **Fixes found on the way.** The summary's typing effect could stay blank when the page re-rendered while it was typing (`TypedText` now counts a text as seen only when it finishes). The Documents checklist uses the shared document names, so "Sale agreement" and "Title deed" are capitalised like the rest. The sign-in password has a show/hide button; the browser tests match the field with `exact: true` because the button's name also contains "password".
 
+### 8.13 One loader, everything at once (2026-11-17)
+
+A screen used to paint its heading first and fill in over the next second or two (the case page, then its customer messages, then the documents desk). Now each screen mounts hidden, runs all its requests, and is shown in one go.
+
+- **Loader** (`Loader.jsx`): the Pramaan shield draws itself, then the tick that proves it, then it starts over (2.2 s). One stroke weight, brand purple on a faint outline, no gradient or glow; reduced motion shows the finished mark. Its label is spoken to screen readers.
+- **First screen after sign-in:** the whole app (sidebar, top bar, page) stays hidden behind a full-screen loader ("Getting your desk ready") until the first screen is ready and the bundled fonts are loaded, so text never appears in one font and then jumps.
+- **Later screens:** the sidebar and top bar stay; the content area shows the loader. It appears after 180 ms, so a fast load never flashes it.
+- **How it works** (`Loading.jsx`): `Reveal` wraps the page, keyed by route. It mounts the page with `display: none` and counts what is loading. `useAsync` reports its first load automatically; a plain fetch uses `useBusy(flag)`. When nothing has been loading for 80 ms the page is shown, once. It never holds a screen longer than 10 s. Only the first load is held: refreshing a table, changing a filter or opening the Audit tab later does not hide the page again, and a screen without a `Reveal` (a page test) behaves as before.
+- **Applicant link page:** the same loader on its own, in place of the brand header followed by "Opening…".
+- **Fixed on the way:** the documents desk could show an older inventory after a newer save (a slow refetch answered after the employment change); a save now wins over any refetch in flight.
+
 ## 9. Stage 9 design: customer notifications (planned 2026-11-02, built 2026-11-02)
 
 - **Draft dialog** on the case workspace after confirm, override or a stopped run: a template picker (a few short templates plus **Blank**), the recipient (customer email, masked in lists), the subject (fixed), the body (editable), the fixed fraud footer (shown, locked), and the officer's contact lines. A **Send** button opens a second confirmation that shows the final text. A blocked send shows the exact reason (for example "Contains a number that looks like an account number").

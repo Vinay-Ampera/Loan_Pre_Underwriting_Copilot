@@ -23,6 +23,7 @@ import ScoreBadge from '../components/ScoreBadge'
 import StageProgress from '../components/StageProgress'
 import StatusChip, { CaseStatusChip } from '../components/StatusChip'
 import UploadZone from '../components/UploadZone'
+import { useBusy } from '../components/Loading'
 import { ErrorState, Skeleton } from '../components/States'
 import './CaseWorkspacePage.css'
 import { formatWhen } from '../lib/format'
@@ -71,6 +72,13 @@ export default function CaseWorkspacePage() {
   const [step, setStep] = useState('desk') // review | desk | form: where a case opened at the desk is
   const reviewed = useRef(false)
   const [inventory, setInventory] = useState(null)
+  const [inventoryLoading, setInventoryLoading] = useState(false)
+  const inventoryEdits = useRef(0) // counts answers from saves, which are newer than any refetch
+  const saveInventory = (next) => {
+    inventoryEdits.current += 1
+    setInventory(next)
+  }
+  useBusy(inventoryLoading) // the documents desk is part of the page's first load
   const [offer, setOffer] = useState(null)
   const audit = useAsync(
     () => (tab === 'audit' ? api.get(`/cases/${id}/audit`) : Promise.resolve(null)),
@@ -114,11 +122,24 @@ export default function CaseWorkspacePage() {
   // the admin; the identity values the cards offer are the officer's, for the form
   const deskCase = c && !c.report && !['running'].includes(c.status)
   useEffect(() => {
-    if (!c || !deskCase) return
+    if (!c || !deskCase) {
+      setInventoryLoading(false)
+      return undefined
+    }
+    let stale = false // a slower, older answer must not replace a newer one
+    const edits = inventoryEdits.current
+    setInventoryLoading(true)
     api
       .get(`/cases/${id}/inventory`)
-      .then((inv) => setInventory(inv?.counts ? inv : null))
-      .catch(() => setInventory(null))
+      .then(
+        (inv) =>
+          !stale && edits === inventoryEdits.current && setInventory(inv?.counts ? inv : null),
+      )
+      .catch(() => !stale && setInventory(null))
+      .finally(() => !stale && setInventoryLoading(false))
+    return () => {
+      stale = true
+    }
   }, [id, c?.documents?.length, c?.status, deskCase]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!c || isAdmin || !(step === 'form' || editing)) return
@@ -347,7 +368,7 @@ export default function CaseWorkspacePage() {
                       <IntakeDesk
                         caseId={id}
                         inventory={inventory}
-                        setInventory={setInventory}
+                        setInventory={saveInventory}
                         docTypes={c.doc_types}
                         editable={editable}
                         recipient={first?.email}

@@ -54,3 +54,15 @@
     padding: 0 var(--s-4);
   }
 }
+
+/* a screen's content mounts hidden and is shown once everything in it has loaded (Loading.jsx) */
+.reveal {
+  display: contents;
+}
+.reveal-wait {
+  display: none;
+}
+/* the first screen after sign-in: nothing of the app shows until all of it can */
+.shell-booting > :not(.boot-screen) {
+  visibility: hidden;
+}

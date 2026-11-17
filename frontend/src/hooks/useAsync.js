@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useBusy } from '../components/Loading'
 
 /** Load something on mount (and on `reload`). Returns { data, error, loading, reload, setData }. */
 export function useAsync(loader, deps = []) {
@@ -29,6 +30,8 @@ export function useAsync(loader, deps = []) {
       alive.current = false
     }
   }, [run])
+  // the first load of a screen is held behind one loader (components/Loading.jsx)
+  useBusy(state.loading && state.data === null && !state.error)
   const setData = useCallback((data) => setState((s) => ({ ...s, data })), [])
   return { ...state, reload: () => run(true), setData }
 }
