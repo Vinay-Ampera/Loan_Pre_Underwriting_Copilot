@@ -87,9 +87,12 @@ def build_router(
         cooldown_time=r["cooldown_time"],
     )
     # lets `complete` tell whether the primary or a fallback answered
-    router.primary_models = {  # type: ignore[attr-defined]
+    # (setattr, not a plain assignment: whether the Router class allows a new attribute depends on
+    # the litellm version, so a `type: ignore` here fails mypy on one version or the other)
+    primary_models = {
         role: providers[spec["primary"]]["model"] for role, spec in cfg["roles"].items()
     }
+    setattr(router, "primary_models", primary_models)  # noqa: B010
     return router
 
 
