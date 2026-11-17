@@ -71,7 +71,7 @@ export default function PrecedentReviewCard({ p, onApprove, onReject }) {
           <dt>Rules involved</dt>
           <dd>
             {p.rule_ids.map((r) => (
-              <code key={r} className="rule-pill">
+              <code key={r} className="ref-id rule-pill">
                 {r}
               </code>
             ))}

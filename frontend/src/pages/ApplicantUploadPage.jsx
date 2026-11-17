@@ -3,6 +3,7 @@ import { publicApi, tokenFromHash } from '../api/public'
 import BrandMark from '../components/BrandMark'
 import BulkUpload from '../components/BulkUpload'
 import ConfirmDialog from '../components/ConfirmDialog'
+import Icon from '../components/Icons'
 import { LOAN_TYPES, loanLabel } from '../components/LoanTypePicker'
 import { docLabel } from '../lib/docLabels'
 import './ApplicantUploadPage.css'
@@ -23,7 +24,11 @@ function Checklist({ checklist }) {
           <ul className="ap-list">
             {p.items.map((i) => (
               <li key={i.type} className={i.have >= i.needed ? 'met' : 'missing'}>
-                <span aria-hidden="true">{i.have >= i.needed ? '✓' : '!'}</span>
+                <Icon
+                  name={i.have >= i.needed ? 'check' : 'alert-circle'}
+                  size={16}
+                  className="ap-mark"
+                />
                 <span>
                   {docLabel(i.type)}
                   {i.needed > 1 && (

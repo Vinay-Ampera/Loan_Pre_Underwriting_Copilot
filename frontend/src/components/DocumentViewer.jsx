@@ -75,7 +75,7 @@ export default function DocumentViewer({ caseId, doc }) {
                   <dt>{label(f.name)}</dt>
                   <dd>
                     <span className="mono">{f.value}</span>
-                    {f.needs_review && <span className="low-tag"> ! Low confidence</span>}
+                    {f.needs_review && <span className="low-tag"> Low confidence</span>}
                   </dd>
                 </div>
               ))}

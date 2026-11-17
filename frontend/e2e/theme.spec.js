@@ -5,8 +5,8 @@ const rgb = (hex) => {
   const n = parseInt(hex.slice(1), 16)
   return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
 }
-const LIGHT_BG = rgb('#f7f6fa')
-const DARK_BG = rgb('#141220')
+const LIGHT_BG = rgb('#f7f7f8')
+const DARK_BG = rgb('#141415')
 
 const bodyBg = (page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
 const noSideScroll = (page) =>
@@ -98,10 +98,7 @@ test('reduced motion switches off animation and the typing effect', async ({ pag
     .locator('.login-card')
     .evaluate((el) => parseFloat(getComputedStyle(el).animationDuration))
   expect(seconds).toBeLessThan(0.01)
-  const glow = await page
-    .locator('.login-glow')
-    .evaluate((el) => parseFloat(getComputedStyle(el).animationDuration))
-  expect(glow).toBeLessThan(0.01)
+  await expect(page.locator('.login-glow')).toHaveCount(0) // no looping decoration at all
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   const normal = await page
     .locator('.login-card')

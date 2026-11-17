@@ -1,6 +1,6 @@
 # DESIGN_SYSTEM
 
-Calm, readable, trustworthy. Built for bank staff who review many cases a day. The UI shows what the backend decides; it never computes scores. Brand: **Pramaan** (bank and product). Stage 8 (built 2026-11-02) restyles everything below; section 8 holds the design as built and overrides sections 2 and 6b where they differ. The section 2 table is the Stage 6 palette and is kept for history; the live values are in `frontend/src/styles/tokens.css` and section 8.1.
+Calm, readable, trustworthy. Built for bank staff who review many cases a day. The UI shows what the backend decides; it never computes scores. Brand: **Pramaan** (bank and product). Stage 8 (built 2026-11-02) restyles everything below; section 8 holds the design as built and overrides sections 2 and 6b where they differ. The craft pass of 2026-11-17 (section 8.11) refines section 8 and overrides 8.1, 8.2, 8.3 and 8.7 where they differ. The section 2 table is the Stage 6 palette and is kept for history; the live values are in `frontend/src/styles/tokens.css` and section 8.1.
 
 ## 1. Principles
 
@@ -174,6 +174,18 @@ CSS only. Entrance fade and rise, score ring fill, stepper advance, skeleton shi
 ### 8.8 Accessibility
 
 WCAG AA contrast in both themes; visible focus; dialogs trap focus; icons come with text; the theme toggle has labels for screen readers; keyboard operable throughout.
+
+### 8.11 Craft pass (2026-11-17)
+
+A redline pass over every screen, following the **unslop** checklist by Damir Sokolovsky (github.com/heydamir/unslop, CC BY 4.0). It keeps locked decision 16 as it is (user, 2026-11-17): Pramaan purple, Outfit and Inter, light, dark and system, and login as the landing page. No feature, route, role, wording rule or score changes.
+
+- **Direction.** Product: a pre-underwriting desk where bank loan officers check documents stage by stage, see a score computed in code with policy citations, and confirm every case. Character: exact, unhurried, accountable. World: a bank's credit desk (case files, ledgers, stamped papers). Moments: the case verdict (score ring, stepper, 3C strip) and the case file on login. Signature: rule and clause IDs as small mono tags.
+- **Colour.** Surfaces, borders and text come from one neutral graphite ramp; purple leaves the surfaces and is the one accent (primary button, selection, the active nav icon, the current stage, the sign-off stage on login). Light: `--bg #F7F7F8`, `--surface #FFFFFF`, `--raised #F2F2F4`, `--chrome #FFFFFF` (sidebar, login panel), `--ink #18181B`, `--muted #52525B`, `--faint #6A6A73` (meta only), `--line` ink at 9%, `--line-strong #D4D4D8` (inputs, secondary buttons). Dark: `--bg #141415`, `--surface #1A1A1C`, `--raised #232326`, `--chrome #0F0F10`, `--ink #EDEDEF`, `--muted #A1A1A8`, `--faint #8A8A92`, `--line-strong #3A3A3F`, no shadows (depth from surface steps). `--brand-soft` is `#EFEDF6` / `#26232F`. Status colours, button purple and danger tokens are unchanged. Removed: `--shimmer`, `--glow-a/b`, `--panel-bg` (the login gradient). New: `--shadow-float` (menus, dialogs), `--focus-ring`, `--radius-sm/panel`, `--fs-13/28`, `--topbar-h`. `tokens.test.js` checks AA for the new pairs and that surfaces carry no visible hue.
+- **Type.** Weights 400 and 500 (Inter 500 added); 600 only for the wordmark. Page titles 28 px, Outfit 500. No upper-case tracked labels anywhere (12 places became sentence case). Figures use tabular numbers; the score band reads "Recommend approve / Refer / Recommend reject / Not computed" instead of capitals.
+- **Icons.** One line set (`Icons.jsx`, stroke 1.5). The text glyphs used as status marks (✓ ✕ ! ● ■ ⟳ ○ =) became icons in status chips, the stepper, stage progress, checklists, findings, upload results and the applicant page.
+- **Shape and spacing.** 4 px grid. Radii: 6 tags and chips, 8 controls, 12 cards, 16 dialogs and the login panels. Chips and tags are no longer pills. Page padding 32 / 24 / 16; content max 1440 px. Sidebar 248 px with 36 px rows and a sticky 56 px top bar; sticky case panels and the Help contents clear it.
+- **Screens.** Login: the gradient panel and drifting glow are gone; the five stages are drawn as a case file with the officer sign-off as the one accented step, still without weights or bands; on phones the form comes first. Home: no greeting; stat tiles are label, figure and hint with no coloured top bar. Help header: plain card. Charts: neutral track, 8 px bars, mono values. Tables: quiet header row. The audit timeline marks only the latest entry in purple.
+- **Motion.** One curve `cubic-bezier(0.22, 1, 0.36, 1)`, 150 / 200 / 360 ms. Removed: the looping stepper pulse, the login glow drift, the skeleton sheen (now a slow fade), hover lifts on cards and tiles. Only live states loop: a case being assessed, the stage in progress, a loading placeholder. `styles/craft.test.js` guards all of this (no gradients, glows, upper-case labels, weights above 600, catch-all transitions, hover transforms, glyph icons, or loops outside live states).
 
 ## 9. Stage 9 design: customer notifications (planned 2026-11-02, built 2026-11-02)
 

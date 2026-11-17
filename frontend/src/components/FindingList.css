@@ -9,13 +9,13 @@
 }
 .finding-icon {
   flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
 }
 .sev-hard .finding-icon {
   background: var(--reject-bg);
@@ -34,12 +34,12 @@
   color: var(--stopped);
 }
 .finding-sev {
-  font-weight: 600;
+  font-weight: 500;
 }
 .finding-role {
   margin-left: var(--s-2);
-  padding: 0 8px;
-  border-radius: 999px;
+  padding: 0 var(--s-2);
+  border-radius: var(--radius-sm);
   background: var(--stopped-bg);
   color: var(--muted);
   font-size: var(--fs-12);
@@ -54,14 +54,21 @@
   border: 0;
   background: none;
   padding: 0;
+  border-radius: var(--radius-sm);
+}
+.clause-link .ref-id {
   color: var(--primary);
-  text-decoration: underline;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.clause-link:hover .ref-id,
+.clause-link[aria-expanded='true'] .ref-id {
+  border-color: var(--primary);
 }
 .clause-text {
   margin: var(--s-2) 0 0;
   padding: var(--s-2) var(--s-3);
-  border-left: 3px solid var(--primary);
-  background: var(--primary-soft);
+  border-left: 2px solid var(--primary);
+  background: var(--raised);
   border-radius: 0 var(--radius-input) var(--radius-input) 0;
   animation: rise var(--t-med) var(--ease) both;
 }

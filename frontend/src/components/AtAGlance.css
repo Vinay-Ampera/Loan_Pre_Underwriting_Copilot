@@ -1,9 +1,8 @@
 .glance {
   display: flex;
-  gap: var(--s-5);
+  gap: var(--s-6);
   align-items: center;
-  padding: var(--s-4);
-  border-left: 4px solid var(--brand);
+  padding: var(--s-5);
 }
 .glance-body {
   display: flex;
@@ -13,9 +12,9 @@
 }
 .glance-body h3 {
   color: var(--muted);
-  font-size: var(--fs-12);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--font);
+  font-size: var(--fs-13);
+  font-weight: 500;
 }
 .glance-reasons {
   padding-left: var(--s-4);
@@ -24,8 +23,9 @@
   gap: var(--s-1);
 }
 .glance-sev {
+  margin-right: var(--s-1);
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 500;
 }
 .glance-next {
   padding-top: var(--s-2);

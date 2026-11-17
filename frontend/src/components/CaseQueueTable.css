@@ -5,10 +5,17 @@
   text-align: left;
   font-size: var(--fs-12);
   color: var(--muted);
-  font-weight: 600;
-  padding: var(--s-3) var(--s-4);
+  font-weight: 500;
+  padding: var(--s-2) var(--s-4);
   border-bottom: 1px solid var(--line);
+  background: var(--raised);
   white-space: nowrap;
+}
+.queue thead th:first-child {
+  border-top-left-radius: var(--radius-card);
+}
+.queue thead th:last-child {
+  border-top-right-radius: var(--radius-card);
 }
 .queue td {
   padding: var(--s-3) var(--s-4);
@@ -19,7 +26,7 @@
   transition: background var(--t-fast) var(--ease);
 }
 .queue tbody tr:hover {
-  background: var(--bg);
+  background: var(--raised);
 }
 .queue tbody tr:last-child td {
   border-bottom: 0;
@@ -60,10 +67,10 @@
   display: inline-block;
   margin-left: var(--s-2);
   padding: 0 var(--s-2);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--primary-soft);
   color: var(--primary);
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }

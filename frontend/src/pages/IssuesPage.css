@@ -11,7 +11,7 @@
 }
 .ok-note {
   color: var(--approve);
-  font-weight: 600;
+  font-weight: 500;
 }
 .issue-list {
   list-style: none;

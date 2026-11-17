@@ -20,8 +20,6 @@
 .aud-table th {
   color: var(--muted);
   font-size: var(--fs-12);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 .aud-table tbody tr:last-child td {
   border-bottom: 0;

@@ -28,8 +28,6 @@
   margin: 0;
   font-size: var(--fs-12);
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 .contact-list {
   list-style: none;

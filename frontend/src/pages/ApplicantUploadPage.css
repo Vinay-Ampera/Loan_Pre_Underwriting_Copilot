@@ -51,8 +51,6 @@
 }
 .ap-who {
   font-size: var(--fs-12);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
 }
 .ap-warn {
@@ -153,4 +151,8 @@
   .bulk-buttons .btn {
     flex: 1 1 100%;
   }
+}
+.ap-mark {
+  flex: none;
+  align-self: center;
 }

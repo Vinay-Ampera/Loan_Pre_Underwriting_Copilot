@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  border-left: 2px solid var(--line);
+  border-left: 2px solid var(--line-strong);
   margin-left: 6px;
   padding-left: var(--s-4);
 }
@@ -16,6 +16,9 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  background: var(--faint);
+  box-shadow: 0 0 0 3px var(--surface);
+}
+.timeline li:first-child .tl-dot {
   background: var(--primary);
-  box-shadow: 0 0 0 3px var(--bg);
 }

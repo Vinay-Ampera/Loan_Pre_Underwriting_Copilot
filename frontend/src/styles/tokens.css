@@ -1,17 +1,24 @@
 /* Design tokens from docs/DESIGN_SYSTEM.md section 8. Components use these variables only.
    Light is the default. Dark applies when <html data-theme="dark"> or, with no choice stored,
-   when the system prefers dark. The two dark blocks must stay identical (a test checks it). */
+   when the system prefers dark. The two dark blocks must stay identical (a test checks it).
+   Surfaces, borders and text come from one neutral (graphite) ramp; Pramaan purple is the one
+   accent, kept for the primary action, the selection and the key figure. */
 :root {
   color-scheme: light;
 
   --brand: #7c70af;
   --brand-strong: #5e4fa0;
-  --brand-soft: #e4e1ee;
-  --bg: #f7f6fa;
+  --brand-soft: #efedf6;
+
+  --bg: #f7f7f8;
   --surface: #ffffff;
-  --ink: #1f2933;
-  --muted: #5a6472;
-  --line: #ddd9e8;
+  --raised: #f2f2f4;
+  --chrome: #ffffff;
+  --ink: #18181b;
+  --muted: #52525b;
+  --faint: #6a6a73;
+  --line: rgba(24, 24, 27, 0.09);
+  --line-strong: #d4d4d8;
 
   --primary: var(--brand-strong);
   --primary-hover: #4d3f8a;
@@ -24,8 +31,8 @@
   --refer-bg: #fff1d6;
   --reject: #b03a36;
   --reject-bg: #fde3e1;
-  --stopped: #52606d;
-  --stopped-bg: #eeeff3;
+  --stopped: #4a4a52;
+  --stopped-bg: #f1f1f3;
   --unverified: #0b6a72;
   --unverified-bg: #ddf3f4;
 
@@ -33,22 +40,22 @@
   --danger-hover: #962f2c;
   --danger-ink: #ffffff;
 
-  --shimmer: #f6f5fa;
-  --overlay: rgba(31, 25, 51, 0.5);
-  --shadow: 0 1px 2px rgba(48, 36, 92, 0.07), 0 1px 3px rgba(48, 36, 92, 0.05);
-  --focus: 0 0 0 3px rgba(94, 79, 160, 0.5);
-  --glow-a: rgba(124, 112, 175, 0.22);
-  --glow-b: rgba(11, 106, 114, 0.1);
-  --panel-bg: linear-gradient(160deg, #3b3070 0%, #4a3d8a 55%, #5e4fa0 100%);
+  --overlay: rgba(9, 9, 11, 0.45);
+  --shadow: 0 1px 2px rgba(16, 16, 20, 0.05);
+  --shadow-float: 0 12px 32px rgba(16, 16, 20, 0.12), 0 2px 6px rgba(16, 16, 20, 0.06);
+  --focus: 0 0 0 3px rgba(94, 79, 160, 0.35);
+  --focus-ring: #5e4fa0;
 
   --font: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-head: Outfit, Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
   --fs-14: 0.875rem;
   --fs-16: 1rem;
   --fs-20: 1.25rem;
   --fs-24: 1.5rem;
+  --fs-28: 1.75rem;
   --fs-32: 2rem;
 
   --s-1: 4px;
@@ -58,14 +65,20 @@
   --s-5: 20px;
   --s-6: 24px;
   --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
 
-  --radius-card: 8px;
-  --radius-input: 6px;
-  --sidebar-w: 232px;
+  --radius-sm: 6px;
+  --radius-input: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --sidebar-w: 248px;
+  --topbar-h: 56px;
 
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --t-fast: 120ms;
-  --t-med: 220ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 150ms;
+  --t-med: 200ms;
+  --t-slow: 360ms;
 }
 
 :root[data-theme='dark'] {
@@ -73,15 +86,20 @@
 
   --brand: #9a8fcb;
   --brand-strong: #b3a9dd;
-  --brand-soft: #2a2540;
-  --bg: #141220;
-  --surface: #1e1b2e;
-  --ink: #eceaf4;
-  --muted: #a9a6bd;
-  --line: #35314a;
+  --brand-soft: #26232f;
+
+  --bg: #141415;
+  --surface: #1a1a1c;
+  --raised: #232326;
+  --chrome: #0f0f10;
+  --ink: #ededef;
+  --muted: #a1a1a8;
+  --faint: #8a8a92;
+  --line: rgba(237, 237, 239, 0.09);
+  --line-strong: #3a3a3f;
 
   --primary-hover: #c6bde8;
-  --primary-ink: #141220;
+  --primary-ink: #141415;
 
   --approve: #7bdca8;
   --approve-bg: #123524;
@@ -89,8 +107,8 @@
   --refer-bg: #3a2c10;
   --reject: #ff9c97;
   --reject-bg: #3f1b1e;
-  --stopped: #b5b2c8;
-  --stopped-bg: #2a273b;
+  --stopped: #b4b4bc;
+  --stopped-bg: #232326;
   --unverified: #6fd6db;
   --unverified-bg: #0f3336;
 
@@ -98,13 +116,11 @@
   --danger-hover: #ffb3af;
   --danger-ink: #2b0b0d;
 
-  --shimmer: #2f2b44;
-  --overlay: rgba(6, 4, 14, 0.65);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --focus: 0 0 0 3px rgba(179, 169, 221, 0.6);
-  --glow-a: rgba(154, 143, 203, 0.18);
-  --glow-b: rgba(111, 214, 219, 0.08);
-  --panel-bg: linear-gradient(160deg, #1e1a38 0%, #2c2552 55%, #3b3169 100%);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow: none;
+  --shadow-float: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --focus: 0 0 0 3px rgba(179, 169, 221, 0.45);
+  --focus-ring: #b3a9dd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -113,15 +129,20 @@
 
     --brand: #9a8fcb;
     --brand-strong: #b3a9dd;
-    --brand-soft: #2a2540;
-    --bg: #141220;
-    --surface: #1e1b2e;
-    --ink: #eceaf4;
-    --muted: #a9a6bd;
-    --line: #35314a;
+    --brand-soft: #26232f;
+
+    --bg: #141415;
+    --surface: #1a1a1c;
+    --raised: #232326;
+    --chrome: #0f0f10;
+    --ink: #ededef;
+    --muted: #a1a1a8;
+    --faint: #8a8a92;
+    --line: rgba(237, 237, 239, 0.09);
+    --line-strong: #3a3a3f;
 
     --primary-hover: #c6bde8;
-    --primary-ink: #141220;
+    --primary-ink: #141415;
 
     --approve: #7bdca8;
     --approve-bg: #123524;
@@ -129,8 +150,8 @@
     --refer-bg: #3a2c10;
     --reject: #ff9c97;
     --reject-bg: #3f1b1e;
-    --stopped: #b5b2c8;
-    --stopped-bg: #2a273b;
+    --stopped: #b4b4bc;
+    --stopped-bg: #232326;
     --unverified: #6fd6db;
     --unverified-bg: #0f3336;
 
@@ -138,12 +159,10 @@
     --danger-hover: #ffb3af;
     --danger-ink: #2b0b0d;
 
-    --shimmer: #2f2b44;
-    --overlay: rgba(6, 4, 14, 0.65);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --focus: 0 0 0 3px rgba(179, 169, 221, 0.6);
-    --glow-a: rgba(154, 143, 203, 0.18);
-    --glow-b: rgba(111, 214, 219, 0.08);
-    --panel-bg: linear-gradient(160deg, #1e1a38 0%, #2c2552 55%, #3b3169 100%);
+    --overlay: rgba(0, 0, 0, 0.6);
+    --shadow: none;
+    --shadow-float: 0 16px 40px rgba(0, 0, 0, 0.5);
+    --focus: 0 0 0 3px rgba(179, 169, 221, 0.45);
+    --focus-ring: #b3a9dd;
   }
 }

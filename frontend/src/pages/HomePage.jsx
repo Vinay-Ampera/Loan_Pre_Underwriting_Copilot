@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import { useSession } from '../App'
 import { useAsync } from '../hooks/useAsync'
 import CaseQueueTable from '../components/CaseQueueTable'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
@@ -16,7 +15,6 @@ const HINT = {
 }
 
 export default function HomePage() {
-  const { session } = useSession()
   const { data, error, loading, reload } = useAsync(() => api.get('/cases'), [])
   const counts = data ? tileCounts(data) : null
   return (
@@ -24,7 +22,9 @@ export default function HomePage() {
       <header className="home-head">
         <div>
           <h1>Home</h1>
-          <p className="muted">Welcome, {session.user.name}. A human confirms every case.</p>
+          <p className="muted">
+            Your cases and what is waiting on you. A human confirms every case.
+          </p>
         </div>
         <Link to="/cases/new" className="btn btn-primary">
           New case

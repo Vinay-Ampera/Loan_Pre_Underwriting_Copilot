@@ -23,7 +23,6 @@
 .users th {
   color: var(--muted);
   font-size: var(--fs-12);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .users tbody tr:last-child td {

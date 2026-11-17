@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { api } from '../api/client'
+import Icon from './Icons'
 import './UploadZone.css'
 
-const ICON = { accepted: '✓', warning: '!', rejected: '✕' }
+const ICON = { accepted: 'check', warning: 'alert-circle', rejected: 'x' }
 const LABEL = { accepted: 'Accepted', warning: 'Accepted with a warning', rejected: 'Rejected' }
 const TYPE_NAME = { pan_card: 'PAN card', aadhaar: 'Aadhaar', photo: 'Photograph', other: 'Other' }
 
@@ -85,6 +86,9 @@ export default function UploadZone({ caseId, roles, docTypes, onUploaded, disabl
           send([...e.dataTransfer.files])
         }}
       >
+        <span className="dropzone-icon" aria-hidden="true">
+          <Icon name="upload" size={20} />
+        </span>
         <p>Drop PDF, JPG or PNG files here, or</p>
         <label className={`btn${busy || disabled ? ' disabled' : ''}`} htmlFor="up-files">
           {busy ? 'Checking files…' : 'Choose files'}
@@ -113,7 +117,7 @@ export default function UploadZone({ caseId, roles, docTypes, onUploaded, disabl
           {results.map((r) => (
             <li key={r.id} className={`ur ur-${r.status}`}>
               <span className="ur-icon" aria-hidden="true">
-                {ICON[r.status]}
+                <Icon name={ICON[r.status]} size={16} />
               </span>
               <div>
                 <p>

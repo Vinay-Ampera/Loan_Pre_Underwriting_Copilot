@@ -3,6 +3,7 @@ import { login } from '../api/client'
 import { takeNotice } from '../api/session'
 import { useSession } from '../App'
 import BrandMark from '../components/BrandMark'
+import Icon from '../components/Icons'
 import ThemeToggle from '../components/ThemeToggle'
 import { JOURNEY } from '../lib/journey'
 import './LoginPage.css'
@@ -10,30 +11,38 @@ import './LoginPage.css'
 function BrandPanel() {
   return (
     <section className="login-panel" aria-label="About Pramaan">
-      <BrandMark inverse />
-      <h1 className="login-headline">Proof before every decision.</h1>
-      <p className="login-lead">
-        Pramaan checks a loan file stage by stage, scores it in code and cites the policy. The loan
-        officer decides.
-      </p>
+      <BrandMark />
+      <div className="login-intro">
+        <h1 className="login-headline">Proof before every decision</h1>
+        <p className="login-lead">
+          Pramaan checks a loan file stage by stage, scores it in code and cites the policy. The
+          loan officer decides.
+        </p>
+      </div>
+      <figure className="case-file">
+        <figcaption className="case-file-head">
+          <span>How every case moves</span>
+          <span className="case-file-count">5 stages</span>
+        </figcaption>
+        <ol className="journey" aria-label="The five underwriting stages">
+          {JOURNEY.map((s, i) => (
+            <li key={s.id} className={s.id === 'signoff' ? 'journey-human' : undefined}>
+              <span className="journey-n" aria-hidden="true">
+                {s.id === 'signoff' ? <Icon name="shield-check" size={16} /> : `0${i + 1}`}
+              </span>
+              <span className="journey-text">
+                <strong>{s.label}</strong>
+                <span className="journey-detail">{s.detail}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p className="login-human">A human confirms every case.</p>
+      </figure>
       <p className="login-about">
         Documents are read on this machine first, personal details are masked before any model sees
         the text, and every finding points to a rule.
       </p>
-      <ol className="journey" aria-label="The five underwriting stages">
-        {JOURNEY.map((s, i) => (
-          <li key={s.id} style={{ '--i': i }}>
-            <span className="journey-n" aria-hidden="true">
-              {i + 1}
-            </span>
-            <span>
-              <strong>{s.label}</strong>
-              <span className="journey-detail">{s.detail}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="login-human">A human confirms every case.</p>
       <p className="login-note">Pramaan is a sample bank. Synthetic data only.</p>
     </section>
   )
@@ -66,10 +75,11 @@ export default function LoginPage() {
         <div className="login-theme">
           <ThemeToggle />
         </div>
-        <div className="login-glow" aria-hidden="true" />
         <form className="login-card card" onSubmit={submit}>
-          <h2>Sign in</h2>
-          <p className="muted">Staff accounts only. Your admin creates your account.</p>
+          <div className="login-card-head">
+            <h2>Sign in</h2>
+            <p className="muted">Staff accounts only. Your admin creates your account.</p>
+          </div>
           {notice && (
             <p className="login-notice" role="status">
               {notice}
@@ -104,13 +114,15 @@ export default function LoginPage() {
               {error}
             </p>
           )}
-          <button type="submit" className="btn btn-primary" disabled={busy}>
+          <button type="submit" className="btn btn-primary login-submit" disabled={busy}>
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
-          <p className="small muted">
-            Synthetic data only. Do not enter real customer information.
-          </p>
-          <p className="small muted login-help">Can&apos;t sign in? Contact your admin.</p>
+          <div className="login-fine">
+            <p className="small muted">
+              Synthetic data only. Do not enter real customer information.
+            </p>
+            <p className="small muted login-help">Can&apos;t sign in? Contact your admin.</p>
+          </div>
         </form>
       </main>
     </div>

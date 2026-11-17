@@ -33,7 +33,9 @@ test('an admin can read cases but not create or upload, and an officer has no pr
 test('an officer cannot open or call the precedent queue', async ({ page }) => {
   await signIn(page, 'officer')
   await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Precedents' })).toHaveCount(0)
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Precedents' }),
+  ).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Users' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Audit log' })).toHaveCount(0)
   await page.goto('/admin/precedents')
@@ -60,7 +62,10 @@ test('the admin reviews a precedent: approve needs a dialog and an expiry date',
   page,
 }) => {
   await signIn(page, 'admin')
-  await page.getByRole('link', { name: 'Precedents' }).click()
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: 'Precedents' })
+    .click()
   const card = page.locator('article', { hasText: 'CASE-2026-9001' })
   await expect(card).toContainText('Stable employer for ten years')
   await card.getByRole('button', { name: 'Approve…' }).click()

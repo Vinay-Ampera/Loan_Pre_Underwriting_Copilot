@@ -31,7 +31,7 @@
 }
 .msg-blocked {
   border: 1px solid var(--line);
-  border-left: 4px solid var(--refer);
+  border-left: 3px solid var(--refer);
   border-radius: var(--radius-card);
   padding: var(--s-3);
 }

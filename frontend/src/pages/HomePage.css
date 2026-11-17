@@ -1,7 +1,7 @@
 .home {
   display: flex;
   flex-direction: column;
-  gap: var(--s-6);
+  gap: var(--s-8);
 }
 .home-head,
 .recent-head {
@@ -14,32 +14,41 @@
 .tiles {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-4);
+  gap: var(--s-3);
+}
+.tiles > li {
+  display: flex;
 }
 .tile {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--s-4);
+  gap: var(--s-1);
+  padding: var(--s-5);
   color: var(--ink);
   text-decoration: none;
-  border-top: 3px solid var(--brand);
   transition:
-    transform var(--t-fast) var(--ease),
-    border-color var(--t-fast) var(--ease);
+    border-color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease);
 }
 .tile:hover {
-  transform: translateY(-2px);
-  border-color: var(--primary);
-}
-.tile-count {
-  font-family: var(--font-head);
-  font-size: var(--fs-32);
-  font-weight: 600;
-  line-height: 1.1;
+  border-color: var(--line-strong);
+  background: var(--raised);
 }
 .tile-label {
-  font-weight: 600;
+  order: -1;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--muted);
+}
+.tile-count {
+  margin: var(--s-1) 0;
+  font-family: var(--font-head);
+  font-size: var(--fs-32);
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 .recent {
   display: flex;
@@ -75,6 +84,11 @@
 
 .corrected-note {
   padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--refer);
   border-radius: var(--radius-input);
-  background: var(--refer-bg);
+  background: var(--surface);
+}
+.home > .corrected-note + .corrected-note {
+  margin-top: calc(var(--s-6) * -1);
 }

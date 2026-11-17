@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: var(--s-3);
   position: sticky;
-  top: var(--s-6);
+  top: calc(var(--topbar-h) + var(--s-4));
 }
 .ws-main {
   display: flex;
@@ -35,10 +35,10 @@
   flex-direction: column;
   gap: var(--s-3);
   position: sticky;
-  top: var(--s-6);
+  top: calc(var(--topbar-h) + var(--s-4));
 }
 .recommended {
-  font-weight: 600;
+  font-weight: 500;
 }
 .running-card,
 .edit-card {
@@ -57,8 +57,10 @@
 .tab {
   border: 0;
   background: none;
-  padding: var(--s-2) var(--s-4);
+  padding: var(--s-3) var(--s-4);
   color: var(--muted);
+  font-weight: 500;
+  transition: color var(--t-fast) var(--ease);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   white-space: nowrap;
@@ -69,7 +71,6 @@
 .tab.on {
   color: var(--ink);
   border-bottom-color: var(--primary);
-  font-weight: 600;
 }
 .tab-body {
   display: flex;
@@ -109,7 +110,7 @@
   border-radius: var(--radius-input);
   background: var(--stopped-bg);
   color: var(--stopped);
-  font-weight: 600;
+  font-weight: 500;
 }
 .failed-note {
   display: flex;
@@ -156,6 +157,6 @@
 .label-yourself summary {
   cursor: pointer;
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: var(--s-3);
 }

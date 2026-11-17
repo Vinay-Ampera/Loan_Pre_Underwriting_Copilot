@@ -16,8 +16,6 @@
 .sent th {
   color: var(--muted);
   font-size: var(--fs-12);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 .sent tbody tr:last-child td {
   border-bottom: 0;
@@ -42,7 +40,7 @@
 .sent-pill.is-on {
   background: var(--primary-soft);
   border-color: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 .sent-fields {
   display: flex;

@@ -25,7 +25,7 @@
 }
 .officer-n {
   font-family: var(--font-head);
-  font-weight: 600;
+  font-weight: 500;
   display: inline-block;
   min-width: 2ch;
 }
@@ -38,8 +38,6 @@
 .officer-cases th {
   color: var(--muted);
   font-size: var(--fs-12);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 .officer-cases-head {
   display: flex;

@@ -1,99 +1,152 @@
 .login {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
 }
+
+/* left: the brand and the five stages, drawn as a case file */
 .login-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--s-6);
-  padding: var(--s-8) clamp(var(--s-6), 5vw, 72px);
-  background: var(--panel-bg);
-  color: #ffffff;
   justify-content: center;
+  gap: var(--s-8);
+  padding: var(--s-12) clamp(var(--s-6), 6vw, 96px);
+  background: var(--chrome);
+  border-right: 1px solid var(--line);
 }
-.login-headline {
-  font-size: clamp(1.75rem, 3.2vw, var(--fs-32));
-  font-weight: 600;
-  line-height: 1.15;
-  color: #ffffff;
-  animation: rise var(--t-med) var(--ease) both;
-}
-.login-lead {
-  max-width: 46ch;
-  color: #ece9f8;
-}
-.journey {
+.login-intro {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
 }
-.journey li {
+.login-headline {
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  max-width: 16ch;
+}
+.login-lead {
+  max-width: 44ch;
+  font-size: var(--fs-16);
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.case-file {
+  margin: 0;
+  max-width: 520px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+  animation: rise var(--t-slow) var(--ease) both;
+}
+.case-file-head {
   display: flex;
-  gap: var(--s-3);
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--line);
+  background: var(--raised);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--muted);
+}
+.case-file-count {
+  font-family: var(--mono);
+  font-size: var(--fs-12);
+  color: var(--faint);
+}
+.journey {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-2) 0;
+}
+.journey li {
+  position: relative;
+  display: flex;
+  gap: var(--s-4);
   align-items: flex-start;
-  animation: rise var(--t-med) var(--ease) both;
-  animation-delay: calc(var(--i) * 70ms);
+  padding: var(--s-3) var(--s-5);
+}
+/* the thread that joins the stages */
+.journey li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--s-5) + 15px);
+  top: 44px;
+  bottom: -12px;
+  width: 1px;
+  background: var(--line-strong);
 }
 .journey-n {
   flex: none;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid #ffffff;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--mono);
   font-size: var(--fs-12);
-  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+.journey-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+  min-width: 0;
 }
 .journey strong {
-  display: block;
-  font-weight: 600;
+  font-weight: 500;
 }
 .journey-detail {
-  display: block;
-  font-size: var(--fs-12);
-  color: #ddd8f2;
+  font-size: var(--fs-13);
+  color: var(--muted);
 }
-.login-about {
-  max-width: 46ch;
-  font-size: var(--fs-12);
-  color: #ddd8f2;
+.journey-human .journey-n {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-ink);
 }
 .login-human {
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--line);
   font-family: var(--font-head);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--fs-16);
+  color: var(--primary);
+}
+.login-about {
+  max-width: 52ch;
+  font-size: var(--fs-13);
+  color: var(--muted);
 }
 .login-note {
   font-size: var(--fs-12);
-  color: #ddd8f2;
+  font-family: var(--mono);
+  color: var(--faint);
 }
+
+/* right: the sign-in form */
 .login-side {
   position: relative;
   display: grid;
   place-items: center;
-  padding: var(--s-6);
-  overflow: hidden;
+  padding: var(--s-12) var(--s-6);
 }
 .login-theme {
   position: absolute;
   top: var(--s-4);
   right: var(--s-4);
   z-index: 1;
-}
-/* a slow drifting glow: CSS only, off for reduced motion */
-.login-glow {
-  position: absolute;
-  inset: -20%;
-  background: radial-gradient(40% 40% at 25% 30%, var(--glow-a), transparent 70%),
-    radial-gradient(35% 35% at 75% 65%, var(--glow-b), transparent 70%);
-  animation: drift 18s ease-in-out infinite alternate;
-}
-@keyframes drift {
-  to {
-    transform: translate(4%, -3%) scale(1.06);
-  }
 }
 .login-card {
   position: relative;
@@ -102,24 +155,53 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  animation: rise var(--t-med) var(--ease) both;
+  border-radius: var(--radius-panel);
+  animation: rise var(--t-slow) var(--ease) both;
 }
-@media (max-width: 900px) {
+.login-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin-bottom: var(--s-2);
+}
+.login-card-head h2 {
+  font-size: var(--fs-24);
+}
+.login-submit {
+  min-height: 44px;
+  margin-top: var(--s-2);
+}
+.login-fine {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line);
+}
+.login-notice {
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-input);
+  background: var(--raised);
+  font-size: var(--fs-14);
+}
+
+@media (max-width: 960px) {
   .login {
     grid-template-columns: minmax(0, 1fr);
   }
   .login-panel {
-    padding: var(--s-6) var(--s-4);
+    order: 2;
+    padding: var(--s-8) var(--s-4);
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    gap: var(--s-6);
+  }
+  .login-side {
+    padding: 64px var(--s-4) var(--s-8);
   }
   .journey-detail {
     display: none;
   }
-}
-
-.login-notice {
-  padding: var(--s-3) var(--s-4);
-  border-left: 3px solid var(--primary);
-  border-radius: var(--radius-input);
-  background: var(--bg);
-  font-size: var(--fs-14);
 }

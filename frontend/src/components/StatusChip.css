@@ -1,18 +1,18 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 10px 2px 8px;
-  border-radius: 999px;
+  gap: var(--s-1);
+  padding: 0 var(--s-2) 0 6px;
+  border-radius: var(--radius-sm);
   font-size: var(--fs-12);
-  font-weight: 600;
-  line-height: 1.6;
+  font-weight: 500;
+  line-height: 22px;
   white-space: nowrap;
 }
 .chip-icon {
-  font-size: 0.85em;
-  width: 1em;
-  text-align: center;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
 }
 .chip-approve {
   color: var(--approve);
@@ -38,17 +38,15 @@
   color: var(--muted);
   background: var(--stopped-bg);
 }
-.chip-info {
-  color: var(--primary);
-  background: var(--primary-soft);
-}
+.chip-info,
+.chip-running,
 .chip-done {
   color: var(--primary);
   background: var(--primary-soft);
 }
+/* a case being assessed is live, so its mark turns; nothing else loops */
 .spin {
-  display: inline-block;
-  animation: chip-spin 1.4s linear infinite;
+  animation: chip-spin 1s linear infinite;
 }
 @keyframes chip-spin {
   to {

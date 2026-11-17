@@ -1,6 +1,6 @@
 .help-section {
   padding: var(--s-6);
-  scroll-margin-top: var(--s-4);
+  scroll-margin-top: calc(var(--topbar-h) + var(--s-4));
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
@@ -16,16 +16,21 @@
 .help-section-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--brand-soft);
-  color: var(--primary);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-input);
+  background: var(--raised);
+  color: var(--muted);
 }
 .help-section-body {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+}
+/* emphasis by weight, not italics */
+.help-section-body em {
+  font-style: normal;
+  font-weight: 500;
 }
 .help-section-body ul {
   padding-left: var(--s-6);
@@ -44,24 +49,27 @@
   list-style: none;
 }
 .help-section-body .help-steps li {
-  display: flex;
-  gap: var(--s-3);
-  align-items: flex-start;
+  position: relative;
+  min-height: 24px;
   margin: 0;
+  padding: 2px 0 0 36px;
 }
 .help-steps li::before {
   counter-increment: hstep;
   content: counter(hstep);
-  flex: none;
+  position: absolute;
+  left: 0;
+  top: 0;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--primary);
-  color: var(--primary);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-family: var(--mono);
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
 }
 /* horizontal flow, for short sequences such as the three gates */
 .help-flow {
@@ -77,8 +85,8 @@
   margin: 0;
   padding: var(--s-3);
   border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  background: var(--bg);
+  border-radius: var(--radius-input);
+  background: var(--raised);
   position: relative;
 }
 .help-flow strong {

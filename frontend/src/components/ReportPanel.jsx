@@ -65,7 +65,7 @@ function Citations({ report }) {
         <ul className="citations">
           {shown.map((c) => (
             <li key={c.clause_id} id={`clause-${c.clause_id}`}>
-              <code>{c.clause_id}</code>
+              <code className="ref-id">{c.clause_id}</code>
               <p>{c.text}</p>
             </li>
           ))}
@@ -172,7 +172,7 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction, rea
             <ul>
               {conditions.map((f, i) => (
                 <li key={i}>
-                  {f.message} <code>{f.rule_id}</code>
+                  {f.message} <code className="ref-id">{f.rule_id}</code>
                 </li>
               ))}
             </ul>

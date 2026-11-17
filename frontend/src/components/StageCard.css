@@ -13,10 +13,10 @@
   text-align: left;
 }
 .stage-head:hover {
-  background: var(--bg);
+  background: var(--raised);
 }
 .stage-name {
-  font-weight: 600;
+  font-weight: 500;
 }
 .stage-score {
   font-family: var(--mono);
@@ -25,12 +25,13 @@
   color: var(--muted);
 }
 .stage-bar {
-  height: 3px;
-  background: var(--stopped-bg);
+  height: 2px;
+  background: var(--raised);
 }
+/* points earned, in a neutral step: the chip beside it carries the result */
 .stage-fill {
   height: 100%;
-  background: var(--primary);
+  background: var(--line-strong);
   transition: width 600ms var(--ease);
 }
 .stage-body {

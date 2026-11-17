@@ -5,21 +5,22 @@
 }
 .checklist-who {
   color: var(--muted);
-  font-size: var(--fs-12);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-family: var(--font);
+  font-size: var(--fs-13);
+  font-weight: 500;
   margin-bottom: var(--s-2);
 }
 .checklist li {
   display: flex;
   gap: var(--s-2);
-  align-items: baseline;
-  padding: 2px 0;
+  align-items: center;
+  padding: var(--s-1) 0;
 }
 .check-mark {
-  width: 1.2em;
-  text-align: center;
-  font-weight: 600;
+  flex: none;
+  display: grid;
+  place-items: center;
+  align-self: center;
 }
 .checklist .met .check-mark {
   color: var(--approve);

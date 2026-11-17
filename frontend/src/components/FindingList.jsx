@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import Icon from './Icons'
 import './FindingList.css'
 
 const SEVERITY = {
-  hard_fail: { icon: '✕', label: 'Hard fail', cls: 'sev-hard' },
-  cap: { icon: '!', label: 'Caps the band', cls: 'sev-cap' },
-  points_lost: { icon: '−', label: 'Points lost', cls: 'sev-points' },
-  note: { icon: 'i', label: 'Note', cls: 'sev-note' },
+  hard_fail: { icon: 'x', label: 'Hard fail', cls: 'sev-hard' },
+  cap: { icon: 'alert-circle', label: 'Caps the band', cls: 'sev-cap' },
+  points_lost: { icon: 'minus', label: 'Points lost', cls: 'sev-points' },
+  note: { icon: 'info', label: 'Note', cls: 'sev-note' },
 }
 const ROLE = { primary: 'Applicant', co: 'Co-applicant' }
 
@@ -16,7 +17,7 @@ function Finding({ f, clauses }) {
   return (
     <li className={`finding ${sev.cls}`}>
       <span className="finding-icon" aria-hidden="true">
-        {sev.icon}
+        <Icon name={sev.icon} size={14} />
       </span>
       <div className="finding-body">
         <p>
@@ -28,7 +29,7 @@ function Finding({ f, clauses }) {
           <p className="small source-tag">The form value here is {f.evidence.source_note}.</p>
         )}
         <p className="finding-ids small">
-          {f.rule_id && <code>{f.rule_id}</code>}
+          {f.rule_id && <code className="ref-id">{f.rule_id}</code>}
           {f.points_lost > 0 && <span className="muted"> −{f.points_lost} pts</span>}
           {f.clause_id && (
             <button
@@ -37,7 +38,7 @@ function Finding({ f, clauses }) {
               aria-expanded={open}
               onClick={() => setOpen((o) => !o)}
             >
-              <code>{f.clause_id}</code>
+              <code className="ref-id">{f.clause_id}</code>
             </button>
           )}
         </p>

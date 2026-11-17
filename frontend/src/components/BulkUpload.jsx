@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
+import Icon from './Icons'
 import './UploadZone.css'
 import './BulkUpload.css'
 
-const ICON = { accepted: '✓', warning: '!', rejected: '✕', ignored: '=' }
+const ICON = { accepted: 'check', warning: 'alert-circle', rejected: 'x', ignored: 'copy' }
 const LABEL = {
   accepted: 'Received',
   warning: 'Received with a note',
@@ -148,7 +149,7 @@ export default function BulkUpload({
             {results.map((r, i) => (
               <li key={`${r.name}-${i}`} className={`ur ur-${r.status}`}>
                 <span className="ur-icon" aria-hidden="true">
-                  {ICON[r.status]}
+                  <Icon name={ICON[r.status]} size={16} />
                 </span>
                 <div>
                   <p>

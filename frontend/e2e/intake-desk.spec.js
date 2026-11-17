@@ -104,7 +104,7 @@ test('an applicant link: created with a second click, used with no sign-in, show
   // the officer sees it as from the applicant, and can disable the link
   await page.getByRole('link', { name: 'Cases' }).first().click()
   await expect(page.getByText('From applicant').first()).toBeVisible()
-  await expect(page.getByText('Applicant submitted').first()).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Applicant submitted' }).first()).toBeVisible()
   await page.getByRole('link', { name: 'Upload links' }).click()
   await page.getByRole('button', { name: 'Disable' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Yes, disable it' }).click()

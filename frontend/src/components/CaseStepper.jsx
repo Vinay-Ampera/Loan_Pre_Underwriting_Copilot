@@ -1,8 +1,9 @@
 import { journeyState } from '../lib/journey'
+import Icon from './Icons'
 import './CaseStepper.css'
 
 const WORD = { done: 'done', current: 'in progress', stopped: 'stopped here', todo: 'not started' }
-const MARK = { done: '✓', current: '●', stopped: '■', todo: '' }
+const MARK = { done: 'check', current: 'dot', stopped: 'x' }
 
 /** The five underwriting stages and where the case is. A stopped case stops at the failing one. */
 export default function CaseStepper({ caseData, stopText }) {
@@ -18,7 +19,7 @@ export default function CaseStepper({ caseData, stopText }) {
             aria-current={s.state === 'current' || s.state === 'stopped' ? 'step' : undefined}
           >
             <span className="step-dot" aria-hidden="true">
-              {MARK[s.state] || i + 1}
+              {MARK[s.state] ? <Icon name={MARK[s.state]} size={14} /> : i + 1}
             </span>
             <span className="step-text">
               <span className="step-label">{s.label}</span>

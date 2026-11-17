@@ -8,24 +8,23 @@
   gap: var(--s-4);
   align-items: center;
   padding: var(--s-6);
-  background: linear-gradient(120deg, var(--brand-soft), var(--surface));
 }
 .help-hero-icon {
   flex: none;
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: var(--primary-ink);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-card);
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 .help-hero-text {
   flex: 1;
   min-width: 0;
 }
 .help-hero-text .muted {
-  font-weight: 600;
+  margin-top: var(--s-1);
 }
 .help-quick {
   display: grid;
@@ -37,16 +36,19 @@
   align-items: center;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   color: var(--ink);
   transition:
-    transform var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease),
     border-color var(--t-fast) var(--ease);
 }
+.help-quick-card svg {
+  color: var(--faint);
+}
 .help-quick-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--brand);
+  border-color: var(--line-strong);
+  background: var(--raised);
 }
 .help-layout {
   display: grid;
@@ -62,13 +64,13 @@
 }
 .help-toc {
   position: sticky;
-  top: var(--s-6);
+  top: calc(var(--topbar-h) + var(--s-4));
   font-size: var(--fs-14);
 }
 .help-toc-title {
   margin-bottom: var(--s-2);
   font-family: var(--font-head);
-  font-weight: 600;
+  font-weight: 500;
 }
 .help-toc ul {
   display: flex;
@@ -89,7 +91,7 @@
 .help-toc a.active {
   border-left-color: var(--primary);
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
 }
 .agent-grid {
   display: grid;

@@ -1,5 +1,6 @@
 import { api } from '../api/client'
 import { docLabel, WHO } from '../lib/docLabels'
+import Icon from './Icons'
 import StatusChip from './StatusChip'
 import './Inventory.css'
 
@@ -174,7 +175,7 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
             <ul className="inv-missing">
               {p.missing.map((m) => (
                 <li key={m.type} className={m.essential ? 'essential' : ''}>
-                  <span aria-hidden="true">!</span> {docLabel(m.type)}
+                  <Icon name="alert-circle" size={16} className="inv-mark" /> {docLabel(m.type)}
                   {m.needed > 1 && (
                     <span className="muted">
                       {' '}

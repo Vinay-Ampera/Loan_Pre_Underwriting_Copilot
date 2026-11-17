@@ -3,7 +3,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  color: var(--brand);
+  color: var(--primary);
 }
 .brand-lockup.inverse {
   color: #ffffff;
@@ -12,8 +12,8 @@
 .brand-name {
   font-family: var(--font-head);
   font-weight: 600;
-  font-size: var(--fs-20);
-  letter-spacing: 0.01em;
+  font-size: 1.125rem;
+  line-height: 1;
   color: var(--ink);
 }
 .brand-lockup.inverse .brand-name {

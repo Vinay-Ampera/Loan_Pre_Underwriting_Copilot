@@ -1,3 +1,4 @@
+import Icon from './Icons'
 import './DocumentChecklist.css'
 
 const NAME = {
@@ -30,7 +31,7 @@ export default function DocumentChecklist({ items }) {
               .map((i) => (
                 <li key={i.type} className={i.met ? 'met' : 'missing'}>
                   <span className="check-mark" aria-hidden="true">
-                    {i.met ? '✓' : '!'}
+                    <Icon name={i.met ? 'check' : 'alert-circle'} size={16} />
                   </span>
                   <span>
                     {pretty(i.type)}

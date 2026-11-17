@@ -1,24 +1,31 @@
 .progress {
   display: flex;
-  gap: var(--s-4);
+  gap: var(--s-2) var(--s-5);
   flex-wrap: wrap;
 }
 .progress li {
   display: flex;
   gap: var(--s-2);
   align-items: center;
-  color: var(--muted);
+  color: var(--faint);
 }
 .progress .done {
+  color: var(--ink);
+}
+.progress .done .pg-mark {
   color: var(--approve);
 }
 .progress .active {
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 500;
 }
+.pg-mark {
+  display: inline-grid;
+  place-items: center;
+}
+/* the stage being worked on is live, so its mark turns */
 .progress .active .pg-mark {
-  display: inline-block;
-  animation: pg-spin 1.4s linear infinite;
+  animation: pg-spin 1s linear infinite;
 }
 @keyframes pg-spin {
   to {

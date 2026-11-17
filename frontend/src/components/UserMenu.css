@@ -5,58 +5,76 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  min-height: 40px;
-  padding: 0 var(--s-3) 0 var(--s-2);
+  height: 36px;
+  padding: 0 var(--s-2) 0 var(--s-1);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-input);
   background: var(--surface);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
 }
 .user-menu-btn:hover {
-  border-color: var(--primary);
+  background: var(--raised);
+}
+.user-menu-btn[aria-expanded='true'] {
+  border-color: var(--line-strong);
+  background: var(--raised);
 }
 .avatar {
   display: grid;
   place-items: center;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: var(--primary);
-  color: var(--on-primary, #fff);
+  color: var(--primary-ink);
   font-size: var(--fs-12);
+  font-weight: 500;
 }
 .user-menu-name {
-  max-width: 14ch;
+  max-width: 16ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .role-tag {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--brand-soft);
-  color: var(--primary);
+  padding: 0 var(--s-2);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--muted);
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 20px;
+  text-transform: capitalize;
 }
 .user-menu-list {
   position: absolute;
   right: 0;
-  top: calc(100% + var(--s-1));
+  top: calc(100% + var(--s-2));
   z-index: 20;
-  min-width: 220px;
-  padding: var(--s-2);
+  min-width: 240px;
+  padding: var(--s-1);
   display: flex;
   flex-direction: column;
   gap: 2px;
+  box-shadow: var(--shadow-float);
+  animation: menu-in var(--t-med) var(--ease) both;
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 .user-menu-who {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-2) var(--s-3) var(--s-3);
   border-bottom: 1px solid var(--line);
   margin-bottom: var(--s-1);
   overflow-wrap: anywhere;
@@ -65,19 +83,22 @@
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  min-height: 40px;
+  min-height: 36px;
   padding: 0 var(--s-3);
   border: 0;
-  border-radius: var(--radius-input);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
 }
+.user-menu-list button svg {
+  color: var(--faint);
+}
 .user-menu-list button:hover {
-  background: var(--bg);
+  background: var(--raised);
 }
 @media (max-width: 480px) {
   .user-menu-name {
@@ -87,12 +108,13 @@
 
 .readonly-badge {
   align-self: flex-start;
-  padding: 1px var(--s-2);
-  border-radius: 999px;
+  padding: 0 var(--s-2);
+  border-radius: var(--radius-sm);
   background: var(--unverified-bg);
   color: var(--unverified);
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
 }
 .user-menu-btn .readonly-badge {

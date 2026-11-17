@@ -1,4 +1,5 @@
-// Small inline icons (stroke follows the text colour). Always used beside a text label.
+// Small inline line icons, one set, one stroke (1.5). The stroke follows the text colour.
+// Always used beside a text label or with an accessible name on the control.
 const paths = {
   home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
   cases: 'M4 5h16M4 12h16M4 19h16',
@@ -19,17 +20,33 @@ const paths = {
   flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
   link: 'M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1',
   shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  // status marks (replace the old text glyphs)
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+  x: 'M6.5 6.5l11 11M17.5 6.5l-11 11',
+  minus: 'M6 12h12',
+  'alert-circle': 'M12 21a9 9 0 100-18 9 9 0 000 18M12 7.5v5.5M12 16.5h.01',
+  'help-circle':
+    'M12 21a9 9 0 100-18 9 9 0 000 18M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1-1.5 2M12 17h.01',
+  stop: 'M12 21a9 9 0 100-18 9 9 0 000 18M9 9h6v6H9z',
+  loader: 'M12 3a9 9 0 109 9',
+  circle: 'M12 20a8 8 0 100-16 8 8 0 000 16',
+  dot: 'M12 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5',
+  copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
+  inbox: 'M3 13h5l1.5 3h5L16 13h5M5 5h14l2 8v6H3v-6z',
+  upload: 'M12 15V4M7.5 8.5L12 4l4.5 4.5M4 15v5h16v-5',
+  'shield-check': 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5',
 }
 
-export default function Icon({ name, size = 18 }) {
+export default function Icon({ name, size = 18, className }) {
   return (
     <svg
+      className={className}
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

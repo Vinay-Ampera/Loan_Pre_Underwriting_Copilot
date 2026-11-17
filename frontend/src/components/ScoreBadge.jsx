@@ -1,6 +1,7 @@
 import './ScoreBadge.css'
 
 const R = 52
+const BAND = { approve: 'Recommend approve', refer: 'Refer', reject: 'Recommend reject' }
 const C = 2 * Math.PI * R
 
 /** Score ring and band. "Not computed" when the run stopped (the UI never computes a score). */
@@ -30,7 +31,7 @@ export default function ScoreBadge({ score, band, indicative }) {
           {score != null && <span className="score-of">of 100</span>}
         </div>
       </div>
-      <div className="score-band">{band ? band.toUpperCase() : 'NOT COMPUTED'}</div>
+      <div className="score-band">{band ? BAND[band] || band : 'Not computed'}</div>
       {score == null && indicative != null && (
         <div className="small">Indicative only: {Number(indicative).toString()}</div>
       )}

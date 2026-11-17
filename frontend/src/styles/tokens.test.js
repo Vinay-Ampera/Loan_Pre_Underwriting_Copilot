@@ -70,6 +70,14 @@ const PAIRS = [
   ['--danger-ink', '--danger-bg'],
   ['--danger-ink', '--danger-hover'],
   ['--ink', '--brand-soft'],
+  ['--ink', '--raised'],
+  ['--muted', '--raised'],
+  ['--faint', '--surface'],
+  ['--faint', '--bg'],
+  ['--ink', '--chrome'],
+  ['--muted', '--chrome'],
+  ['--primary', '--raised'],
+  ['--primary', '--chrome'],
 ]
 
 describe.each([
@@ -94,10 +102,26 @@ describe('tokens', () => {
     expect(light['--brand']).toBe('#7c70af')
   })
 
-  it('the white panel text passes AA on the whole login gradient', () => {
-    const stops = light['--panel-bg'].match(/#[0-9a-f]{6}/gi)
-    expect(stops.length).toBeGreaterThan(1)
-    for (const s of stops) expect(contrast('#ffffff', s)).toBeGreaterThanOrEqual(4.5)
+  it('has no gradient, glow or shimmer tokens: surfaces are one neutral ramp', () => {
+    for (const t of [light, dark]) {
+      for (const [name, value] of Object.entries(t)) {
+        expect(value, name).not.toMatch(/gradient\(/)
+        expect(name).not.toMatch(/glow|shimmer|panel-bg/)
+      }
+    }
+  })
+
+  it('keeps page and card surfaces neutral (no visible hue)', () => {
+    const chroma = (hex) => {
+      const n = parseInt(hex.slice(1), 16)
+      const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+      return Math.max(...c) - Math.min(...c)
+    }
+    for (const t of [light, dark]) {
+      for (const role of ['--bg', '--surface', '--raised', '--chrome']) {
+        expect(chroma(t[role]), role).toBeLessThanOrEqual(6)
+      }
+    }
   })
 
   it('system dark and explicit dark define the same values', () => {

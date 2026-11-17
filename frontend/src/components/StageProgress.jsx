@@ -1,3 +1,4 @@
+import Icon from './Icons'
 import './StageProgress.css'
 
 const STEPS = [
@@ -21,7 +22,7 @@ export default function StageProgress({ stages }) {
       {rows.map((s) => (
         <li key={s.id} className={s.complete ? 'done' : s.id === active ? 'active' : ''}>
           <span className="pg-mark" aria-hidden="true">
-            {s.complete ? '✓' : s.id === active ? '⟳' : '○'}
+            <Icon name={s.complete ? 'check' : s.id === active ? 'loader' : 'circle'} size={16} />
           </span>
           {s.label}
           <span className="sr-only">

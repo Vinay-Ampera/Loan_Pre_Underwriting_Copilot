@@ -33,7 +33,7 @@
   display: flex;
   justify-content: space-between;
   gap: var(--s-4);
-  padding: 6px var(--s-2);
+  padding: var(--s-2);
   border-bottom: 1px solid var(--line);
 }
 .fields dt {
@@ -52,7 +52,7 @@
 .low-tag {
   color: var(--refer);
   font-size: var(--fs-12);
-  font-weight: 600;
+  font-weight: 500;
 }
 .warn {
   color: var(--refer);

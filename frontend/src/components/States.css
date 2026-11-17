@@ -1,13 +1,19 @@
 .state {
-  padding: var(--s-6);
+  padding: var(--s-8) var(--s-6);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--s-2);
 }
+.state .btn {
+  margin-top: var(--s-2);
+}
 .state-error {
-  border-color: var(--reject);
+  border-color: transparent;
   background: var(--reject-bg);
+  color: var(--reject);
+}
+.state-error h3 {
   color: var(--reject);
 }
 .skeleton-block {
@@ -15,19 +21,14 @@
   flex-direction: column;
   gap: var(--s-3);
 }
+/* loading is a live state: a slow, quiet fade, no moving sheen */
 .skeleton {
   border-radius: var(--radius-input);
-  background: linear-gradient(
-    90deg,
-    var(--stopped-bg) 25%,
-    var(--shimmer) 50%,
-    var(--stopped-bg) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.3s linear infinite;
+  background: var(--raised);
+  animation: skeleton-fade 1.4s var(--ease) infinite alternate;
 }
-@keyframes shimmer {
+@keyframes skeleton-fade {
   to {
-    background-position: -200% 0;
+    opacity: 0.55;
   }
 }

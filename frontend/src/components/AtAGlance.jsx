@@ -29,7 +29,7 @@ export default function AtAGlance({ report }) {
             {reasons.map((f, i) => (
               <li key={i}>
                 <span className="glance-sev small">{SEVERITY[f.severity]}</span> {f.message}{' '}
-                <code>{f.rule_id}</code>
+                <code className="ref-id">{f.rule_id}</code>
               </li>
             ))}
           </ol>

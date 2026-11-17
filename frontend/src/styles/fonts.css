@@ -1,5 +1,7 @@
-/* Bundled through @fontsource: no runtime request to Google Fonts. Latin subset only. */
+/* Bundled through @fontsource: no runtime request to Google Fonts. Latin subset only.
+   Interface weights are 400 and 500; 600 is kept for rare emphasis and the wordmark. */
 @import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
 @import '@fontsource/inter/latin-600.css';
 @import '@fontsource/outfit/latin-500.css';
 @import '@fontsource/outfit/latin-600.css';

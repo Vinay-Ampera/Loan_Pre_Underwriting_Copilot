@@ -28,6 +28,9 @@ Next: the user's review of Stage 10 Parts A to C and the decision on Part D, the
 
 ## Decisions log
 
+### 2026-11-17: Frontend craft pass (unslop), locked decision 16 kept
+The user asked to redo the whole frontend with the unslop skill (github.com/heydamir/unslop) so it reads as a production bank platform. Agreed in conversation: keep Pramaan purple and Outfit + Inter (purple becomes the one accent, surfaces neutral), keep light, dark and system only, keep login as the landing page (no public site), and do every screen in one pass. Frontend only: no route, role, API, wording-rule or scoring change. Details in `DESIGN_SYSTEM.md` 8.11. Tests: `tokens.test.js` updated (new pairs, neutral-surface check, the login-gradient check removed), new `styles/craft.test.js`, `e2e/theme.spec.js` background values updated and the glow check replaced.
+
 ### 2026-11-04: Stage 10 planned, Docker becomes Stage 11 (changes locked decisions 16 and 18, amends E-31)
 Three automation items from the review window, agreed with the user in conversation. Docs only; no code written.
 - **Intake desk:** the officer uploads a zip, folder or files; each file is read once (cached by hash, so no second OCR in Extraction), classified and assigned; an inventory shows received, missing (essential marked), extra, unrecognised, rejected and duplicate. Missing items: "Ask the applicant" or "Proceed anyway" (second click). Cross-case duplicate detection is **out of v1** (E-44).
