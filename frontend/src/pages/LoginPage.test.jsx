@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../api/client', () => ({ login: vi.fn() }))
@@ -21,5 +21,15 @@ describe('LoginPage', () => {
     expect(screen.getByText("Can't sign in? Contact your admin.")).toBeInTheDocument()
     expect(container.querySelector('a[href^="mailto:"], a[href^="tel:"]')).toBeNull()
     expect(screen.queryByRole('contentinfo')).toBeNull()
+  })
+
+  it('shows and hides the password with a toggle button', () => {
+    render(<LoginPage />)
+    const field = screen.getByLabelText('Password')
+    expect(field).toHaveAttribute('type', 'password')
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }))
+    expect(field).toHaveAttribute('type', 'text')
+    fireEvent.click(screen.getByRole('button', { name: 'Hide password' }))
+    expect(field).toHaveAttribute('type', 'password')
   })
 })

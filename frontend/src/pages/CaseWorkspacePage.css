@@ -53,6 +53,9 @@
   gap: var(--s-1);
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
+  /* overflow-x alone makes y "auto" too; the tab's -1px margin then overflows by 1px
+     and shows a tiny vertical scrollbar */
+  overflow-y: hidden;
 }
 .tab {
   border: 0;
