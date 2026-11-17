@@ -187,6 +187,19 @@ A redline pass over every screen, following the **unslop** checklist by Damir So
 - **Screens.** Login: the gradient panel and drifting glow are gone; the five stages are drawn as a case file with the officer sign-off as the one accented step, still without weights or bands; on phones the form comes first. Home: no greeting; stat tiles are label, figure and hint with no coloured top bar. Help header: plain card. Charts: neutral track, 8 px bars, mono values. Tables: quiet header row. The audit timeline marks only the latest entry in purple.
 - **Motion.** One curve `cubic-bezier(0.22, 1, 0.36, 1)`, 150 / 200 / 360 ms. Removed: the looping stepper pulse, the login glow drift, the skeleton sheen (now a slow fade), hover lifts on cards and tiles. Only live states loop: a case being assessed, the stage in progress, a loading placeholder. `styles/craft.test.js` guards all of this (no gradients, glows, upper-case labels, weights above 600, catch-all transitions, hover transforms, glyph icons, or loops outside live states).
 
+### 8.12 Case page tidy (2026-11-17)
+
+Display only: no route, role, API, scoring or wording-rule change, and the keywords (Recommended, At a glance, Points lost, Next, Conditions) are kept.
+
+- **Two columns.** The case page is the content plus one 300 px rail. The document checklist moved from a third column into a "Required documents" card at the top of the Documents tab (open while anything is missing, closed once all are in, with "N of M received").
+- **The score once.** The ring sits in the rail only, as a small ring with the band beside it (`ScoreBadge compact`). At a glance no longer repeats it, and the "Recommended: ..." sentence under the ring shows only on the other tabs because the Report tab already has it as its heading.
+- **Nothing stale after a decision.** Once the officer has decided, At a glance drops "Next:" and the summary drops its closing "Awaiting your confirmation." (`ReportPanel`, `AtAGlance`).
+- **Readable findings.** `lib/format.js` tidies the rules-engine sentences for display: the rule ID leaves the sentence (it is the tag beside it), field names are capitalised, and money, percentages and months carry a unit ("Earned 0 of 12 points: FOIR 72.6%", "Net monthly income ₹12,800"). Sentences of any other shape are shown as they are. The model-written summary gets the same units on the figures it quotes. At a glance rows are aligned columns: kind, finding, rule tag.
+- **Dates** are day, month in words, year ("1 Nov 2026, 12:43 pm") everywhere, not 11/1/2026.
+- **Stepper.** Once all five stages are done it is one slim line (the detail text stays in the page for screen readers); in progress it is unchanged.
+- **Header.** The status chip sits beside the case number.
+- **Fixes found on the way.** The summary's typing effect could stay blank when the page re-rendered while it was typing (`TypedText` now counts a text as seen only when it finishes). The Documents checklist uses the shared document names, so "Sale agreement" and "Title deed" are capitalised like the rest. The sign-in password has a show/hide button; the browser tests match the field with `exact: true` because the button's name also contains "password".
+
 ## 9. Stage 9 design: customer notifications (planned 2026-11-02, built 2026-11-02)
 
 - **Draft dialog** on the case workspace after confirm, override or a stopped run: a template picker (a few short templates plus **Blank**), the recipient (customer email, masked in lists), the subject (fixed), the body (editable), the fixed fraud footer (shown, locked), and the officer's contact lines. A **Send** button opens a second confirmation that shows the final text. A blocked send shows the exact reason (for example "Contains a number that looks like an account number").

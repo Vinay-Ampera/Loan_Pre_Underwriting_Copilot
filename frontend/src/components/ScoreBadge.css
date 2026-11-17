@@ -80,3 +80,29 @@
   font-size: var(--fs-13);
   font-weight: 500;
 }
+
+/* beside the case: a small ring and the band, so the score is shown once and takes little room */
+.score-compact {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--s-4);
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+}
+.score-compact .score-ring {
+  width: 88px;
+  height: 88px;
+  flex: none;
+}
+.score-compact .score-num {
+  font-size: 1.625rem;
+}
+.score-compact .score-of {
+  font-size: 10px;
+  margin-top: 2px;
+}
+.score-compact .score-band {
+  font-family: var(--font-head);
+  font-size: var(--fs-16);
+}

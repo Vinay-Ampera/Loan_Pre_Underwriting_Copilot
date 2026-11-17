@@ -58,4 +58,39 @@ describe('ReportPanel', () => {
     await user.click(screen.getByRole('button', { name: 'PL-KYC-02A' }))
     expect(screen.getAllByText('Address on the application must match.').length).toBeGreaterThan(1)
   })
+
+  it('drops the "Next:" line and the awaiting sentence once the officer has decided', () => {
+    const decidedReport = {
+      ...report,
+      summary: 'Refer, with a FOIR of 72.6. Awaiting your confirmation.',
+    }
+    const action = { action: 'confirm', final_decision: 'refer', at: '2026-11-01T07:13:45Z' }
+    const { rerender } = render(
+      <ReportPanel
+        caseId="c1"
+        caseNo="CASE-2026-0001"
+        report={decidedReport}
+        officerAction={null}
+      />,
+    )
+    expect(screen.getByText(/Next:/)).toBeInTheDocument()
+    rerender(
+      <ReportPanel
+        caseId="c1"
+        caseNo="CASE-2026-0001"
+        report={decidedReport}
+        officerAction={action}
+      />,
+    )
+    expect(screen.queryByText(/Next:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Awaiting your confirmation/)).not.toBeInTheDocument()
+    expect(screen.getByText(/FOIR of 72.6%/)).toBeInTheDocument()
+  })
+
+  it('shows the score once, in the ring beside the case, not inside At a glance', () => {
+    render(
+      <ReportPanel caseId="c1" caseNo="CASE-2026-0001" report={{ ...report, total_score: 72 }} />,
+    )
+    expect(screen.queryByLabelText('Score 72')).not.toBeInTheDocument()
+  })
 })

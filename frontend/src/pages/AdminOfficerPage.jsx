@@ -5,6 +5,7 @@ import StatusChip, { CaseStatusChip } from '../components/StatusChip'
 import { loanLabel } from '../components/LoanTypePicker'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AdminOfficerPage.css'
+import { formatWhen } from '../lib/format'
 
 const STATUS = [
   ['draft', 'Draft'],
@@ -29,7 +30,7 @@ const FILTERS = [
   ...STATUS.map(([k, l]) => [k, l, (c) => c.status === k]),
   ['corrected', 'Changed by an admin', (c) => c.corrected],
 ]
-const when = (v) => (v ? new Date(v).toLocaleString() : 'Never')
+const when = (v) => (v ? formatWhen(v) : 'Never')
 const money = (n) =>
   new Intl.NumberFormat('en-IN', {
     style: 'currency',

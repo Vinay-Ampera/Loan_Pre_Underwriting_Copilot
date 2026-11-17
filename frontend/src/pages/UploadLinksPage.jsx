@@ -10,13 +10,14 @@ import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import StatusChip from '../components/StatusChip'
 import { useAsync } from '../hooks/useAsync'
 import './UploadLinksPage.css'
+import { formatDay } from '../lib/format'
 
 const STATE = {
   active: ['approve', 'Open'],
   expired: ['stopped', 'Expired'],
   disabled: ['reject', 'Disabled'],
 }
-const day = (t) => new Date(t).toLocaleDateString([], { dateStyle: 'medium' })
+const day = formatDay
 
 /**
  * Create a link, then show its address once. Creating it is outward-facing, so the dialog's

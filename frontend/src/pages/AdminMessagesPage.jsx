@@ -7,6 +7,7 @@ import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { filterMessages, isFiltered, NO_FILTER } from '../lib/messageFilter'
 import '../components/MessageDialog.css'
 import './SentItemsPage.css'
+import { formatWhen } from '../lib/format'
 
 const unique = (rows, key, label) => {
   const seen = new Map()
@@ -140,7 +141,7 @@ export default function AdminMessagesPage() {
             <tbody>
               {shown.map((m) => (
                 <tr key={m.id}>
-                  <td data-label="Sent">{new Date(m.sent_at).toLocaleString()}</td>
+                  <td data-label="Sent">{formatWhen(m.sent_at)}</td>
                   <td data-label="Case">
                     <Link to={`/cases/${m.case_id}`} className="mono">
                       {m.case_no}

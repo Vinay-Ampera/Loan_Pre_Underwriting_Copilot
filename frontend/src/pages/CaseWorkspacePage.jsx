@@ -25,6 +25,7 @@ import StatusChip, { CaseStatusChip } from '../components/StatusChip'
 import UploadZone from '../components/UploadZone'
 import { ErrorState, Skeleton } from '../components/States'
 import './CaseWorkspacePage.css'
+import { formatWhen } from '../lib/format'
 
 const TABS = [
   ['documents', 'Documents'],
@@ -48,7 +49,7 @@ function Decision({ action, report }) {
             to <strong>{word}</strong> (the system recommended {report?.band ?? 'no band'})
           </>
         )}{' '}
-        on {new Date(action.at).toLocaleString()}.
+        on {formatWhen(action.at)}.
       </p>
       {action.reason && <p className="muted">Reason: {action.reason}</p>}
     </div>
@@ -202,14 +203,19 @@ export default function CaseWorkspacePage() {
     }
   }
   const missingKyc = c.checklist.filter((i) => i.kyc && !i.met)
+  const metCount = c.checklist.filter((i) => i.met).length
+  const missingAny = metCount < c.checklist.length
 
   return (
     <div className="workspace">
       <header className="ws-head">
-        <div>
-          <h1>
-            <span className="mono">{c.case_no}</span>
-          </h1>
+        <div className="ws-title">
+          <div className="ws-title-row">
+            <h1>
+              <span className="mono">{c.case_no}</span>
+            </h1>
+            <CaseStatusChip status={c.status} band={c.band} />
+          </div>
           <p className="muted">
             {loanLabel(c.loan_type)} · {first ? first.full_name : 'details not entered yet'}
             {c.applicants.length > 1 && ` with ${c.applicants[1].full_name}`}
@@ -222,7 +228,6 @@ export default function CaseWorkspacePage() {
             </p>
           )}
         </div>
-        <CaseStatusChip status={c.status} band={c.band} />
       </header>
 
       <CaseStepper
@@ -231,11 +236,6 @@ export default function CaseWorkspacePage() {
       />
 
       <div className="ws-grid">
-        <aside className="ws-left card">
-          <h3>Documents</h3>
-          <DocumentChecklist items={c.checklist} />
-        </aside>
-
         <section className="ws-main">
           {running && (
             <div className="card running-card">
@@ -282,6 +282,17 @@ export default function CaseWorkspacePage() {
 
               {tab === 'documents' && (
                 <div className="tab-body">
+                  {c.checklist.length > 0 && (
+                    <details className="checklist-card card" open={missingAny}>
+                      <summary>
+                        <span>Required documents</span>
+                        <span className="muted small">
+                          {metCount} of {c.checklist.length} received
+                        </span>
+                      </summary>
+                      <DocumentChecklist items={c.checklist} />
+                    </details>
+                  )}
                   {c.origin === 'applicant' && <ApplicantRequest c={c} />}
                   {step === 'review' && c.intake_stage && c.applicant_sent && !isAdmin ? (
                     <ApplicantReview
@@ -489,11 +500,18 @@ export default function CaseWorkspacePage() {
 
         <aside className="ws-right">
           {report ? (
-            <ScoreBadge score={c.total_score} band={c.band} indicative={report.indicative_score} />
+            <ScoreBadge
+              compact
+              score={c.total_score}
+              band={c.band}
+              indicative={report.indicative_score}
+            />
           ) : (
-            <ScoreBadge score={null} band={null} />
+            <ScoreBadge compact score={null} band={null} />
           )}
-          {report && <p className="recommended">{report.recommendation_text}.</p>}
+          {report && tab !== 'report' && (
+            <p className="recommended">{report.recommendation_text}.</p>
+          )}
 
           {actionError && !editing && (
             <p className="field-error" role="alert">
@@ -506,7 +524,7 @@ export default function CaseWorkspacePage() {
               <strong>The assessment failed.</strong> Please try again, or contact an admin if it
               keeps failing.
               <span className="small muted">
-                Error type: {c.last_failure.error} · {new Date(c.last_failure.at).toLocaleString()}
+                Error type: {c.last_failure.error} · {formatWhen(c.last_failure.at)}
               </span>
             </div>
           )}

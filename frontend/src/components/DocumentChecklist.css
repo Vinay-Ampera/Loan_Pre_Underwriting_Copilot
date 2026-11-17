@@ -3,6 +3,11 @@
   flex-direction: column;
   gap: var(--s-4);
 }
+.checklist ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  column-gap: var(--s-6);
+}
 .checklist-who {
   color: var(--muted);
   font-family: var(--font);

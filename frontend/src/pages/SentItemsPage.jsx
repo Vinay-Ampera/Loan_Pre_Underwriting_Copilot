@@ -9,6 +9,7 @@ import StatusChip from '../components/StatusChip'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { filterMessages, isFiltered, NO_FILTER, STATUS_FILTERS } from '../lib/messageFilter'
 import './SentItemsPage.css'
+import { formatWhen } from '../lib/format'
 
 export const MESSAGE_STATUS = {
   sent: ['done', 'Sent'],
@@ -216,7 +217,7 @@ export default function SentItemsPage() {
             <tbody>
               {shown.map((m) => (
                 <tr key={m.id}>
-                  <td data-label="Date">{new Date(m.sent_at || m.created_at).toLocaleString()}</td>
+                  <td data-label="Date">{formatWhen(m.sent_at || m.created_at)}</td>
                   <td data-label="Case">
                     <Link to={`/cases/${m.case_id}`} className="mono">
                       {m.case_no}

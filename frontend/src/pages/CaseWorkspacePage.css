@@ -10,19 +10,42 @@
   gap: var(--s-4);
   flex-wrap: wrap;
 }
-.ws-grid {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 280px;
-  gap: var(--s-4);
-  align-items: start;
-}
-.ws-left {
-  padding: var(--s-4);
+.ws-title {
   display: flex;
   flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+/* the status sits beside the case number, where the eye already is */
+.ws-title-row {
+  display: flex;
+  align-items: center;
   gap: var(--s-3);
-  position: sticky;
-  top: calc(var(--topbar-h) + var(--s-4));
+  flex-wrap: wrap;
+}
+.ws-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--s-6);
+  align-items: start;
+}
+.checklist-card {
+  padding: 0;
+}
+.checklist-card summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  cursor: pointer;
+  font-weight: 500;
+}
+.checklist-card[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+.checklist-card .checklist {
+  padding: var(--s-4);
 }
 .ws-main {
   display: flex;
@@ -125,20 +148,25 @@
   color: var(--reject);
 }
 .decision {
-  padding: var(--s-4);
+  padding: var(--s-3) var(--s-4);
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
+  gap: var(--s-1);
+  border-left: 3px solid var(--approve);
+}
+.decision h3 {
+  font-size: var(--fs-14);
+}
+.decision p {
+  font-size: var(--fs-13);
+  line-height: 1.5;
 }
 @media (max-width: 1000px) {
   .ws-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .ws-left,
   .ws-right {
     position: static;
-  }
-  .ws-right {
     order: -1;
   }
 }

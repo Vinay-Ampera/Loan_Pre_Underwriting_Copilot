@@ -6,13 +6,10 @@ import Dialog from './Dialog'
 import MessageDialog from './MessageDialog'
 import { MessageChip } from '../pages/SentItemsPage'
 import './CustomerContact.css'
+import { formatWhen } from '../lib/format'
 
 const UNSENT = ['draft', 'blocked']
-const when = (m) =>
-  new Date(m.sent_at || m.created_at).toLocaleString([], {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
+const when = (m) => formatWhen(m.sent_at || m.created_at)
 
 /**
  * Backing out of the dialog leaves an unsent draft. When one exists, "Write a message" asks first:

@@ -81,7 +81,7 @@ test('the admin reviews a precedent: approve needs a dialog and an expiry date',
 test('wrong password shows one plain message', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('Email').fill('officer@example.test')
-  await page.getByLabel('Password').fill('not the password')
+  await page.getByLabel('Password', { exact: true }).fill('not the password')
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.getByRole('alert')).toHaveText('Email or password is incorrect.')
 })

@@ -3,6 +3,7 @@ import Dialog from './Dialog'
 import StatusChip from './StatusChip'
 import { loanLabel } from './LoanTypePicker'
 import './PrecedentReviewCard.css'
+import { formatDay } from '../lib/format'
 
 const TONE = {
   pending: 'refer',
@@ -42,7 +43,7 @@ export default function PrecedentReviewCard({ p, onApprove, onReject }) {
             <span className="mono">{p.case_no}</span> · {loanLabel(p.loan_type)}
           </h3>
           <p className="small muted">
-            Proposed by {p.proposed_by} on {new Date(p.created_at).toLocaleDateString()}
+            Proposed by {p.proposed_by} on {formatDay(p.created_at)}
           </p>
         </div>
         <StatusChip tone={TONE[p.status]}>{p.status}</StatusChip>

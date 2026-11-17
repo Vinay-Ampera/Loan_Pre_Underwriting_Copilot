@@ -15,11 +15,13 @@ export default function TypedText({ id, text, speed = 12 }) {
 
   useEffect(() => {
     if (instant) return undefined
-    seen.add(id)
     const step = Math.max(1, Math.ceil(text.length / 160))
     const timer = setInterval(() => {
       setShown((n) => {
-        if (n + step >= text.length) clearInterval(timer)
+        if (n + step >= text.length) {
+          clearInterval(timer)
+          seen.add(id) // only a finished text counts as seen, so a re-render mid-typing cannot freeze it
+        }
         return Math.min(text.length, n + step)
       })
     }, speed)

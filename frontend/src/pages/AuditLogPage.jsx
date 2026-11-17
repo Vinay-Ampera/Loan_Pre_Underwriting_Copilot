@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import { downloadFile, queryOf } from '../lib/download'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AuditorTable.css'
+import { formatWhen } from '../lib/format'
 
 const PAGE = 100
 const NONE = { action: '', actor: '', case_no: '', date_from: '', date_to: '' }
@@ -148,7 +149,7 @@ export default function AuditLogPage() {
               <tbody>
                 {data.rows.map((r, i) => (
                   <tr key={`${r.at}-${i}`}>
-                    <td data-label="When">{new Date(r.at).toLocaleString()}</td>
+                    <td data-label="When">{formatWhen(r.at)}</td>
                     <td data-label="Actor">
                       {r.actor} {r.actor_role && <span className="muted">({r.actor_role})</span>}
                     </td>

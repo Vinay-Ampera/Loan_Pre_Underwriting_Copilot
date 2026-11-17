@@ -7,6 +7,7 @@ import AtAGlance from './AtAGlance'
 import TypedText from './TypedText'
 import { conditionsFrom } from '../lib/conditions'
 import { filterCitations } from '../lib/glance'
+import { tidyFinding, tidySummary } from '../lib/format'
 import './ReportPanel.css'
 
 const SECTION = { primary: 'Applicant', co: 'Co-applicant', case: 'Case-level' }
@@ -115,7 +116,7 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction, rea
         <p className="stop-note">{report.stop_text}</p>
       )}
 
-      <AtAGlance report={report} />
+      <AtAGlance report={report} decided={Boolean(officerAction)} />
 
       {Object.keys(report.identity_from_documents || {}).length > 0 && (
         <aside
@@ -151,7 +152,10 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction, rea
       <section className="card report-block">
         <h3>Summary</h3>
         <p>
-          <TypedText id={`${caseId}:${report.summary}`} text={report.summary} />
+          <TypedText
+            id={`${caseId}:${report.summary}`}
+            text={tidySummary(report.summary, { decided: Boolean(officerAction) })}
+          />
         </p>
         <p className="small muted">
           {report.summary_source === 'model'
@@ -172,7 +176,7 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction, rea
             <ul>
               {conditions.map((f, i) => (
                 <li key={i}>
-                  {f.message} <code className="ref-id">{f.rule_id}</code>
+                  {tidyFinding(f.message)} <code className="ref-id">{f.rule_id}</code>
                 </li>
               ))}
             </ul>

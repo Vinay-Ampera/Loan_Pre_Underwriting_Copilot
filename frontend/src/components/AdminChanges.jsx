@@ -1,4 +1,5 @@
 import './AdminCorrection.css'
+import { formatWhen } from '../lib/format'
 
 const WORD = { approve: 'approve', refer: 'refer', reject: 'reject' }
 
@@ -19,7 +20,7 @@ export default function AdminChanges({ actions }) {
           <h3>{i === latest ? 'Changed by an admin' : 'Earlier admin change'}</h3>
           <p>
             {a.admin} changed the decision from <strong>{WORD[a.previous_decision]}</strong> to{' '}
-            <strong>{WORD[a.final_decision]}</strong> on {new Date(a.at).toLocaleString()}.
+            <strong>{WORD[a.final_decision]}</strong> on {formatWhen(a.at)}.
           </p>
           <p className="muted">Reason: {a.reason}</p>
         </div>

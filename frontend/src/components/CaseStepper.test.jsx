@@ -35,4 +35,15 @@ describe('CaseStepper', () => {
     expect(steps()[4]).toHaveTextContent('in progress')
     expect(steps()[4]).not.toHaveTextContent(/done/)
   })
+
+  it('slims down to one line once every stage is done', () => {
+    const { container } = render(<CaseStepper caseData={{ status: 'confirmed' }} />)
+    expect(container.firstChild).toHaveClass('stepper-done')
+    expect(steps()[4]).toHaveTextContent('done') // still in the page for screen readers
+  })
+
+  it('stays full size while the case is in progress', () => {
+    const { container } = render(<CaseStepper caseData={{ status: 'awaiting_confirmation' }} />)
+    expect(container.firstChild).not.toHaveClass('stepper-done')
+  })
 })

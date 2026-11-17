@@ -9,8 +9,9 @@ const MARK = { done: 'check', current: 'dot', stopped: 'x' }
 export default function CaseStepper({ caseData, stopText }) {
   const steps = journeyState(caseData)
   const stopped = steps.find((s) => s.state === 'stopped')
+  const allDone = steps.every((s) => s.state === 'done')
   return (
-    <div className="stepper-wrap card">
+    <div className={`stepper-wrap card${allDone ? ' stepper-done' : ''}`}>
       <ol className="stepper" aria-label="Underwriting stages">
         {steps.map((s, i) => (
           <li

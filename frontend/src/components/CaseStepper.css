@@ -109,3 +109,26 @@
     border-left-color: var(--reject);
   }
 }
+
+/* a finished case: one slim line, the detail is still in the page for screen readers */
+.stepper-done {
+  padding: var(--s-3) var(--s-5);
+}
+.stepper-done .step {
+  align-items: center;
+  padding-top: var(--s-2);
+}
+.stepper-done .step-detail {
+  display: none;
+}
+.stepper-done .step-state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.stepper-done .step-label {
+  font-size: var(--fs-13);
+}

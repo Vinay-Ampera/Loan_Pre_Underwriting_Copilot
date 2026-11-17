@@ -6,6 +6,7 @@ import { loanLabel } from '../components/LoanTypePicker'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import '../components/CaseQueueTable.css'
 import './HomePage.css'
+import { formatWhen } from '../lib/format'
 
 const TILES = [
   ['pending_precedents', 'Pending precedents', 'Waiting for your review', '/admin/precedents'],
@@ -57,7 +58,7 @@ function RecentDecisions() {
                     {STATUS[c.status]}{' '}
                     {c.corrected && <StatusChip tone="refer">Changed by an admin</StatusChip>}
                   </td>
-                  <td data-label="Decided">{new Date(c.decided_at).toLocaleString()}</td>
+                  <td data-label="Decided">{formatWhen(c.decided_at)}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Icon from './Icons'
+import { tidyFinding } from '../lib/format'
 import './FindingList.css'
 
 const SEVERITY = {
@@ -21,7 +22,7 @@ function Finding({ f, clauses }) {
       </span>
       <div className="finding-body">
         <p>
-          <span className="finding-sev">{sev.label}.</span> {f.message}
+          <span className="finding-sev">{sev.label}.</span> {tidyFinding(f.message)}
           {f.role && <span className="finding-role"> {ROLE[f.role]}</span>}
         </p>
         {f.explanation && <p className="muted">{f.explanation}</p>}

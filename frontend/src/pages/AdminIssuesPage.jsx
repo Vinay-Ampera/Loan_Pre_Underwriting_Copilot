@@ -5,6 +5,7 @@ import Dialog from '../components/Dialog'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { CATEGORIES, IssueChip } from './IssuesPage'
 import './AdminIssuesPage.css'
+import { formatWhen } from '../lib/format'
 
 const FILTERS = [
   ['open', 'Open'],
@@ -84,7 +85,7 @@ export default function AdminIssuesPage() {
                 </p>
                 <p className="small muted">
                   {i.reporter} · {categoryLabel(i.category)}
-                  {i.case_ref && ` · ${i.case_ref}`} · {new Date(i.created_at).toLocaleString()}
+                  {i.case_ref && ` · ${i.case_ref}`} · {formatWhen(i.created_at)}
                 </p>
               </div>
               <IssueChip status={i.status} />

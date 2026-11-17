@@ -1,4 +1,5 @@
 import Icon from './Icons'
+import { DOC_LABEL } from '../lib/docLabels'
 import './DocumentChecklist.css'
 
 const NAME = {
@@ -13,7 +14,7 @@ const NAME = {
 const pretty = (t) =>
   t
     .split('/')
-    .map((p) => NAME[p] || p.replaceAll('_', ' '))
+    .map((p) => NAME[p] || DOC_LABEL[p] || p.replaceAll('_', ' '))
     .join(' or ')
 const WHO = { primary: 'Applicant', co: 'Co-applicant' }
 

@@ -6,6 +6,7 @@ import Callout from '../components/Callout'
 import StatusChip from '../components/StatusChip'
 import { Skeleton } from '../components/States'
 import './IssuesPage.css'
+import { formatWhen } from '../lib/format'
 
 export const CATEGORIES = [
   ['bug', 'Something is broken'],
@@ -132,7 +133,7 @@ export default function IssuesPage() {
                   <p>{i.body}</p>
                   <p className="small muted">
                     {CATEGORIES.find((c) => c[0] === i.category)?.[1]}
-                    {i.case_ref && ` · ${i.case_ref}`} · {new Date(i.created_at).toLocaleString()}
+                    {i.case_ref && ` · ${i.case_ref}`} · {formatWhen(i.created_at)}
                   </p>
                 </div>
                 <IssueChip status={i.status} />

@@ -1,4 +1,5 @@
 import './AuditTimeline.css'
+import { formatWhen } from '../lib/format'
 
 const LABEL = {
   case_created: 'Case created',
@@ -36,7 +37,7 @@ export default function AuditTimeline({ events }) {
               {e.detail?.result === 'rejected' && <span className="muted"> – {e.detail.code}</span>}
             </p>
             <p className="small muted">
-              {e.actor} · {new Date(e.at).toLocaleString()}
+              {e.actor} · {formatWhen(e.at)}
             </p>
           </div>
         </li>

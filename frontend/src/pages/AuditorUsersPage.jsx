@@ -3,6 +3,7 @@ import { useAsync } from '../hooks/useAsync'
 import StatusChip from '../components/StatusChip'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AuditorTable.css'
+import { formatWhen } from '../lib/format'
 
 const ROLE = { officer: 'Loan officer', admin: 'Admin', auditor: 'Auditor' }
 
@@ -46,7 +47,7 @@ export default function AuditorUsersPage() {
                     )}
                   </td>
                   <td data-label="Last sign-in">
-                    {u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'}
+                    {u.last_login ? formatWhen(u.last_login) : 'Never'}
                   </td>
                 </tr>
               ))}

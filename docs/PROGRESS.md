@@ -28,6 +28,9 @@ Next: the user's review of Stage 10 Parts A to C and the decision on Part D, the
 
 ## Decisions log
 
+### 2026-11-17: Case page tidy, password toggle, two test fixes
+UI only, at the user's request after a review of the case page (details in `DESIGN_SYSTEM.md` 8.12): two-column case page, the score shown once, no stale "awaiting" text after a decision, readable finding sentences and dates, a slim stepper once done, a show/hide password button on sign-in, and a `TypedText` fix. `e2e/auditor.spec.js` now checks `/admin/users` and `/admin/recent-decisions` for 403 (the old `/admin/audit-log` no longer exists; the audit log moved to `/auditor/audit-log`). Unit tests 563 pass; all 29 browser tests pass.
+
 ### 2026-11-17: Frontend craft pass (unslop), locked decision 16 kept
 The user asked to redo the whole frontend with the unslop skill (github.com/heydamir/unslop) so it reads as a production bank platform. Agreed in conversation: keep Pramaan purple and Outfit + Inter (purple becomes the one accent, surfaces neutral), keep light, dark and system only, keep login as the landing page (no public site), and do every screen in one pass. Frontend only: no route, role, API, wording-rule or scoring change. Details in `DESIGN_SYSTEM.md` 8.11. Tests: `tokens.test.js` updated (new pairs, neutral-surface check, the login-gradient check removed), new `styles/craft.test.js`, `e2e/theme.spec.js` background values updated and the glow check replaced.
 

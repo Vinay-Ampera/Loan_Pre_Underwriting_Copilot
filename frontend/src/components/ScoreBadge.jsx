@@ -5,11 +5,11 @@ const BAND = { approve: 'Recommend approve', refer: 'Refer', reject: 'Recommend 
 const C = 2 * Math.PI * R
 
 /** Score ring and band. "Not computed" when the run stopped (the UI never computes a score). */
-export default function ScoreBadge({ score, band, indicative }) {
+export default function ScoreBadge({ score, band, indicative, compact = false }) {
   const tone = band || 'none'
   const pct = score == null ? 0 : Math.max(0, Math.min(100, Number(score)))
   return (
-    <div className={`score-badge score-${tone}`}>
+    <div className={`score-badge score-${tone}${compact ? ' score-compact' : ''}`}>
       <div className="score-ring">
         <svg viewBox="0 0 120 120" aria-hidden="true">
           <circle className="ring-track" cx="60" cy="60" r={R} />

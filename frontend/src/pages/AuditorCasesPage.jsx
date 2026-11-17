@@ -7,6 +7,7 @@ import { LOAN_TYPES, loanLabel } from '../components/LoanTypePicker'
 import { CaseStatusChip } from '../components/StatusChip'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AuditorTable.css'
+import { formatDay } from '../lib/format'
 
 const PAGE = 100
 const STATUSES = [
@@ -34,7 +35,7 @@ const NONE = {
   date_to: '',
 }
 const DECISION = { confirm: 'Confirmed', override: 'Overridden' }
-const day = (v) => new Date(v).toLocaleDateString()
+const day = formatDay
 
 function Select({ id, label, value, onChange, all, options }) {
   return (
