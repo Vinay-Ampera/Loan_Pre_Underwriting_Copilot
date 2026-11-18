@@ -93,7 +93,10 @@ def build_router(
         role: providers[spec["primary"]]["model"] for role, spec in cfg["roles"].items()
     }
     setattr(router, "primary_models", primary_models)  # noqa: B010
-    return router
+    # Annotated binding, not a cast: on some litellm versions `Router(...)` is typed Any, which
+    # makes `return router` fail mypy (no-any-return); on others a cast would be flagged redundant.
+    typed: Router = router
+    return typed
 
 
 def _extract_json(text: str) -> Any:
