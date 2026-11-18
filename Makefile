@@ -50,7 +50,7 @@ lint:
 # For Tempo traces, set OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 in .env first.
 grafana:
 	$(OBS) up -d
-	@echo "Grafana    http://localhost:3000  (admin / admin, or GRAFANA_ADMIN_PASSWORD)"
+	@echo "Grafana    http://localhost:3000  (s / s, or GRAFANA_ADMIN_PASSWORD)"
 	@echo "Prometheus http://localhost:9090"
 
 grafana-down:
