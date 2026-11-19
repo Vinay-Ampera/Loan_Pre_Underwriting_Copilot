@@ -6,6 +6,7 @@ import { useAsync } from '../hooks/useAsync'
 import { usePolling } from '../hooks/usePolling'
 import ApplicationForm, { stateFromCase, stateFromDesk } from '../components/ApplicationForm'
 import ApplicantRequest from '../components/ApplicantRequest'
+import LinkWarning from '../components/LinkWarning'
 import ApplicantReview from '../components/ApplicantReview'
 import IntakeDesk from '../components/IntakeDesk'
 import AdminChanges from '../components/AdminChanges'
@@ -314,6 +315,7 @@ export default function CaseWorkspacePage() {
                       <DocumentChecklist items={c.checklist} />
                     </details>
                   )}
+                  {!isAdmin && <LinkWarning c={c} />}
                   {c.origin === 'applicant' && <ApplicantRequest c={c} />}
                   {step === 'review' && c.intake_stage && c.applicant_sent && !isAdmin ? (
                     <ApplicantReview

@@ -87,7 +87,46 @@ describe('ApplicantUploadPage', () => {
     await user.click(screen.getByRole('button', { name: 'Yes, send' }))
     expect(pub.send).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('PRM-0A1B2C3D')).toBeInTheDocument()
-    expect(screen.getByText(/open this same link again/)).toBeInTheDocument()
+    expect(screen.getByText(/your loan officer will get in touch/)).toBeInTheDocument()
+    expect(screen.queryByText(/open this same link again/)).not.toBeInTheDocument()
+  })
+
+  it('after a refresh a sent submission shows the thank-you and the reference, not the form', async () => {
+    pub.link.mockResolvedValue(
+      view({
+        sent: true,
+        reference: 'PRM-0A1B2C3D',
+        request_open: false,
+        accepting_files: false,
+        checklist: null,
+      }),
+    )
+    render(<ApplicantUploadPage />)
+    expect(await screen.findByText('PRM-0A1B2C3D')).toBeInTheDocument()
+    expect(screen.queryByText('What to send')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Send to the bank' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Drop a zip/)).not.toBeInTheDocument()
+    const text = document.body.textContent.toLowerCase()
+    for (const word of ['score', 'recommend', 'approved', 'rejected', 'status', 'outcome']) {
+      expect(text).not.toContain(word)
+    }
+  })
+
+  it('when the officer asks for more, the list and the upload box come back, and sending again thanks them', async () => {
+    const user = userEvent.setup()
+    pub.link.mockResolvedValue(
+      view({ sent: true, reference: 'PRM-0A1B2C3D', more_requested: true, request_open: false }),
+    )
+    pub.send.mockResolvedValue({ reference: 'PRM-0A1B2C3D', incomplete: false })
+    render(<ApplicantUploadPage />)
+    expect(await screen.findByText('What to send')).toBeInTheDocument()
+    expect(screen.getByText(/asked for more documents/)).toBeInTheDocument()
+    expect(screen.getByText('Send the rest of your documents')).toBeInTheDocument()
+    expect(screen.queryByText('Change my request')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Send to the bank' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, send' }))
+    expect(await screen.findByText('PRM-0A1B2C3D')).toBeInTheDocument()
+    expect(screen.queryByText('What to send')).not.toBeInTheDocument()
   })
 
   it("asks for the request first on a new link and sends it as the applicant's own statement", async () => {

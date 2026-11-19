@@ -160,9 +160,12 @@ UNSENT_MESSAGE = (
 
 def waiting_for_applicant(conn: Connection, case_id: UUID, form: dict[str, Any]) -> bool:
     """True while an upload link for this case is still open, the applicant has not pressed
-    Send to the bank, and the officer has not chosen to go on without waiting. A link that was
+    Send to the bank (or, after the officer asked for more, has not sent again), and the officer
+    has not chosen to go on without waiting. A link that was
     switched off or has expired cannot bring more files, so it never holds a case back."""
-    if form.get("applicant_sent") or (form.get("intake") or {}).get("unsent_ack"):
+    if (form.get("applicant_sent") and not form.get("more_requested")) or (
+        form.get("intake") or {}
+    ).get("unsent_ack"):
         return False
     return bool(conn.execute(
         text("""SELECT EXISTS (SELECT 1 FROM upload_links

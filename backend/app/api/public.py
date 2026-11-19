@@ -95,6 +95,16 @@ def _open(case: Any) -> bool:
     return case is not None and case.status in SUBMITTABLE
 
 
+def _accepting(case: Any) -> bool:
+    """Files are taken until the applicant presses Send to the bank. After that the link is
+    closed to them until the officer asks for more (`more_requested`); then it takes files
+    again until they send once more."""
+    if not _open(case):
+        return False
+    form = case.form_data
+    return not form.get("applicant_sent") or bool(form.get("more_requested"))
+
+
 def _counts(request: Request, conn: Connection, case: Any) -> dict[str, Any] | None:
     """The checklist for this link and nothing else: item names and how many are in."""
     if case is None:
@@ -114,17 +124,27 @@ def _view(request: Request, conn: Connection, link: Any) -> dict[str, Any]:
     case = _case(conn, link)
     form = case.form_data if case is not None else {}
     officer_case = case is not None and form.get("origin") != "applicant"
+    sent = form.get("applicant_sent") or {}
+    asked_again = bool(form.get("more_requested"))
+    closed = bool(sent) and not asked_again  # sent, and the officer has not asked for more
     return {
         "active": True,
         "loan_type": link.loan_type or (case.loan_type if case is not None else None),
         "expires_on": link.expires_at.date().isoformat(),
         # the request step: open until the officer takes over the form (E-52); never on a case
-        # the officer made, which has no request to take
-        "request_open": not officer_case and not (case is not None and form.get("request_locked")),
+        # the officer made, which has no request to take; never once the applicant has sent
+        "request_open": not officer_case
+        and not (case is not None and form.get("request_locked"))
+        and not sent,
         "request_received": bool(form.get("request")),
-        "accepting_files": case is not None and _open(case),
-        "sent": bool(form.get("applicant_sent")),
-        "checklist": _counts(request, conn, case),
+        "accepting_files": case is not None and _accepting(case),
+        "sent": bool(sent),
+        # the number the applicant was already given, so a refresh can show it again
+        "reference": sent.get("reference"),
+        # the officer asked for more: the checklist and the upload box come back
+        "more_requested": asked_again,
+        # once sent the applicant sees no checklist until the officer asks for more
+        "checklist": None if closed else _counts(request, conn, case),
     }  # fmt: skip
 
 
@@ -189,7 +209,7 @@ def send_request(
     form = dict(case.form_data)
     if form.get("origin") != "applicant":
         raise HTTPException(409, "This link does not take a request.", headers=NO_CACHE)
-    if form.get("request_locked") or not _open(case):
+    if form.get("request_locked") or form.get("applicant_sent") or not _open(case):
         raise HTTPException(
             409, "Your request was already received by the bank. Please contact your loan officer "
                  "if something needs to change.", headers=NO_CACHE)  # fmt: skip
@@ -216,7 +236,7 @@ def add_files(
     case = _case(conn, link)
     if case is None:
         return JSONResponse({"detail": "Please send your request first."}, 409, headers=NO_CACHE)
-    if not _open(case):
+    if not _accepting(case):
         write_audit(conn, None, "applicant_upload_refused", "case", case.id,
                     after={"link_id": str(link.id), "status": case.status})  # fmt: skip
         return JSONResponse(
@@ -355,18 +375,23 @@ def send_to_bank(
     case = _case(conn, link)
     if case is None or not _open(case):
         return JSONResponse({"detail": CLOSED}, 409, headers=NO_CACHE)
+    form: dict[str, Any] = dict(case.form_data)
+    before = form.get("applicant_sent") or {}
+    if before and not form.get("more_requested"):  # pressed twice or after a refresh: same answer
+        return JSONResponse({"reference": before.get("reference"),
+                             "incomplete": bool(before.get("incomplete"))}, headers=NO_CACHE)  # fmt: skip
     counts = _counts(request, conn, case)
     incomplete = not (counts and counts["complete"])
-    form: dict[str, Any] = dict(case.form_data)
-    reference = (form.get("applicant_sent") or {}).get("reference") or (
-        "PRM-" + secrets.token_hex(4).upper())  # fmt: skip
+    reference = before.get("reference") or ("PRM-" + secrets.token_hex(4).upper())
     form["applicant_sent"] = {"at": date.today().isoformat(), "incomplete": incomplete,
                               "reference": reference}  # fmt: skip
+    form.pop("more_requested", None)  # the officer's request is answered
     conn.execute(
         text("""UPDATE cases SET form_data = CAST(:f AS jsonb), updated_at = now(),
                     status = CASE WHEN status IN ('draft', 'uploaded') THEN 'applicant_submitted'
                                   ELSE status END WHERE id = :c"""),
         {"f": json.dumps(form), "c": case.id})  # fmt: skip
     write_audit(conn, None, "applicant_sent", "case", case.id,
-                after={"link_id": str(link.id), "incomplete": incomplete})  # fmt: skip
+                after={"link_id": str(link.id), "incomplete": incomplete,
+                       "again": bool(before)})  # fmt: skip
     return JSONResponse({"reference": reference, "incomplete": incomplete}, headers=NO_CACHE)

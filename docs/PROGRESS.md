@@ -319,3 +319,12 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Backend:** `ingest.waiting_for_applicant` (link for the case open, not sent, no acknowledgement); inventory field `waiting_for_applicant`; `POST /cases/{id}/intake/continue-unsent` (second click, owner only, one audit row `continued_before_applicant_sent`, stored as `form_data.intake.unsent_ack`); `POST /cases/{id}/submit` returns 409 while waiting. No migration.
 - **Frontend:** `IntakeDesk` shows a note and a "Continue before the applicant has sent?" dialog; "Proceed anyway" for missing items ends in the same dialog when the applicant has not sent. Help page line added.
 - **Edge case:** E-72.
+
+---
+
+## Applicant page after Send and the expired-link warning (2026-11-19)
+
+- **Decision (user, 2026-11-19):** after the applicant presses Send to the bank the page stays on the thank-you screen with the reference, also after a refresh; the applicant cannot see the checklist or add files until the officer asks for more; when the officer asks, the page shows what is submitted and what is still needed. If the link has expired or been switched off while the applicant still owes documents, the officer is warned with a button to the Upload links page. The inbox and email plan (Parts 1 and 2) is still **not built**.
+- **Backend (no migration):** `public._view` returns `reference`, `more_requested` and no checklist once sent; `_accepting` refuses files and a changed request after the first send until `form_data.more_requested`; Send again is idempotent; a second send keeps the reference and clears `more_requested`. `links._reopen_for_more` (called by Ask the applicant) sets `more_requested`, clears `intake.unsent_ack` and writes `applicant_more_requested`. `ingest.waiting_for_applicant` treats a pending request for more as waiting. The case payload carries `more_requested`.
+- **Frontend:** `ApplicantUploadPage` (thank-you from the server state, "Send the rest of your documents" when asked for more), `LinkWarning` (case page, officer only) and an Upload links page filtered by `?case=`.
+- **Edge cases:** E-73, E-74, E-75.

@@ -8,8 +8,9 @@ audit log and the listings carry. The public side of a link is in `public.py`.
 
 import base64
 import hashlib
+import json
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -278,6 +279,22 @@ def regenerate(
     return {"id": link_id, "path": link_path(token), "expires_at": row.expires_at}
 
 
+def _reopen_for_more(conn: Connection, case: Any, user: User) -> None:
+    """The officer asks for more after the applicant has already sent: the applicant's page opens
+    again (checklist and upload box) until they send once more, and an earlier choice to go on
+    without waiting no longer counts. Before the first send there is nothing to reopen."""
+    form = dict(case.form_data)
+    if not form.get("applicant_sent"):
+        return
+    form["more_requested"] = {"at": date.today().isoformat()}
+    intake = dict(form.get("intake") or {})
+    intake.pop("unsent_ack", None)
+    form["intake"] = intake
+    conn.execute(text("UPDATE cases SET form_data = CAST(:f AS jsonb), updated_at = now() "
+                      "WHERE id = :c"), {"f": json.dumps(form), "c": case.id})  # fmt: skip
+    write_audit(conn, user.id, "applicant_more_requested", "case", case.id)
+
+
 @router.post("/cases/{case_id}/ask-applicant")
 def ask_applicant(
     case_id: UUID, body: SecondClickIn, request: Request, user: User = Depends(officer_only),
@@ -291,6 +308,7 @@ def ask_applicant(
     case = get_case(conn, case_id, user, lock=True)
     if case.status not in ("draft", "uploaded", "applicant_submitted"):
         raise HTTPException(409, "This case can no longer receive files.")
+    _reopen_for_more(conn, case, user)
     live = conn.execute(
         text("""SELECT id, expires_at FROM upload_links
                 WHERE case_id = :c AND disabled_at IS NULL AND expires_at > now()

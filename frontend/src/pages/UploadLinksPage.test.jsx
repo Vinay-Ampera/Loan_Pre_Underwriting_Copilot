@@ -26,7 +26,7 @@ const link = (over = {}) => ({
   ...over,
 })
 
-function setup(role = 'officer', list = [link()]) {
+function setup(role = 'officer', list = [link()], entry = '/links') {
   who.role = role
   api.get.mockReset().mockImplementation(async (path) => {
     if (path === '/links') return list
@@ -37,7 +37,7 @@ function setup(role = 'officer', list = [link()]) {
   })
   api.post.mockReset().mockResolvedValue({})
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <UploadLinksPage />
     </MemoryRouter>,
   )
@@ -46,6 +46,22 @@ function setup(role = 'officer', list = [link()]) {
 beforeEach(() => vi.clearAllMocks())
 
 describe('UploadLinksPage', () => {
+  it('opened from a case warning it shows only that case and a way back to all links', async () => {
+    const user = setup(
+      'officer',
+      [
+        link({ id: 'l1', state: 'expired', case_id: 'c1', case_no: 'CASE-2026-0007' }),
+        link({ id: 'l2', case_id: 'c2', case_no: 'CASE-2026-0008' }),
+      ],
+      '/links?case=CASE-2026-0007',
+    )
+    expect(await screen.findByText('Expired')).toBeInTheDocument()
+    expect(screen.queryByText('CASE-2026-0008')).not.toBeInTheDocument()
+    expect(screen.getByText(/Set days/, { selector: 'strong' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Show all links' }))
+    expect(await screen.findByText('CASE-2026-0008')).toBeInTheDocument()
+  })
+
   it('creating a link needs the second click and shows the address once', async () => {
     const user = setup()
     await screen.findByText('Open')

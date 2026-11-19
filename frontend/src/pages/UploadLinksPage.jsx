@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useSession } from '../App'
 import { linkUrl } from '../components/AskApplicantDialog'
@@ -224,6 +224,8 @@ function SetDaysDialog({ link, onClose, onDone }) {
 export default function UploadLinksPage() {
   const isAdmin = useSession().session.user.role === 'admin'
   const links = useAsync(() => api.get('/links'), [])
+  const [params, setParams] = useSearchParams()
+  const caseFilter = params.get('case') // set by the warning on a case whose link has ended
   const [creating, setCreating] = useState(false)
   const [toDisable, setToDisable] = useState(null)
   const [toSet, setToSet] = useState(null)
@@ -232,6 +234,8 @@ export default function UploadLinksPage() {
   const [regenerated, setRegenerated] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+
+  const rows = (links.data || []).filter((l) => !caseFilter || l.case_no === caseFilter)
 
   async function disable() {
     setBusy(true)
@@ -292,10 +296,23 @@ export default function UploadLinksPage() {
       )}
       {links.loading && !links.data && <Skeleton lines={4} />}
       {links.error && <ErrorState error={links.error} onRetry={links.reload} />}
+      {links.data && caseFilter && (
+        <p className="small" role="status">
+          Showing the links of <strong className="mono">{caseFilter}</strong>. To open an expired
+          link again choose <strong>Set days</strong>. A disabled link cannot be reopened: use{' '}
+          <strong>Ask the applicant</strong> on the case to make a new one.{' '}
+          <button type="button" className="btn btn-ghost" onClick={() => setParams({})}>
+            Show all links
+          </button>
+        </p>
+      )}
       {links.data && links.data.length === 0 && (
         <EmptyState title="No links yet">Create one to ask an applicant for documents.</EmptyState>
       )}
-      {links.data && links.data.length > 0 && (
+      {links.data && links.data.length > 0 && rows.length === 0 && (
+        <EmptyState title="No links for this case">Use Show all links to see the rest.</EmptyState>
+      )}
+      {rows.length > 0 && (
         <div className="card links-wrap">
           <table className="links-table">
             <thead>
@@ -313,7 +330,7 @@ export default function UploadLinksPage() {
               </tr>
             </thead>
             <tbody>
-              {links.data.map((l) => {
+              {rows.map((l) => {
                 const [tone, label] = STATE[l.state]
                 return (
                   <tr key={l.id}>

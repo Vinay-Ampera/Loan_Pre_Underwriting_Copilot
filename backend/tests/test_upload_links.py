@@ -162,7 +162,8 @@ def test_the_page_reads_back_nothing_but_checklist_counts(
     first = client.get("/api/v1/public/link", headers=tok(token)).json()
     assert first == {"active": True, "loan_type": "personal", "expires_on": first["expires_on"],
                      "request_open": True, "request_received": False, "accepting_files": False,
-                     "sent": False, "checklist": None}  # fmt: skip
+                     "sent": False, "reference": None, "more_requested": False,
+                     "checklist": None}  # fmt: skip
     assert (
         client.post("/api/v1/public/files", files=pfiles("a.pdf"), headers=tok(token)).status_code
         == 409
@@ -297,6 +298,124 @@ def test_once_the_officer_saves_the_form_the_request_is_locked_and_the_link_take
 
 
 @needs_cases
+def _sent_by_applicant(client: TestClient, h: dict[str, str]) -> tuple[str, str, dict[str, str]]:
+    """A case that arrived through a link and was sent: (case id, reference, token header)."""
+    token = make_link(client, h)["token"]
+    client.post("/api/v1/public/request", json=REQUEST, headers=tok(token))
+    client.post("/api/v1/public/files", files=pfiles("p.pdf"), headers=tok(token))
+    sent = client.post("/api/v1/public/send", json={"second_click": True}, headers=tok(token))
+    assert sent.status_code == 200
+    cid = client.get("/api/v1/cases", headers=h).json()[0]["id"]
+    return cid, sent.json()["reference"], tok(token)
+
+
+def test_after_send_a_refresh_shows_the_reference_and_the_link_takes_nothing_more(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, ref, t = _sent_by_applicant(client, h)
+    view = client.get("/api/v1/public/link", headers=t).json()
+    assert view["sent"] is True and view["reference"] == ref and view["more_requested"] is False
+    # nothing to fill in or add: no checklist, no upload, no request step
+    assert view["checklist"] is None and view["accepting_files"] is False
+    assert view["request_open"] is False
+    refused = client.post("/api/v1/public/files", files=pfiles("late.pdf"), headers=t)
+    assert refused.status_code == 409 and refused.json() == {
+        "detail": "This link is not accepting files right now."
+    }
+    assert client.post("/api/v1/public/request", json=REQUEST, headers=t).status_code == 409
+    # pressing Send again (a second tab, a refresh) gives the same answer and writes nothing new
+    again = client.post("/api/v1/public/send", json={"second_click": True}, headers=t)
+    assert again.status_code == 200 and again.json()["reference"] == ref
+    timeline = [a["action"] for a in client.get(f"/api/v1/cases/{cid}/audit", headers=h).json()]
+    assert timeline.count("applicant_sent") == 1
+    assert "applicant_upload_refused" in timeline
+    with engine.connect() as c:
+        assert (
+            c.execute(
+                text("SELECT count(*) FROM documents WHERE original_name = 'late.pdf'")
+            ).scalar()
+            == 0
+        )
+    # the view carries the reference and nothing that reads like an outcome
+    blob = json.dumps(view).lower()
+    for word in ("score", "recommend", "approved", "rejected", "outcome"):
+        assert word not in blob
+
+
+def test_the_officer_asking_for_more_reopens_the_page_until_the_applicant_sends_again(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, ref, t = _sent_by_applicant(client, h)
+    detail = client.get(f"/api/v1/cases/{cid}", headers=h).json()
+    assert detail["applicant_sent"] and not detail["more_requested"]
+    assert (
+        client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()["waiting_for_applicant"]
+        is False
+    )
+    asked = client.post(
+        f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h
+    )
+    assert asked.status_code == 200
+    assert client.get(f"/api/v1/cases/{cid}", headers=h).json()["more_requested"]
+    # the applicant's page shows what is in and what is still needed, and takes files again
+    view = client.get("/api/v1/public/link", headers=t).json()
+    assert view["more_requested"] is True and view["checklist"] is not None
+    assert view["accepting_files"] is True and view["reference"] == ref
+    assert (
+        client.post("/api/v1/public/files", files=pfiles("more.pdf"), headers=t).status_code == 200
+    )
+    # the officer is now waiting for the new files, until the applicant sends again
+    inv = client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()
+    assert inv["waiting_for_applicant"] is True
+    sent = client.post("/api/v1/public/send", json={"second_click": True}, headers=t).json()
+    assert sent["reference"] == ref  # the same reference: it is the same submission
+    closed = client.get("/api/v1/public/link", headers=t).json()
+    assert closed["more_requested"] is False and closed["checklist"] is None
+    assert closed["accepting_files"] is False
+    assert (
+        client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()["waiting_for_applicant"]
+        is False
+    )
+    assert not client.get(f"/api/v1/cases/{cid}", headers=h).json()["more_requested"]
+    timeline = [a["action"] for a in client.get(f"/api/v1/cases/{cid}/audit", headers=h).json()]
+    assert timeline.count("applicant_more_requested") == 1 and timeline.count("applicant_sent") == 2
+
+
+def test_asking_for_more_cancels_an_earlier_choice_to_go_on_without_waiting(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, _, t = _sent_by_applicant(client, h)
+    client.post(f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h)
+    unsent = f"/api/v1/cases/{cid}/intake/continue-unsent"
+    done = client.post(unsent, json={"second_click": True}, headers=h).json()
+    assert done["waiting_for_applicant"] is False
+    client.post(f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h)
+    inv = client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()
+    assert inv["waiting_for_applicant"] is True  # a new request is a new wait
+
+
+def test_asking_for_more_after_the_link_expired_makes_a_new_link_for_the_case(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, ref, old = _sent_by_applicant(client, h)
+    with engine.begin() as c:
+        c.execute(text("UPDATE upload_links SET expires_at = now() - interval '1 day' WHERE case_id = :c"),
+                  {"c": cid})  # fmt: skip
+    assert client.get("/api/v1/public/link", headers=old).status_code == 404  # the old one is dead
+    assert client.get(f"/api/v1/cases/{cid}/link", headers=h).json()["link"]["state"] == "expired"
+    asked = client.post(
+        f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h
+    ).json()
+    assert asked["new_link"] is True and asked["token"]
+    view = client.get("/api/v1/public/link", headers=tok(asked["token"])).json()
+    assert view["more_requested"] is True and view["reference"] == ref
+    assert client.get(f"/api/v1/cases/{cid}/link", headers=h).json()["link"]["state"] == "active"
+
+
 def test_after_submit_the_link_refuses_files_neutrally_and_the_officer_sees_it(
     client: TestClient, engine: Engine
 ) -> None:  # fmt: skip

@@ -363,21 +363,19 @@ export default function ApplicantUploadPage() {
       </section>,
     )
   if (!view) return <PageLoader full label="Opening…" />
-  if (done)
+  // sent: the page stays on the thank-you, also after a refresh, until the officer asks for more
+  const reference = done?.reference || (view.sent && !view.more_requested ? view.reference : null)
+  if (reference)
     return shell(
       <section className="card ap-card" aria-live="polite">
         <h1>Thank you. We have it.</h1>
         <p>
-          Your reference is <strong className="mono">{done.reference}</strong>. Keep it in case you
-          speak to your loan officer.
+          Your reference is <strong className="mono">{reference}</strong>. Keep it in case you speak
+          to your loan officer.
         </p>
-        {done.incomplete && (
-          <p className="muted">
-            Some items were not sent yet. You can open this same link again to add them while it is
-            open.
-          </p>
-        )}
-        <p className="muted">The bank will contact you if it needs anything else.</p>
+        <p className="muted">
+          If anything else is needed, your loan officer will get in touch with you.
+        </p>
       </section>,
     )
 
@@ -388,10 +386,16 @@ export default function ApplicantUploadPage() {
   return shell(
     <>
       <h1>
-        Send your documents
+        {view.more_requested ? 'Send the rest of your documents' : 'Send your documents'}
         {view.loan_type && <span className="muted"> · {loanLabel(view.loan_type)}</span>}
       </h1>
       <p className="muted">This link is open until {view.expires_on}.</p>
+      {view.more_requested && (
+        <p role="status">
+          Your loan officer has asked for more documents. The list below shows what is in and what
+          is still needed.
+        </p>
+      )}
       {error && (
         <p className="field-error" role="alert">
           {error}

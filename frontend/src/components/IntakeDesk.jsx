@@ -67,7 +67,9 @@ export default function IntakeDesk({
     setBusy(true)
     setError(null)
     try {
-      setInventory(await api.post(`/cases/${caseId}/intake/continue-unsent`, { second_click: true }))
+      setInventory(
+        await api.post(`/cases/${caseId}/intake/continue-unsent`, { second_click: true }),
+      )
       setUnsent(false)
       onContinue?.()
     } catch (e) {

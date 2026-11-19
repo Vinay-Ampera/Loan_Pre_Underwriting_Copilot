@@ -454,6 +454,7 @@ def read_case(
         "request": form.get("request"),  # the applicant's own statement, a claim to be checked
         "request_locked": bool(form.get("request_locked")),
         "applicant_sent": form.get("applicant_sent"),  # {at, incomplete, reference} once sent
+        "more_requested": form.get("more_requested"),  # {at} while the officer waits for more
         "identity": {"from_documents": form.get("from_documents", {}),
                      "confirmed": bool(form.get("identity_confirmed"))},  # fmt: skip
     }  # fmt: skip

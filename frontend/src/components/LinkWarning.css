@@ -1,0 +1,28 @@
+.link-warning {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--refer-bg);
+  color: var(--ink);
+}
+.link-warning-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--refer);
+}
+.link-warning-body {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+.link-warning-body strong {
+  display: block;
+  font-family: var(--font-head);
+  font-weight: 500;
+}
+.link-warning-body p {
+  margin-top: var(--s-1);
+}
