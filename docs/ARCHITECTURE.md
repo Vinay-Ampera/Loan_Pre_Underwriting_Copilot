@@ -79,7 +79,11 @@ zip / folder / files / applicant link
 - Extraction (`agents/assemble.py`, `_early_read`) loads the saved read result when its hash and application date match and reads the file again only when the model pass needs the page text (never saved) or the date differs. No second OCR otherwise.
 - The public routes (`/api/v1/public/*`) have no session. The token travels in the `X-Upload-Token` header and the page keeps it in the URL fragment (`/u#token`), which a browser never sends to a server, so it is in no access log. `api/ratelimit.py` limits per link and per address.
 - `api/links.py` creates, lists, extends and disables links (officer for their own, admin naming an officer). "Ask the applicant" makes a link bound to a case. The "Upload link" message (Stage 9 outbox) carries the link added by code; the page holds the token in memory for the two calls and the server keeps only a placeholder.
-- Part D (bundle PDF split, `intake/bundle.py`) is not built.
+- Part D (bundle PDF split, built 2026-11-18): `intake/bundle.py` proposes the split from each page's own title (the same local classifier), `api/ingest.py` (`Desk`) stores a multi-page PDF that looks like several documents as a row with status `bundle`, and `api/intake.py` saves the officer's edit (no dialog) and cuts on the second click (`confirm_split`): each piece is a PDF cut with PyMuPDF, checked, read from the pages already read, classified and filed like a file of its own, linked to the original by `parent_document_id`, `page_from`, `page_to`. The bundle is read twice (to propose, then to cut) because raw page text is never kept; a piece's PDF metadata is not judged (it describes the merging tool), so the piece carries the quality flag `from_bundle` instead.
+
+## 3e. AI control (admin, 2026-11-18)
+
+`app/services/ai_config.py` holds the configuration the pipeline uses: models per role, router settings, the model switch, temperature and length per role, and the published prompt texts, loaded from `ai_config_versions` and `ai_prompt_versions` over the file defaults (`llm_models.yaml`, `prompts/*.md`). The API starts with a `ConfiguredRouter` that looks like a LiteLLM router to the agents but forwards each call to the router of the configuration **bound to the running case**. `Runner` binds the active snapshot (a context variable) as each run starts, after a cheap check of the two version stamps, so a published change reaches the next case and never changes a running one. `AgentContext.models()` is the router or `None` when the admin switched models off (the agents then write their text in code). `app/api/ai_control.py` is the admin-only API; `app/agents/prompt_check.py` tries a draft prompt on a fixed synthetic sample with the real schema and guardrails.
 
 ## 4. Model routing
 
@@ -92,6 +96,8 @@ zip / folder / files / applicant link
 | Evaluation judge | A lighter model from a different family than the generator | Avoids self-grading |
 
 Providers are spread across agents to share the free quota. Verify model IDs and limits at Stage 1.
+
+The table above is the file default. From Stage 10 the admin can change it from the AI control page (section 3e): each role's first choice and fallbacks come from the providers listed in `llm_models.yaml`; keys stay in `.env`.
 
 **Gemini and PDFs:** v1 never sends raw PDFs to a cloud model. Text is extracted locally (OCR for images), masked, then sent. Direct PDF reading is an optional switch for production with approved data.
 

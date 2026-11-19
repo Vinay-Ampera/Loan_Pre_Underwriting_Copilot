@@ -26,6 +26,7 @@ import CaseWorkspacePage from './pages/CaseWorkspacePage'
 import AdminHomePage from './pages/AdminHomePage'
 import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import AdminAiControlPage from './pages/AdminAiControlPage'
 import AdminOfficerPage from './pages/AdminOfficerPage'
 import AuditorOverviewPage from './pages/AuditorOverviewPage'
 import AuditLogPage from './pages/AuditLogPage'
@@ -134,6 +135,14 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminUsersPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/ai"
+        element={
+          <Shell role="admin">
+            <AdminAiControlPage />
           </Shell>
         }
       />

@@ -33,6 +33,7 @@ from app.intake.masker import Masker
 from app.rag.retrieve import PolicyRetriever
 from app.rag.schemas import PolicyResult, RetrievedClause
 from app.scoring.models import ScoreReport
+from app.services import ai_config
 
 MAX_FINDINGS_TO_MODEL = 12
 SEVERITY_ORDER = {"hard_fail": 0, "cap": 1, "points_lost": 2, "note": 3}
@@ -210,6 +211,7 @@ async def run_decision(
         documents=documents,
         versions={"rules": score.rules_version, "rules_checksum": score.rules_checksum,
                   "policy": version_info(conn, score.loan_type), "prompts": {**prompts, "decision": version},
+                  "ai_config": ai_config.active().config_version,
                   "models": models},
     )  # fmt: skip
     meta = {"needs_judge": asked.output is not None and needs_judge(

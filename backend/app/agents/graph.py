@@ -26,7 +26,6 @@ from app.agents import evals, store
 from app.agents.assemble import extract
 from app.agents.decision import run_decision
 from app.agents.kyc import KycResult, run_kyc_agent
-from app.agents.policy import PROMPT_VERSION as POLICY_PROMPT_VERSION
 from app.agents.policy import run_policy_agent
 from app.agents.report import Report, mark_from_documents
 from app.agents.results import checks_for
@@ -42,6 +41,7 @@ from app.observability.tracing import stage_span
 from app.rag.schemas import PolicyResult
 from app.scoring.engine import score_case
 from app.scoring.models import CaseInput, ScoreReport
+from app.services import ai_config
 
 Update = dict[str, Any]
 Node = Callable[[PipelineState], Awaitable[Any]]
@@ -129,7 +129,7 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             store.save_stage(
                 conn, _case(state), "extraction", status=status, score=pts, max_score=mx,
                 hard_fail=stopped, fail_class=score.stop_class if stopped else None,
-                findings=_dump(ex.flags), model=ex.calls[-1].model if ex.calls else None, prompt_version=1,
+                findings=_dump(ex.flags), model=ex.calls[-1].model if ex.calls else None, prompt_version=ai_config.active().prompt_versions()["extraction"],
                 fallback_used=any(c.fallback_used for c in ex.calls),
                 checks=checks_for(score, ("documents",)),
             )  # fmt: skip
@@ -204,7 +204,7 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
         inp = _input(state)
         with ctx.engine.connect() as conn:
             retriever = ctx.retriever_factory(conn) if ctx.retriever_factory else None
-            result = await run_policy_agent(conn, ctx.router, inp, score, rs, retriever=retriever)
+            result = await run_policy_agent(conn, ctx.models(), inp, score, rs, retriever=retriever)
         status = "unverified" if result.unverified else "passed"
         calls = (
             [LLMCallRecord(stage="policy", role="policy", model=result.model or "", tokens_in=result.tokens_in,
@@ -216,7 +216,7 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             store.save_stage(
                 conn, _case(state), "policy", status=status, score=result.score,
                 max_score=score.stage_max["policy"], findings=_dump(result.fit_findings),
-                model=result.model, prompt_version=POLICY_PROMPT_VERSION, retries=result.retries,
+                model=result.model, prompt_version=ai_config.active().prompt_versions()["policy"], retries=result.retries,
                 fallback_used=result.fallback_used, checks=checks_for(score, ("policy",)),
             )  # fmt: skip
         return {
@@ -296,8 +296,8 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
         ] if s]  # fmt: skip
         models = {"supervisor": plan.model, "kyc": kyc_r.model if kyc_r else None,
                   "risk": risk_r.model if risk_r else None, "policy": pol_r.model if pol_r else None}  # fmt: skip
-        prompts = {"supervisor": plan.prompt_version, "extraction": 1, "kyc": kyc_r.prompt_version if kyc_r else 0,
-                   "risk": risk_r.prompt_version if risk_r else 0, "policy": POLICY_PROMPT_VERSION}  # fmt: skip
+        prompts = {"supervisor": plan.prompt_version, "extraction": ai_config.active().prompt_versions()["extraction"], "kyc": kyc_r.prompt_version if kyc_r else 0,
+                   "risk": risk_r.prompt_version if risk_r else 0, "policy": ai_config.active().prompt_versions()["policy"]}  # fmt: skip
         with ctx.engine.connect() as conn:
             report, asked, meta = await run_decision(
                 ctx, conn, score, kyc=kyc_r, risk=risk_r, policy=pol_r, flags=flags,

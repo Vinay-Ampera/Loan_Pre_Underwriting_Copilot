@@ -25,6 +25,7 @@ from app.agents.runtime import AgentContext, Services
 from app.api import (
     admin,
     admin_cases,
+    ai_control,
     auditor,
     auth,
     cases,
@@ -43,6 +44,7 @@ from app.notifications.sender import Sender, build_sender
 from app.observability import metrics
 from app.rag.embedder import embed_passages
 from app.scoring.rules import load_rules
+from app.services import ai_config
 
 log = logging.getLogger("loan_copilot")
 DIST = REPO_ROOT / "frontend" / "dist"
@@ -75,13 +77,15 @@ def create_app(
             llm_on = settings.llm_enabled if use_llm is None else use_llm
             the_router = router
             if the_router is None and llm_on:
-                from app.services.llm import build_router  # noqa: PLC0415 - only when models are on
+                from app.services.ai_config import ConfiguredRouter  # noqa: PLC0415
 
-                the_router = build_router()
+                the_router = ConfiguredRouter()  # forwards to the router of the run's configuration
             ruleset = load_rules()
             ctx = AgentContext(ruleset=ruleset, engine=eng, router=the_router, services=Services.from_store(),
                                **(ctx_kwargs or {}))  # fmt: skip
-            runner = Runner(Pipeline(ctx, the_saver), eng)
+            ai_config.reset()
+            ai_config.refresh(eng, settings)  # the admin's saved models, prompts and settings
+            runner = Runner(Pipeline(ctx, the_saver), eng, settings)
             app.state.settings, app.state.engine, app.state.ruleset = settings, eng, ruleset
             app.state.runner, app.state.embed = runner, embed or embed_passages
             app.state.sender = sender or build_sender(settings.notification_sender)
@@ -111,6 +115,7 @@ def create_app(
         cases.router,
         admin.router,
         admin_cases.router,
+        ai_control.router,
         auditor.router,
         auditor_view.router,
         users.router,

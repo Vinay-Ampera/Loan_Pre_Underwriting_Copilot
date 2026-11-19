@@ -22,7 +22,7 @@ Raw PAN and Aadhaar are synthetic. Full Aadhaar is never stored.
 
 Stage 10 (built, migrations 0014 and 0015) adds to `documents`: `role` (primary|co, null until the file is filed to a person; it replaces the old join through `applicants` and is what the pipeline reads), `role_source` (auto|officer), `classification` (what the local classifier found) with `type_source` (detected|officer) beside `doc_type` (what the officer sees), `duplicate_of` (the document it repeats) with `duplicate_kind` (exact|same_document|conflict). `status` also takes `ignored`: a repeat is a row with no stored file. `applicant_id` is now `ON DELETE SET NULL`: saving a corrected form replaces the applicant rows and used to delete every uploaded file's row through the cascade (a bug found while building the desk; files are filed by `role` and re-linked after the save).
 
-Next to each stored file the desk keeps a **read result** (`<file>.read.json`, behind the `FileStore` interface): the upload checks, the extracted fields, quality flags, tamper hints and missing fields, keyed by `sha256` and the application date. Extraction loads it instead of reading the file again. Raw page text is never stored. Not built (Part D, not started): `parent_document_id`, `page_from`/`page_to`.
+Next to each stored file the desk keeps a **read result** (`<file>.read.json`, behind the `FileStore` interface): the upload checks, the extracted fields, quality flags, tamper hints and missing fields, keyed by `sha256` and the application date. Extraction loads it instead of reading the file again. Raw page text is never stored. **Bundles (migration 0017):** `documents.status` also takes `bundle` (a multi-page PDF waiting for the officer's split; the proposal and the officer's edit are in `upload_checks.bundle`) and `split` (confirmed; the original stays on disk); a piece has `parent_document_id` (the original, `ON DELETE SET NULL`), `page_from` and `page_to` (1-based, inclusive).
 
 `cases.loan_amount` and `cases.tenure_months` may be empty for a case opened at the desk (their `> 0` checks still hold for a value). `cases.status` also takes `applicant_submitted`. Desk and applicant data that are not columns live in `form_data`: `origin` (`applicant` when it came through a link), `request` (the applicant's own statement: loan type, amount, tenure, purpose, employment, income, earner role), `request_locked`, `applicant_sent` (`at`, `incomplete`, `reference`), `upload_link_id`, `intake` (`employment` per person, `co`, `proceeded`), `from_documents` (per person, the identity fields still exactly as the cards gave them) and `identity_confirmed`.
 
@@ -97,6 +97,16 @@ Index: HNSW on `embedding`; btree on `clause_id`.
 **rule_set_versions**
 `version, checksum, loaded_at, loaded_by`
 Each report stores the policy and rules version used.
+
+## 4b. AI control (migration 0018)
+
+| Table | Purpose |
+|---|---|
+| `ai_config_versions` | One row per saved model configuration: `version` (identity), `config` (jsonb: roles with primary, fallbacks, temperature, max_tokens; router retries, timeout, cooldown; the model switch), `reason`, `source` (`edit` or `rollback`), `rolled_back_to`, `created_by`, `created_at`. Append-only (trigger). No keys. |
+| `ai_prompt_versions` | One published editable prompt text per `(name, version)`; versions continue above the version in the prompt file. `body`, `reason`, `source`, `rolled_back_to`, `created_by`. Append-only (trigger). |
+| `ai_prompt_drafts` | At most one draft per prompt; `tested_hash` and `tested_ok` record the text that last passed the test (publishing needs the hash to match). Editable and deletable. |
+
+With no rows the file defaults apply. `app_rw` can read and insert the two version tables and read, write and delete drafts; `report_ro` reads the two version tables.
 
 ## 5. Mock services (synthetic)
 

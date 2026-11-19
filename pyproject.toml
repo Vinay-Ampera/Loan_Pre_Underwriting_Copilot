@@ -30,6 +30,8 @@ select = ["E", "F", "I", "B", "UP", "SIM", "N"]
 "backend/tests/*" = ["E501"]
 # these reuse the API tests' client and engine fixtures by importing them
 "backend/tests/test_intake_desk.py" = ["F811"]
+"backend/tests/test_bundle.py" = ["F811"]
+"backend/tests/test_ai_control.py" = ["F811"]
 "backend/tests/test_upload_links.py" = ["F811"]
 # intake: dense label tables and messages
 "backend/app/intake/*" = ["E501"]
@@ -64,7 +66,7 @@ known-first-party = ["app", "synthetic"]
 
 # PyMuPDF and the OCR wrappers ship loose types; calls into them are checked by tests instead
 [[tool.mypy.overrides]]
-module = ["app.intake.upload", "app.intake.reader", "app.intake.ocr", "app.intake.evaluate"]
+module = ["app.intake.upload", "app.intake.reader", "app.intake.ocr", "app.intake.evaluate", "app.intake.bundle", "app.intake.evaluate_bundles", "app.api.ingest"]
 disallow_untyped_calls = false
 warn_return_any = false
 disallow_any_expr = false

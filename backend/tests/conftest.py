@@ -40,3 +40,13 @@ def clean_db_url() -> Iterator[str]:
         with admin.connect() as conn:
             conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         admin.dispose()
+
+
+@pytest.fixture(autouse=True)
+def _ai_config_defaults() -> Iterator[None]:
+    """The admin's AI configuration is process-wide state: every test starts and ends on the file defaults."""
+    from app.services import ai_config  # noqa: PLC0415
+
+    ai_config.reset()
+    yield
+    ai_config.reset()

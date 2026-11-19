@@ -107,6 +107,8 @@ Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.m
 - Keep prompts in `prompts/<agent>.md`, versioned with the release.
 - Record prompt version, model ID and parameters on every `stage_runs` row.
 
+**Admin-editable prompts (AI control, 2026-11-18).** Every file in `prompts/` has an editable part (role and style) and, after the line `<!-- locked -->`, a locked part (the safety rules and the reply format). `prompt_text(name)` returns the published version of the editable part (the admin's, if one exists, else the file's) followed by the file's locked part, and the version number. The locked part cannot be edited from the browser; changing it is a code change with a review. `prompt_version` on `stage_runs` and in the report's `versions` is the published version, so a report always says which text produced it. Temperature and an output length limit per role are also admin settings; they default to 0 and to each step's own limit. See `docs/SECURITY.md` 4d.
+
 ## Precedent flow (not an agent, but touches Decision and Policy)
 
 Override → reason required → LLM summary of the report → proposed precedent (embedding) → code checks hard rules (breach = held) → admin approves or rejects → approved precedent stored with expiry → retrieved by Policy for similar borderline cases.

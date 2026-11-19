@@ -215,7 +215,7 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-28 (Stage 10, built) A zip, a folder or many files can be uploaded at once. Archives are unpacked safely (no paths outside the case folder, no symlinks, one nesting level, count, size and ratio limits, junk files skipped) and every inner file gets the normal upload checks.
 - FR-29 (Stage 10, built) Each accepted file is read once (OCR only where needed), classified and assigned to a person; the result is cached against the file hash and reused by Extraction, so nothing is read twice.
 - FR-30 (Stage 10, built) An inventory shows, per person, what is received, still missing (essential items marked), extra, unrecognised, rejected and duplicate-ignored. The officer can correct a type or person.
-- FR-31 (Stage 10, Part D, not built) A PDF holding several documents is split by page into separate files linked to the original; the officer confirms the split.
+- FR-31 (Stage 10, Part D, built 2026-11-18) A multi-page PDF whose pages are different documents is read page by page: a page with a recognised title starts a new document, a page without one continues the previous document, and an unrecognised first page is "unrecognised". The proposed split is shown with a tick on each page where a document starts and a type for each; the officer moves it and confirms with a second click. The original PDF is kept untouched; each piece is its own file (own checks, own duplicate rules) linked to it by `parent_document_id` and page range. Nothing goes on (proceed, submit, resume) while a PDF waits for its split. A bundle may have up to `BUNDLE_MAX_PAGES` pages (120) and `BUNDLE_MAX_MB` megabytes (25) and every scanned page is checked for blur; the whole feature is off with `BUNDLE_SPLIT_ENABLED=false`, and then a multi-page PDF is one document as before.
 
 ### 9.2 ID validation (offline functions, no real lookups)
 
@@ -267,6 +267,15 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-34 (built) The page never reads back a file, a score, a status or an outcome. A wrong, expired or revoked token gets one generic answer. Rate limits and size caps apply per link and per address.
 - FR-35 (built) The case appears in the chosen officer's queue as "From applicant". The officer can correct the request (audited) until they open and edit the form; after that the link accepts files only. Missing items are shown to the applicant on the same link; the Stage 9 message never lists them. A new "Upload link" template carries only the link and the usual footer.
 - FR-36 (built) Uploaded files stay on local disk with a database reference behind a `FileStore` interface; only the assigned officer and the admin can open them, through the authenticated API.
+
+### 9.9 AI control (admin only, built 2026-11-18)
+
+- FR-37 (built) The admin has an AI control page with four tabs: **Models** (per role a first-choice model and up to three fallbacks, chosen from the providers in `llm_models.yaml`; retries, timeout and cooldown), **Keys** (whether each key is set in `.env`, and a test button), **Prompts** (the editable part of each of the six prompts) and **Settings** (model switch, temperature and output length per role). Officers and the auditor cannot open it.
+- FR-38 (built) API keys stay in `.env`. The page shows only "set" or "missing" and the variable name; it never shows, stores or returns a key, and a test returns only ok, latency and the error class.
+- FR-39 (built) A model or setting change needs a written reason (10 characters or more) and a second click. Every model that is new for a role is tested with a real call first; a failed test or a missing key refuses the change. The judge may not be the same model as the Decision step. Each change is a new immutable version; rolling back copies an old version into a new one. Every change is in the audit log with what changed (provider ids and numbers only).
+- FR-40 (built) A prompt has an **editable part** (role and style) and a **locked part** (data is not instructions, no arithmetic, "recommended" wording, no protected attributes, the reply format) that always comes from the file in git and is added after the editable part. A draft is saved freely, must pass a test on a fixed synthetic sample (the real schema and guardrails) and is then published with a reason and a second click; any edit after the test clears the pass. Older versions, and the original text, can be restored the same way.
+- FR-41 (built) A change applies to cases that start after it. A case that is already running keeps the configuration it started with; the report records the configuration version and the prompt versions it used.
+- FR-42 (built) The page cannot change scoring weights, bands, hard rules, the age cap, masking, the output schemas or the guardrails. Switching the models off makes every step write its text in code, exactly as an offline run does.
 
 ## 10. Evaluation
 
@@ -349,4 +358,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built. Stage 10 Parts A, B and C (intake desk, identity from the cards, applicant upload link) are built (2026-11-04); Part D (several documents in one PDF) is not started and may be cut. Stage 11 (hardening, Docker, demo) follows it. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. Stage 11 (hardening, Docker, demo) follows. Status is tracked in `PROGRESS.md`.

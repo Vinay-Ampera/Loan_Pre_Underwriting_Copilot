@@ -114,7 +114,7 @@ def _early_read(ctx: AgentContext, path: str, data: bytes, as_of: date) -> Intak
     saved = readcache.load(sidecar.read_bytes(), sha256_hex(data), as_of)
     if saved is None or saved.document is None:
         return None
-    if ctx.router is not None and (saved.missing or saved.document.doc_type is DocType.UNKNOWN):
+    if ctx.models() is not None and (saved.missing or saved.document.doc_type is DocType.UNKNOWN):
         return None
     return saved
 
@@ -183,10 +183,11 @@ async def extract(ctx: AgentContext, sub: Submission) -> Extracted:
             flags.append(Flag(stage="extraction", code="UPLOAD_REJECTED", role=ref.role,
                               message=f"{ref.name}: {res.upload.message or res.upload.reject_code}"))  # fmt: skip
             continue
-        if ctx.router is not None and (res.missing or res.document.doc_type is DocType.UNKNOWN):
+        router = ctx.models()
+        if router is not None and (res.missing or res.document.doc_type is DocType.UNKNOWN):
             llm_calls: list[Any] = []
             try:
-                res = await enrich(res, ctx.router, masker, llm_calls)
+                res = await enrich(res, router, masker, llm_calls)
             except Exception:  # noqa: BLE001 - the local values stand; the officer sees the gap
                 flags.append(Flag(stage="extraction", code="LLM_FILL_FAILED", role=ref.role,
                                   message=f"{ref.name}: the model pass failed; fields left as read"))  # fmt: skip

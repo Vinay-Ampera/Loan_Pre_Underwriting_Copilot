@@ -18,6 +18,7 @@ from pydantic import BaseModel, ValidationError
 from app.core.config import Settings, get_settings
 from app.intake.masker import assert_masked
 from app.observability.tracing import generation
+from app.services import ai_config
 
 CONFIG_PATH = Path(__file__).with_name("llm_models.yaml")
 
@@ -141,6 +142,8 @@ async def complete[T: BaseModel](
     GSTIN or email.
     """
     assert_masked(*(m["content"] for m in messages))
+    temperature, limit = ai_config.active().tuning(role)  # the admin's settings (default 0, none)
+    max_tokens = limit or max_tokens
     started = time.perf_counter()
     with generation(role) as traced:
         resp: Any = await router.acompletion(  # litellm's response types are loose; validated below
@@ -148,7 +151,7 @@ async def complete[T: BaseModel](
             messages=messages,  # type: ignore[arg-type]
             max_tokens=max_tokens,
             response_format={"type": "json_object"},
-            temperature=0,
+            temperature=temperature,
         )
         usage_ = getattr(resp, "usage", None)
         traced(

@@ -6,8 +6,6 @@ same code validators as any other field. The model never sees a raw identifier: 
 stops the call otherwise.
 """
 
-from pathlib import Path
-
 from litellm.router import Router
 from pydantic import BaseModel, Field
 
@@ -15,9 +13,9 @@ from app.intake import checks
 from app.intake.fields import SPECS, parse_date, parse_money
 from app.intake.masker import Masker, assert_masked
 from app.intake.models import DocType, ExtractedField
+from app.services import ai_config
 from app.services.llm import LLMResult, complete
 
-PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "extraction.md"
 MAX_CHARS = 6000  # keeps the prompt small for free-tier token limits
 LLM_CONFIDENCE_CAP = 0.90  # a model's own confidence is never trusted above this
 NOT_IN_SOURCE_PENALTY = 0.5
@@ -35,7 +33,7 @@ class LLMFields(BaseModel):
 
 
 def system_prompt() -> str:
-    return PROMPT_PATH.read_text().split("-->", 1)[-1].strip()
+    return ai_config.prompt_text("extraction")[0]
 
 
 def wanted_fields(doc_type: DocType, have: set[str]) -> list[str]:

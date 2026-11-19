@@ -18,6 +18,7 @@ from app.agents.state import LLMCallRecord
 from app.intake.masker import MaskingError
 from app.rag.retrieve import PolicyRetriever
 from app.scoring.rules import RuleSet
+from app.services import ai_config
 from app.services.llm import LLMOutputError, LLMResult, complete
 from app.services.mock_services import (
     BureauService,
@@ -26,15 +27,11 @@ from app.services.mock_services import (
     RecordStore,
 )
 
-PROMPTS = Path(__file__).resolve().parents[2] / "prompts"
-
 
 def prompt_text(name: str) -> tuple[str, int]:
-    """(prompt body without its header, version) for `prompts/<name>.md`."""
-    raw = (PROMPTS / f"{name}.md").read_text(encoding="utf-8")
-    header, _, body = raw.partition("-->")
-    version = int(header.split("version:")[1].split("|")[0].strip())
-    return body.strip(), version
+    """(system prompt, version) for `name`: the published version if the admin has one, else the
+    file in `prompts/`. The locked rules are always the file's (see `services/ai_config.py`)."""
+    return ai_config.prompt_text(name)
 
 
 @dataclass
@@ -61,6 +58,11 @@ class AgentContext:
     intake_slots: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(4))
     judge_inconclusive: bool = True
     intake_cache: Path | None = None  # dev speed-up for repeated evaluation runs; off by default
+
+    def models(self) -> Router | None:
+        """The model router, or None when models are off (no router, or the admin switched them
+        off): callers then write the text in code, exactly as in an offline run."""
+        return self.router if ai_config.active().llm_enabled else None
 
 
 def to_record(stage: str, role: str, res: LLMResult[Any]) -> LLMCallRecord:
@@ -103,14 +105,15 @@ async def ask[T: BaseModel](
 ) -> Asked[T]:
     """One model call with the gate rules: schema, guardrails, one retry with the reasons fed
     back, then `unverified`. `build(issues)` makes the (already masked) messages."""
-    if ctx.router is None:
+    router = ctx.models()
+    if router is None:
         return Asked(output=None, skipped=True)
     out = Asked[T](output=None)
     issues: list[str] = []
     for attempt in range(2):
         out.retries = attempt
         try:
-            res = await complete(ctx.router, role, build(issues), schema, max_tokens=max_tokens)
+            res = await complete(router, role, build(issues), schema, max_tokens=max_tokens)
         except LLMOutputError as exc:
             issues = [f"reply was not valid JSON for the schema ({exc})"]
             continue

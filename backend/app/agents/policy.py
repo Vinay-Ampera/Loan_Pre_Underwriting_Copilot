@@ -7,7 +7,6 @@ stage score from `app.scoring`; the model never touches numbers.
 """
 
 import json
-from pathlib import Path
 from typing import Any
 
 from litellm.router import Router
@@ -28,10 +27,8 @@ from app.rag.schemas import (
 )
 from app.scoring.models import CaseInput, RuleOutcome, ScoreReport
 from app.scoring.rules import RuleSet
+from app.services import ai_config
 from app.services.llm import LLMOutputError, complete
-
-PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "policy.md"
-PROMPT_VERSION = 1
 
 # plain-English topics for the RBI conduct clauses every loan type is checked against
 CONDUCT_QUERIES = [
@@ -91,7 +88,7 @@ def build_messages(
         user += "\nYour previous answer failed these checks. Fix them:\n" + "\n".join(
             f"- {i}" for i in issues.issues
         )
-    system = PROMPT_PATH.read_text(encoding="utf-8")
+    system, _ = ai_config.prompt_text("policy")
     return [
         {"role": "system", "content": masker.mask(system)},
         {"role": "user", "content": masker.mask(user)},

@@ -22,6 +22,7 @@ const paths = {
   flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
   link: 'M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1',
   shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  sliders: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6',
   // status marks (replace the old text glyphs)
   check: 'M5 12.5l4.5 4.5L19 7.5',
   x: 'M6.5 6.5l11 11M17.5 6.5l-11 11',

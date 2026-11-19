@@ -19,10 +19,11 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 7 Learning loop, evaluation, observability | Built, committed (`babe29b`) | Open items updated 2026-11-02: OI-1, OI-2, OI-5, OI-6 resolved; OI-3 values, OI-4 live Langfuse check and OI-7 targets wait for the real-model baseline run |
 | 8 UI revamp (Pramaan) | Built, committed (`25e6ad6`, `ff177fa`) | 2026-11-02. Tokens and bundled fonts, light/dark/system, login landing, sidebar shell, Home screens, stepper, score ring, 3C strip, Conditions, admin Users (new endpoints, audited). See "Stage 8 build notes". No migration, no scoring change |
 | 9 Customer notifications and issue reports | **Built, exit criteria pass (not committed)** | 2026-11-02. Migration 0010 (outbox, issue_reports, `users.phone`, `applicants.email`), `app/notifications/`, message and issue routes, Sent items, draft dialog, Report a problem, admin Issues. See "Stage 9 build notes". Run `python -m app.db.migrate` first |
-| 10 Intake desk and applicant upload link | **Parts A, B, C built (2026-11-04, not committed); Part D not started** | Migrations 0014 and 0015; `intake/archive.py`, `readcache.py`, `inventory.py`, `prefill.py`; `api/ingest.py`, `intake.py`, `links.py`, `public.py`, `filestore.py`, `ratelimit.py`; desk, form tick, links page and applicant page in the UI. See "Stage 10 build notes". Run `python -m app.db.migrate` first. Part D (bundle PDF split) waits for the user |
+| 10 Intake desk and applicant upload link | **Parts A to D built** (A, B, C 2026-11-04; D 2026-11-18; not committed) | Migrations 0014 to 0017; `intake/archive.py`, `readcache.py`, `inventory.py`, `prefill.py`, `bundle.py`; `api/ingest.py`, `intake.py`, `links.py`, `public.py`, `filestore.py`, `ratelimit.py`; desk, split screen, form tick, links page and applicant page in the UI. See "Stage 10 build notes" and "Stage 10 Part D build notes". Run `python -m app.db.migrate` first |
+| 10b AI control for the admin | **Built (2026-11-18; not committed)** | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 11 Hardening, Docker and demo | **Planned, not started** | Was Stage 10 (before that Stage 8); renumbered 2026-11-04 |
 
-Next: the user's review of Stage 10 Parts A to C and the decision on Part D, then Stage 11 (hardening and Docker). Do not start Part D or Stage 11 until the user says so.
+Next: the user's review of Stage 10 (Parts A to D) and the AI control page, then Stage 11 (hardening and Docker). Do not start Stage 11 until the user says so.
 
 ---
 
@@ -100,7 +101,8 @@ Tick items here as they land. The exit criteria are in `IMPLEMENTATION_PLAN.md`.
 - [x] Stage 9 Customer notifications and issue reports (2026-11-02; migration 0010; not committed)
 - [ ] Review window: additions and corrections collected by the user before Stage 11
 - [x] Stage 10 Part A intake desk, Part B identity from the cards, Part C applicant upload link (built 2026-11-04; migrations 0014, 0015; not committed)
-- [ ] Stage 10 Part D several documents in one PDF (not started; may be cut)
+- [x] Stage 10 Part D several documents in one PDF (built 2026-11-18; migration 0017; not committed)
+- [x] Stage 10b AI control for the admin (built 2026-11-18; migration 0018; not committed)
 - [ ] Stage 11 Hardening, Docker and demo
 
 ---
@@ -146,6 +148,40 @@ Built in the order A, B, C as asked; Part D was not started (the user said to go
 | Migrations | 0014 and 0015 apply, roll back to 0013 with data present and apply again (`test_stage_10_migrations_...`). **The configured dev database was at 0013**; run `python -m app.db.migrate` |
 | Lint, types, frontend | `ruff check`, `ruff format --check`, `mypy` (134 files), `eslint`, `prettier --check` clean; Vitest 220 of 220 |
 
+
+## Stage 10 Part D build notes (2026-11-18)
+
+Requested by the user on 2026-11-18 ("complete stage 10 part D as well"). Migration **0017**; run `python -m app.db.migrate`.
+
+**What exists**
+- `intake/bundle.py` (pure): `propose` classifies every page with the same local classifier, `validate` checks the officer's split, `cut` makes each piece's PDF with PyMuPDF; `intake/upload.py` has the bundle mode of the upload checks (more pages, every scanned page measured for blur, the bad page named); `intake/reader.py` keeps tables per page and can hand a piece its pages (`subset`) so nothing is read twice; `intake/pipeline.process_file` takes that read and marks a piece `from_bundle`.
+- `api/ingest.py` was reshaped into a `Desk` class (state of one upload step on one case); `ingest()` and the new `confirm_split()` both use it. A multi-page PDF is looked at first: several documents means a stored row with status `bundle`; one document means the read is handed on and it is filed as before.
+- `api/intake.py`: `PUT /cases/{id}/documents/{doc}/split` (the officer's edit, no dialog, audited), `POST .../split/confirm` (second click), `bundles` and `splits` in the inventory; proceed, submit and resume are refused with 409 while a bundle waits.
+- UI: `BundleSplit` (a tick on each page where a document starts, a type for each, Confirm the split, Remove this PDF, Back to the proposed split), shown at the top of the inventory; the desk cannot continue while a PDF waits; the case page lists bundle and split rows.
+- `python -m app.intake.evaluate_bundles --split dev [--mode digital|all] [--workers N]` measures the split.
+
+**Measured (dev split, 60 bundles, all documents including photographs and scans):** page label accuracy **98.8%** (640 of 648), documents exactly right **98.3%** (527 of 536), 0 bundles refused; text-layer only: 100%. Every miss is an Aadhaar photograph whose title OCR did not read. The switch stays on (`BUNDLE_SPLIT_ENABLED=true`). The test split was not used.
+
+**Differences from the plan, and why** (none changes a locked decision)
+1. The bundle is read twice (to propose, then to cut) because raw page text is never saved between the two steps (E-54).
+2. A piece's PDF metadata is not judged for tamper hints (E-61); the piece carries `from_bundle`.
+3. `bundle` and `split` are document statuses rather than a separate table; the proposal and the officer's edit live in `upload_checks.bundle`.
+4. The applicant's link also accepts a bundle (it goes through the same ingest) but only the officer can split it; the applicant sees it as "received".
+5. The split screen is a tick per page, not draggable boundaries; moving a boundary is unticking one page and ticking another.
+6. The applicant photograph is left out of the measurement (no title; E-62).
+
+**Not done:** a Playwright run of the split screen; the cross-case duplicate check stays out of v1 (decision 19e).
+
+## AI control build notes (2026-11-18)
+
+Requested 2026-11-18 ("let the admin have an AI control page"); the user answered the plan with "keep keys in .env, go ahead with your recommendations". Built after Stage 10 Parts A to C, in the same working tree as Part D.
+
+- **Migration 0018** (`ai_config_versions`, `ai_prompt_versions`, `ai_prompt_drafts`); run `python -m app.db.migrate`. Without it the API still starts (it logs a warning and uses the file defaults) and the page fails until migrated.
+- **Backend:** `services/ai_config.py` (defaults, validation, snapshot bound per run, `ConfiguredRouter`, model probe), `api/ai_control.py` (admin only, `/api/v1/admin/ai/...`), `agents/prompt_check.py`, `prompts/*.md` split into editable and locked parts, `AgentContext.models()`, `Runner` binds the configuration to each run, `complete()` reads temperature and length per role, report `versions.ai_config`.
+- **Frontend:** `pages/AdminAiControlPage` (tabs Models, Keys, Prompts, Settings), `components/ReasonDialog`, sidebar entry "AI control" for the admin, a `sliders` icon.
+- **Differences from the suggestion:** (1) the "run the dev split before publishing" gate became a test of the prompt on a fixed synthetic sample with the real schema and guardrails, because the offline evaluation gate never calls a model; (2) the policy relevance threshold is not on the page (it sits in `rag.yaml` and decides which clauses are cited); (3) a model is tested only when it is new for a role, not at every save.
+- **Locked decisions touched:** decision 11 (models) is now the file default, changeable by the admin within the catalogue; decision 9 (roles) gains an admin-only page. Wording for CLAUDE.md is left to the user.
+- **Verified:** `test_ai_control.py` 31 tests, `AdminAiControlPage.test.jsx` 10 tests; see TESTING 7f. Not run: a real model call from the page and a Playwright run.
 
 ## Stage 9 build notes (2026-11-02)
 

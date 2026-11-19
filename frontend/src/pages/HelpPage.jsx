@@ -69,6 +69,7 @@ const ADMIN = [
   ['adm-records', "Messages and a case's history", 'mail'],
   ['issues', 'Read issue reports', 'flag'],
   ['precedents', 'The precedent queue', 'precedent'],
+  ['ai-control', 'AI control: models and prompts', 'sliders'],
 ]
 
 const AUDITOR = [
@@ -158,6 +159,12 @@ function OfficerGuide() {
             The inventory shows what is received, still missing, extra, not recognised, not
             accepted, and repeats that were ignored. Change a type or a person from its list; it
             saves at once.
+          </li>
+          <li>
+            A PDF that holds several documents (a PAN card, then an Aadhaar card, then a statement)
+            appears as a card with every page. A tick marks each page where a new document starts;
+            choose what each one is. Nothing is cut until you choose{' '}
+            <strong>Confirm the split</strong> and confirm again. The original PDF is kept.
           </li>
           <li>
             State the employment type (salaried or self-employed) if you know it. Until then the
@@ -338,6 +345,35 @@ function AdminGuide() {
           <li>Disable an account to stop it signing in. You cannot disable your own account.</li>
           <li>Enable a disabled account to let that person sign in again.</li>
         </ul>
+      </HelpSection>
+
+      <HelpSection id="ai-control" icon="sliders" title="AI control: models and prompts">
+        <ul>
+          <li>
+            <strong>Models</strong> lets you choose which model answers each step and which models
+            take over if it fails. A model that is new for a step is tested first, and the change is
+            refused if the test fails.
+          </li>
+          <li>
+            <strong>Keys</strong> shows whether each key is set. Keys live in the server&apos;s .env
+            file and are never shown or stored here; edit that file and restart the server to change
+            one.
+          </li>
+          <li>
+            <strong>Prompts</strong> lets you change how a step is asked to write. Save a draft,
+            test it, then publish. The safety rules and the reply format are locked and are always
+            added after your text.
+          </li>
+          <li>
+            <strong>Settings</strong> turns the models on or off and sets temperature and length.
+            Temperature 0 gives the most repeatable wording.
+          </li>
+        </ul>
+        <Callout tone="info" title="What a change affects">
+          Every save and publish asks for a reason and a second click, and is kept in the audit log.
+          A change applies to cases that start afterwards; a case already running keeps what it
+          began with. Scores, bands, rules and checks are never changed from this page.
+        </Callout>
       </HelpSection>
 
       <HelpSection id="reset" icon="shield" title="Reset a password">

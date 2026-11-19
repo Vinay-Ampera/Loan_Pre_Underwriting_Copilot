@@ -232,11 +232,11 @@ Risks: the blank option lets the officer type a leak. Mitigation: the code check
 
 ---
 
-## Stage 10: Intake desk and applicant upload link (L), planned 2026-11-04, Parts A to C built 2026-11-04
+## Stage 10: Intake desk and applicant upload link (L), planned 2026-11-04, Parts A to C built 2026-11-04, Part D built 2026-11-18
 
 **Goal:** the officer no longer labels files one by one or types the identity fields, and an applicant can send documents through a one-time link. The pipeline order, scoring, weights, bands and the human confirmation do not change. Everything here happens **before** Submit and ends in the same `Submission` the pipeline already reads.
 
-**Status (2026-11-04):** Parts A, B and C are built and tested; Part D (bundle PDF split) is not started and may be cut. Differences from this text are listed in `PROGRESS.md` ("Stage 10 build notes"): the token rides in the URL fragment and a header (192 bits), the read result is a sidecar file, two photographs are filed by the officer, and the identity values for the form are offered to the owning officer only. The exit-criteria results are in the same notes.
+**Status (2026-11-18):** Parts A, B, C and D are built and tested. Part D (bundle PDF split, built 2026-11-18): migration 0017, `intake/bundle.py`, the split screen (a tick on each page where a document starts), 98.8% page-level label accuracy measured on the dev split, the switch on by default (see `TESTING.md` 7e and `PROGRESS.md`). Differences from this text are listed in `PROGRESS.md` ("Stage 10 build notes"): the token rides in the URL fragment and a header (192 bits), the read result is a sidecar file, two photographs are filed by the officer, and the identity values for the form are offered to the owning officer only. The exit-criteria results are in the same notes.
 
 Decisions behind it are in `PROGRESS.md` (2026-11-04) and `EDGE_CASES.md` E-31 (amended) and E-42 to E-54. Build in this order; each part is usable on its own, and the last part may be cut.
 
@@ -288,6 +288,18 @@ Exit criteria
 Risks: the classifier misses unusual titles, so many files land in "unrecognised". Mitigation: the dropdown, a measured classification rate on the dev split, and no guessing. A public page invites abuse. Mitigation: item 15, a token that opens nothing but its own checklist, and a short expiry. Scope: Part D can be cut first, then the "Upload link" message template.
 
 ---
+
+## Stage 10b: AI control for the admin (added and built 2026-11-18)
+
+**Goal:** the admin can change the models, the model settings and the editable part of the prompts from the browser without a deploy, and nothing the admin can do weakens a locked decision. Requested 2026-11-18; the user chose to keep keys in `.env`.
+
+**Built:** migration 0018 (`ai_config_versions`, `ai_prompt_versions`, `ai_prompt_drafts`); `services/ai_config.py`; `api/ai_control.py` (admin only); `agents/prompt_check.py`; every prompt file split into an editable and a locked part; `Runner` binds the configuration to each run; the AI control page (Models, Keys, Prompts, Settings). Details: PRD 9.9, SECURITY 4d, ARCHITECTURE 3e, DATABASE 4b, TESTING 7f.
+
+**Decisions taken (user: "go ahead with your recommendations"):** keys stay in `.env` (status and test only); prompts are editable only in their editable part, a draft must pass a test before publishing, every change needs a reason and a second click; models come from the fixed catalogue in `llm_models.yaml`; applies to new cases only.
+
+**Not included:** the policy relevance threshold and the precedent bonus cap stay in their own files (they influence what is cited and scored); a browser test of the page; the "run the dev split" evaluation before publishing (the offline gate does not call models, so the prompt test on a fixed sample is the gate).
+
+Exit criteria: met by the tests in TESTING 7f.
 
 ## Stage 11: Hardening, Docker and demo (M)
 

@@ -17,14 +17,19 @@ from sqlalchemy import Engine, text
 from app.agents.graph import Pipeline
 from app.agents.submission import Submission
 from app.api.deps import write_audit
+from app.core.config import Settings, get_settings
+from app.services import ai_config
 
 log = logging.getLogger("loan_copilot.runner")
 
 
 class Runner:
-    def __init__(self, pipeline: Pipeline, engine: Engine) -> None:
+    def __init__(
+        self, pipeline: Pipeline, engine: Engine, settings: Settings | None = None
+    ) -> None:
         self.pipeline = pipeline
         self.engine = engine
+        self.settings = settings or get_settings()
         self.tasks: dict[str, asyncio.Task[None]] = {}
 
     def is_running(self, case_uuid: UUID | str) -> bool:
@@ -40,6 +45,8 @@ class Runner:
 
         async def run() -> None:
             try:
+                # the configuration in force when this run starts is the one it uses to the end
+                ai_config.bind(await ai_config.refresh_async(self.engine, self.settings))
                 await job()
             except asyncio.CancelledError:
                 raise  # shutdown: the checkpoint stays, recover() continues it next start

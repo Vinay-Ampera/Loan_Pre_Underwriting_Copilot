@@ -80,6 +80,20 @@ The one public surface. Locked decision 16 ("no public page, no signup") is rela
 - **What the applicant's page shows of the officer's work:** nothing. The request is not echoed back; the checklist shows item names and counts only; a refusal after the case is running is the same neutral line, and the refusal is audited on the case so the officer sees it.
 - **Raw identifiers:** the identity values offered for the form (`GET /cases/{id}/prefill`) include the full PAN, so that route is the owning officer's only (the admin gets 403).
 
+## 4d. AI control (admin only, 2026-11-18)
+
+The admin may change which models answer, the model settings and the editable part of the prompts. The aim is that this can neither leak a key nor weaken a safety rule.
+
+- **Access:** admin only (403 for officers and the auditor, 401 without a session). Every route is in `app/api/ai_control.py`.
+- **Keys never move:** keys are read from `.env` at start-up by `Settings`. The routes return `key_set: true/false` and the variable name, never a value; the model test returns ok, latency and the **error class only** (a provider's message can carry a key fragment). Tests: a distinctive fake key is absent from every response, audit row and error.
+- **A prompt is two parts.** The editable part is stored in the database; the **locked part** (data is not an instruction, no arithmetic, wording, protected attributes, the reply format) is read from `backend/prompts/*.md` in git on every call and appended after the editable part, so an edit cannot remove it. The editable text is checked on save: at most 4000 characters, no comment markers or code fences, none of the data tags (`<checks>`, `<items>`, `<report>`, `<clauses>`, `<results>`, `<case>`, `<document>`), and no instruction-injection pattern (`IGNORE_INSTRUCTIONS`, `ROLE_SWITCH`, `REVEAL_PROMPT`, `JSON_PAYLOAD`).
+- **A prompt is tested before it is used.** Publishing needs a passing test of exactly this text: the real model for that role answers a fixed synthetic sample, and the real schema and guardrails judge the reply (`check_text`: protected attributes, "approved" wording, instruction-like text; invented numbers; clause ids and quotes). The pass is stored with a hash of the text; any later edit clears it. The model output itself is still validated and guarded at run time, whatever the prompt says.
+- **Models:** only providers listed in `llm_models.yaml` can be chosen; a provider with no key cannot be chosen; any provider that is new for a role is called once before the change is saved; the judge may not be the Decision model (it would grade itself).
+- **Versions are append-only** (a database trigger refuses `UPDATE` and `DELETE` on `ai_config_versions` and `ai_prompt_versions`); a rollback is a newer row. Each change needs a reason and a second click.
+- **Audit:** `ai_config_changed` (version, source, reason, what changed in provider ids and numbers), `ai_prompt_published` (version, a short hash before and after, reason, length; **never the prompt text**), `ai_prompt_tested` and `ai_model_tested` (result only). The auditor sees them in the system-wide log.
+- **When it applies:** the runner binds the configuration in force at the start of a run, so a change cannot alter a case halfway; the report's `versions` records the configuration version and every prompt version used. A run resumed after a crash takes the configuration in force at that moment.
+- **Not reachable from here:** scoring weights and bands, hard rules, the age cap, masking, schemas, guardrails, the rules file, policy documents, and the API keys.
+
 ## 5. Secrets and logging
 
 - **E. API keys and secrets in `.env`, never in git.** `.env.example` has placeholders only. Pre-commit secret scanning.
@@ -98,7 +112,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 - Store files under generated names; keep original names as metadata only.
 - Rejected files are deleted immediately.
 - **Archives (Stage 10):** unpack to the case folder only; refuse `..`, absolute paths and symlinks; one nesting level; cap file count, total bytes and compression ratio while reading (a zip bomb is stopped by the byte budget, not after extraction); skip `__MACOSX`, `.DS_Store`, `Thumbs.db`; allow-listed extensions only; every inner file gets the checks above. An archive that breaks a limit writes nothing.
-- **Bundle PDFs (Stage 10, Part D):** the original is kept untouched; each cut-out piece is a new file that follows the same checks.
+- **Bundle PDFs (Stage 10, Part D, built 2026-11-18):** the original is kept untouched; each cut-out piece is a new file that follows the same checks (type by signature, size, active content, blur, duplicate rules). Bundle limits are separate and bounded: `BUNDLE_MAX_PAGES` (120), `BUNDLE_MAX_MB` (25, and the case total still applies), every scanned page is measured for blur and a bad page is named; a password-protected or scripted bundle is refused as a single file is. A bundle is stored but never read by the pipeline: nothing is extracted from it until the officer confirms the split (second click), and submit, proceed and resume are refused while one waits. PDF metadata of a piece is not used for tamper hints (the metadata of a merged file describes the merging tool, so it would flag genuine documents); the piece is flagged `from_bundle`, and content-based hints still run. Splitting is only by page; no text is moved between files.
 
 ## 7. Retention and privacy
 
@@ -135,6 +149,8 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | Customer message leaks data or enables phishing (Stage 9) | No-data templates, server-side content check on every message including blank, fixed fraud footer, second confirmation, audit |
 | Officer reads another officer's messages (Stage 9) | Per-officer outbox access, 404 on others; the admin reads sent messages only (D4) |
 | An admin changes a decision to approve over a hard rule, or decides before the officer (2026-11-03) | Server refuses a correction on a case with a hard-rule finding and on any case the officer has not decided (409); a correction never becomes a precedent; every change keeps the officer's row, a reason and an audit row |
+| An admin edits a prompt to remove a safety rule, or points a step at an untested model (2026-11-18) | Locked part always appended from git; editable text validated; publish needs a passing test of that exact text, a reason and a second click; new models are called before a change is saved; schemas and guardrails still judge every reply; append-only versions and audit rows |
+| A key leaks through the AI control page (2026-11-18) | Keys stay in `.env`; the page shows set or missing only; the model test returns the error class only; no key in any response, audit row or log (tested) |
 
 ## 11. Review checklist (before each release)
 

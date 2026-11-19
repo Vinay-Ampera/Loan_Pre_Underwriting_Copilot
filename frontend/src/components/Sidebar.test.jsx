@@ -34,6 +34,7 @@ describe('Sidebar', () => {
       'Messages',
       'Issues',
       'Users',
+      'AI control',
       'Help',
     ])
     expect(items).not.toContain('New case')

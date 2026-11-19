@@ -27,6 +27,7 @@ const NAV = {
     ['/admin/messages', 'Messages', 'mail', false],
     ['/admin/issues', 'Issues', 'flag', false],
     ['/admin/users', 'Users', 'users', false],
+    ['/admin/ai', 'AI control', 'sliders', false],
     ['/help', 'Help', 'help', false],
   ],
 }
