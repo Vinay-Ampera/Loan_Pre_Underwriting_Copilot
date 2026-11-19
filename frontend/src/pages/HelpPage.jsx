@@ -176,6 +176,12 @@ function OfficerGuide() {
             needed.
           </li>
           <li>
+            If the applicant has an open upload link but has not pressed{' '}
+            <strong>Send to the bank</strong>, more files may still arrive. Continue then asks you
+            to confirm that you want to go on without waiting; the choice is written to the
+            audit trail of the case.
+          </li>
+          <li>
             In the application form, the name, date of birth, PAN, Aadhaar last four and address are
             filled from the PAN and Aadhaar cards and marked <em>from documents</em>. Check them
             against the cards and tick the box. If the two cards disagree, the field is left empty

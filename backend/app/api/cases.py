@@ -623,6 +623,8 @@ def _prepare_submit(engine: Engine, request: Request, case_id: UUID, user: User)
             raise HTTPException(
                 422, "Confirm the identity details that were read from the cards before submitting."
             )
+        if ingest.waiting_for_applicant(conn, case_id, form):
+            raise HTTPException(409, ingest.UNSENT_MESSAGE)
         docs = _documents(conn, case_id)
         checklist = _checklist(_ruleset(request), row, docs)
         missing = [

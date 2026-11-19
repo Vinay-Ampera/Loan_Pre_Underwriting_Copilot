@@ -93,6 +93,37 @@ describe('IntakeDesk: second click only where the plan says', () => {
     await vi.waitFor(() => expect(setInventory).toHaveBeenCalled())
   })
 
+  it('Continue waits for a second click while the applicant has not pressed Send', async () => {
+    const full = inventory({ complete: true, waiting_for_applicant: true })
+    full.people[0].missing = []
+    full.counts.missing = 0
+    const { user, onContinue } = setup(full)
+    expect(screen.getByText(/has not pressed Send to the bank yet/)).toBeInTheDocument()
+    api.post.mockResolvedValue({ ...full, waiting_for_applicant: false })
+    await user.click(screen.getByRole('button', { name: 'Continue to the application form' }))
+    expect(onContinue).not.toHaveBeenCalled() // the first click only opens the dialog
+    expect(api.post).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(api.post).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Continue to the application form' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, continue anyway' }))
+    expect(api.post).toHaveBeenCalledWith('/cases/c1/intake/continue-unsent', {
+      second_click: true,
+    })
+    await vi.waitFor(() => expect(onContinue).toHaveBeenCalled())
+  })
+
+  it('Continue goes straight on when no link is waiting for the applicant', async () => {
+    const full = inventory({ complete: true, waiting_for_applicant: false })
+    full.people[0].missing = []
+    full.counts.missing = 0
+    const { user, onContinue } = setup(full)
+    expect(screen.queryByText(/has not pressed Send/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Continue to the application form' }))
+    expect(onContinue).toHaveBeenCalled()
+    expect(api.post).not.toHaveBeenCalled()
+  })
+
   it('Proceed anyway is off while the identity papers are missing', () => {
     setup(
       inventory({

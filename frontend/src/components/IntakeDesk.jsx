@@ -28,6 +28,7 @@ export default function IntakeDesk({
 }) {
   const [ask, setAsk] = useState(false)
   const [proceed, setProceed] = useState(false)
+  const [unsent, setUnsent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [splitNote, setSplitNote] = useState(null)
@@ -37,6 +38,7 @@ export default function IntakeDesk({
   const nothingYet = c.received + c.unassigned + c.unrecognised + toSplit === 0
   const missingNow = c.missing > 0 || inventory.depends_on_employment.length > 0
   const blocked = inventory.essential_missing > 0
+  const waiting = Boolean(inventory.waiting_for_applicant)
   const ready = !blocked && toSplit === 0 && (!missingNow || inventory.proceeded)
 
   async function upload(form) {
@@ -49,12 +51,28 @@ export default function IntakeDesk({
     setBusy(true)
     setError(null)
     try {
-      setInventory(await api.post(`/cases/${caseId}/intake/proceed`, { second_click: true }))
+      const next = await api.post(`/cases/${caseId}/intake/proceed`, { second_click: true })
+      setInventory(next)
       setProceed(false)
-      onContinue?.()
+      if (next.waiting_for_applicant) setUnsent(true)
+      else onContinue?.()
     } catch (e) {
       setError(e.message)
       setProceed(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function goOnUnsent() {
+    setBusy(true)
+    setError(null)
+    try {
+      setInventory(await api.post(`/cases/${caseId}/intake/continue-unsent`, { second_click: true }))
+      setUnsent(false)
+      onContinue?.()
+    } catch (e) {
+      setError(e.message)
+      setUnsent(false)
     } finally {
       setBusy(false)
     }
@@ -137,12 +155,17 @@ export default function IntakeDesk({
             type="button"
             className="btn btn-primary"
             disabled={!ready || nothingYet}
-            onClick={onContinue}
+            onClick={waiting ? () => setUnsent(true) : onContinue}
           >
             Continue to the application form
           </button>
         )}
       </div>
+      {editable && waiting && !nothingYet && (
+        <p className="small muted" role="status">
+          The applicant has not pressed Send to the bank yet, so more files may still arrive.
+        </p>
+      )}
       {toSplit > 0 && (
         <p className="small muted">
           A PDF with several documents is waiting for you to confirm how it is split.
@@ -162,6 +185,22 @@ export default function IntakeDesk({
           onClose={() => setAsk(false)}
           onDone={onChanged}
         />
+      )}
+      {unsent && (
+        <ConfirmDialog
+          title="Continue before the applicant has sent?"
+          confirmLabel="Yes, continue anyway"
+          danger={false}
+          busy={busy}
+          onClose={() => setUnsent(false)}
+          onConfirm={goOnUnsent}
+        >
+          <p>
+            The applicant has not pressed Send to the bank, so more files may still arrive. If you
+            continue now, the case is checked with the files received so far. The link stays open
+            until you submit.
+          </p>
+        </ConfirmDialog>
       )}
       {proceed && (
         <ConfirmDialog

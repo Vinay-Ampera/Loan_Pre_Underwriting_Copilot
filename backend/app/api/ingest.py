@@ -152,6 +152,24 @@ def pending_bundles(conn: Connection, case_id: UUID) -> int:
         {"c": case_id}).scalar_one())  # fmt: skip
 
 
+UNSENT_MESSAGE = (
+    "The applicant has not pressed Send to the bank yet, so more files may still arrive. "
+    "Wait for them, or choose Continue anyway on the intake desk."
+)
+
+
+def waiting_for_applicant(conn: Connection, case_id: UUID, form: dict[str, Any]) -> bool:
+    """True while an upload link for this case is still open, the applicant has not pressed
+    Send to the bank, and the officer has not chosen to go on without waiting. A link that was
+    switched off or has expired cannot bring more files, so it never holds a case back."""
+    if form.get("applicant_sent") or (form.get("intake") or {}).get("unsent_ack"):
+        return False
+    return bool(conn.execute(
+        text("""SELECT EXISTS (SELECT 1 FROM upload_links
+                               WHERE case_id = :c AND disabled_at IS NULL AND expires_at > now())"""),
+        {"c": case_id}).scalar_one())  # fmt: skip
+
+
 def _page_count(data: bytes) -> int:
     """Pages of a readable, unprotected PDF; 0 for anything else (the normal checks name why)."""
     try:

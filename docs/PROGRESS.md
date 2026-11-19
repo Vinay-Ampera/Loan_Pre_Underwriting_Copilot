@@ -310,3 +310,12 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Verified:** backend `test_auditor.py` (403 on every route outside `/auditor`, no case route for the auditor, table content and CSV, audit log filters and masking), `test_admin_cases.py` (reading, override rules, hard-rule refusal, reassign rules, lists, audit log), `test_migrations.py` (0012); frontend tests for each screen; Playwright `auditor.spec.js` and `roles.spec.js` updated.
 - **Run it:** `cd backend && ../.venv/bin/python -m app.db.migrate` (0012).
 - **Not built:** an admin UI test in the browser that corrects a case end to end (the browser test database seeds a case without a report; the API and component tests cover it).
+
+---
+
+## Soft gate before the applicant has sent (2026-11-19)
+
+- **Decision (user, 2026-11-19):** files from an upload link are stored as they arrive (unchanged), but the officer may not go on to the form or submit while the applicant has an open link and has not pressed Send to the bank, unless they choose "Continue anyway" behind a second click. Option 2 of three offered (keep as is, soft gate, hard gate). Part 1 and Part 2 of the inbox and email plan were **not** built.
+- **Backend:** `ingest.waiting_for_applicant` (link for the case open, not sent, no acknowledgement); inventory field `waiting_for_applicant`; `POST /cases/{id}/intake/continue-unsent` (second click, owner only, one audit row `continued_before_applicant_sent`, stored as `form_data.intake.unsent_ack`); `POST /cases/{id}/submit` returns 409 while waiting. No migration.
+- **Frontend:** `IntakeDesk` shows a note and a "Continue before the applicant has sent?" dialog; "Proceed anyway" for missing items ends in the same dialog when the applicant has not sent. Help page line added.
+- **Edge case:** E-72.

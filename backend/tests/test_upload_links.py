@@ -321,6 +321,11 @@ def test_after_submit_the_link_refuses_files_neutrally_and_the_officer_sees_it(
         ).status_code
         == 200
     )
+    # the applicant has not pressed Send, so the officer must choose to go on without waiting
+    assert client.post(f"/api/v1/cases/{cid}/submit", headers=h).status_code == 409
+    unsent = f"/api/v1/cases/{cid}/intake/continue-unsent"
+    assert client.post(unsent, json={}, headers=h).status_code == 422
+    assert client.post(unsent, json={"second_click": True}, headers=h).status_code == 200
     assert client.post(f"/api/v1/cases/{cid}/submit", headers=h).status_code == 202
     refused = client.post(
         "/api/v1/public/files", files=pfiles("later.pdf"), headers=tok(asked["token"])
@@ -338,6 +343,89 @@ def test_after_submit_the_link_refuses_files_neutrally_and_the_officer_sees_it(
             ).scalar()
             == 0
         )
+
+
+def _ready_case_with_link(client: TestClient, h: dict[str, str]) -> tuple[str, dict[str, Any]]:
+    case_name = first_clean_dev_case("PL")
+    cid = start(client, h, "personal")
+    push(client, h, cid, as_files(case_name and case_files(case_name)))
+    say_employment(client, h, cid, case_name)
+    offer = client.get(f"/api/v1/cases/{cid}/prefill", headers=h).json()
+    client.put(
+        f"/api/v1/cases/{cid}/form",
+        json={**desk_form(case_name, offer), "identity_confirmed": True},
+        headers=h,
+    )
+    asked = client.post(
+        f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h
+    ).json()
+    return cid, asked
+
+
+def test_submit_waits_for_the_applicant_until_the_officer_goes_on_and_it_is_audited(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, _ = _ready_case_with_link(client, h)
+    inv = client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()
+    assert inv["waiting_for_applicant"] is True
+    blocked = client.post(f"/api/v1/cases/{cid}/submit", headers=h)
+    assert blocked.status_code == 409 and "Send to the bank" in blocked.json()["detail"]
+    # the officer's choice needs the second click, belongs to the owner and is written down
+    unsent = f"/api/v1/cases/{cid}/intake/continue-unsent"
+    assert (
+        client.post(unsent, json={"second_click": True}, headers=login(client, "ben")).status_code
+        == 404
+    )
+    assert client.post(unsent, json={}, headers=h).status_code == 422
+    done = client.post(unsent, json={"second_click": True}, headers=h).json()
+    assert done["waiting_for_applicant"] is False
+    timeline = [a["action"] for a in client.get(f"/api/v1/cases/{cid}/audit", headers=h).json()]
+    assert timeline.count("continued_before_applicant_sent") == 1
+    # a second call changes nothing and writes no second row
+    client.post(unsent, json={"second_click": True}, headers=h)
+    again = [a["action"] for a in client.get(f"/api/v1/cases/{cid}/audit", headers=h).json()]
+    assert again.count("continued_before_applicant_sent") == 1
+    assert client.post(f"/api/v1/cases/{cid}/submit", headers=h).status_code == 202
+
+
+def test_the_wait_ends_when_the_applicant_sends_or_the_link_is_switched_off(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    # the applicant presses Send to the bank: nothing to wait for
+    cid, asked = _ready_case_with_link(client, h)
+    r = client.post("/api/v1/public/send", json={"second_click": True}, headers=tok(asked["token"]))
+    assert r.status_code == 200
+    assert (
+        client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()["waiting_for_applicant"]
+        is False
+    )
+    assert client.post(f"/api/v1/cases/{cid}/submit", headers=h).status_code == 202
+    # a link that was switched off can bring no more files: nothing to wait for either
+    cid2, asked2 = _ready_case_with_link(client, h)
+    assert (
+        client.get(f"/api/v1/cases/{cid2}/inventory", headers=h).json()["waiting_for_applicant"]
+        is True
+    )
+    off = client.post(
+        f"/api/v1/links/{asked2['link_id']}/disable", json={"second_click": True}, headers=h
+    )
+    assert off.status_code == 200, off.text
+    assert (
+        client.get(f"/api/v1/cases/{cid2}/inventory", headers=h).json()["waiting_for_applicant"]
+        is False
+    )
+    assert client.post(f"/api/v1/cases/{cid2}/submit", headers=h).status_code == 202
+
+
+def test_a_case_with_no_upload_link_is_never_held_back(client: TestClient) -> None:
+    h = login(client, "asha")
+    cid = start(client, h, "personal")
+    assert (
+        client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()["waiting_for_applicant"]
+        is False
+    )
 
 
 def test_ask_the_applicant_needs_the_second_click_and_keeps_the_same_link_open(

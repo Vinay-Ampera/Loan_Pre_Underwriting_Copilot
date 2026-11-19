@@ -138,6 +138,7 @@ def inventory_for(conn: Connection, rs: Any, row: Any) -> dict[str, Any]:
     inv["complete"] = bool(inv["complete"]) and not inv["bundles"]
     inv["counts"]["bundles"] = len(inv["bundles"])
     inv["proceeded"] = bool(form.get("intake", {}).get("proceeded"))
+    inv["waiting_for_applicant"] = ingest.waiting_for_applicant(conn, row.id, form)
     inv["stage"] = "form" if form.get("applicants") else "intake"
     return inv
 
@@ -399,6 +400,29 @@ def proceed_anyway(
     write_audit(
         conn, user.id, "proceeded_with_missing", "case", case_id, after={"missing": missing}
     )
+    return inventory_for(conn, _ruleset(request), get_case(conn, case_id, user))
+
+
+@router.post("/{case_id}/intake/continue-unsent")
+def continue_before_applicant_sent(
+    case_id: UUID, body: SendIn, request: Request, user: User = Depends(officer_only),
+    conn: Connection = Depends(get_conn),
+) -> dict[str, Any]:  # fmt: skip
+    """Go on although the applicant has not pressed Send to the bank (the second click). The
+    link stays open and more files can still arrive; this only records the officer's choice."""
+    import json
+
+    if not body.second_click:
+        raise HTTPException(422, "This needs a second confirmation click.")
+    row = get_case(conn, case_id, user, lock=True)
+    if row.status not in SUBMITTABLE:
+        raise HTTPException(409, "This case can no longer be changed.")
+    form = dict(_case_form(row))
+    if ingest.waiting_for_applicant(conn, case_id, form):
+        form["intake"] = {**form.get("intake", {}), "unsent_ack": {"at": date.today().isoformat()}}
+        conn.execute(text("UPDATE cases SET form_data = CAST(:f AS jsonb), updated_at = now() "
+                          "WHERE id = :c"), {"f": json.dumps(form), "c": case_id})  # fmt: skip
+        write_audit(conn, user.id, "continued_before_applicant_sent", "case", case_id, after={})
     return inventory_for(conn, _ruleset(request), get_case(conn, case_id, user))
 
 
