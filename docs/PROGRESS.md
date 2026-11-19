@@ -328,3 +328,12 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Backend (no migration):** `public._view` returns `reference`, `more_requested` and no checklist once sent; `_accepting` refuses files and a changed request after the first send until `form_data.more_requested`; Send again is idempotent; a second send keeps the reference and clears `more_requested`. `links._reopen_for_more` (called by Ask the applicant) sets `more_requested`, clears `intake.unsent_ack` and writes `applicant_more_requested`. `ingest.waiting_for_applicant` treats a pending request for more as waiting. The case payload carries `more_requested`.
 - **Frontend:** `ApplicantUploadPage` (thank-you from the server state, "Send the rest of your documents" when asked for more), `LinkWarning` (case page, officer only) and an Upload links page filtered by `?case=`.
 - **Edge cases:** E-73, E-74, E-75.
+
+---
+
+## State-aware Ask dialog and breadcrumbs (2026-11-19)
+
+- **Decision (user, 2026-11-19):** the Ask the applicant dialog says what really happens for each link state, an expired link can be reopened (same address) or replaced, a switched-off link only replaced, and deep pages get breadcrumbs. Built, not committed. Inbox and email (Parts 1 and 2) still **not built**.
+- **Backend (no migration):** `POST /cases/{id}/ask-applicant` takes `reopen` (expired link: extend it by the standard period and reuse it, audit `upload_link_reopened`; switched-off: 409; no link: creates one). `GET /cases/{id}/link` prefers an open link over a newer ended one.
+- **Frontend:** `AskApplicantDialog` (fetches the case link, `modeOf`), `Breadcrumbs` on the case page, the admin officer page and the filtered Upload links page.
+- **Edge case:** E-75 updated.

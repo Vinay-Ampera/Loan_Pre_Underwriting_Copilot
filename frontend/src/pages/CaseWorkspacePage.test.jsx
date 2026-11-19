@@ -114,6 +114,19 @@ describe('CaseWorkspacePage for the admin', () => {
     },
   )
 
+  it('shows where the admin is: Users, the officer, then the case', async () => {
+    api.get.mockResolvedValue(caseData('awaiting_confirmation', { officer_id: 'o1' }))
+    renderPage()
+    await screen.findByText(/Admin view\./)
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    expect(within(nav).getByRole('link', { name: 'Users' })).toHaveAttribute('href', '/admin/users')
+    expect(within(nav).getByRole('link', { name: 'Asha Officer' })).toHaveAttribute(
+      'href',
+      '/admin/users/o1',
+    )
+    expect(within(nav).getByText('CASE-2026-0001')).toHaveAttribute('aria-current', 'page')
+  })
+
   it('offers Change the decision only after the officer has decided', async () => {
     api.get.mockResolvedValue(caseData('awaiting_confirmation'))
     renderPage()

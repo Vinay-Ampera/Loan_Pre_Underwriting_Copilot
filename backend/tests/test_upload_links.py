@@ -397,6 +397,80 @@ def test_asking_for_more_cancels_an_earlier_choice_to_go_on_without_waiting(
     assert inv["waiting_for_applicant"] is True  # a new request is a new wait
 
 
+def test_reopen_brings_the_expired_link_back_with_the_same_address(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, ref, old = _sent_by_applicant(client, h)
+    with engine.begin() as c:
+        c.execute(text("UPDATE upload_links SET expires_at = now() - interval '1 day' WHERE case_id = :c"),
+                  {"c": cid})  # fmt: skip
+    assert client.get("/api/v1/public/link", headers=old).status_code == 404
+    url = f"/api/v1/cases/{cid}/ask-applicant"
+    assert client.post(url, json={"reopen": True}, headers=h).status_code == 422  # second click
+    asked = client.post(url, json={"second_click": True, "reopen": True}, headers=h).json()
+    assert asked["new_link"] is False and asked["token"] == old["X-Upload-Token"]
+    view = client.get("/api/v1/public/link", headers=old).json()  # the address the applicant has
+    assert view["more_requested"] is True and view["reference"] == ref
+    with engine.connect() as c:
+        assert (
+            c.execute(
+                text("SELECT count(*) FROM upload_links WHERE case_id = :c"), {"c": cid}
+            ).scalar()
+            == 1
+        )
+    timeline = [a["action"] for a in client.get(f"/api/v1/cases/{cid}/audit", headers=h).json()]
+    assert timeline.count("applicant_more_requested") == 1
+    with engine.connect() as c:
+        assert (
+            c.execute(
+                text("SELECT count(*) FROM audit_log WHERE action = 'upload_link_reopened'")
+            ).scalar()
+            == 1
+        )
+
+
+def test_a_switched_off_link_cannot_be_reopened_but_a_new_one_can_be_made(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, _, old = _sent_by_applicant(client, h)
+    link_id = client.get(f"/api/v1/cases/{cid}/link", headers=h).json()["link"]["id"]
+    client.post(f"/api/v1/links/{link_id}/disable", json={"second_click": True}, headers=h)
+    url = f"/api/v1/cases/{cid}/ask-applicant"
+    refused = client.post(url, json={"second_click": True, "reopen": True}, headers=h)
+    assert refused.status_code == 409 and "switched off" in refused.json()["detail"]
+    assert client.get("/api/v1/public/link", headers=old).status_code == 404  # still dead
+    fresh = client.post(url, json={"second_click": True}, headers=h).json()
+    assert fresh["new_link"] is True and fresh["token"] != old["X-Upload-Token"]
+
+
+def test_reopen_with_no_link_at_all_just_makes_one(client: TestClient) -> None:
+    h = login(client, "asha")
+    cid = start(client, h, "personal")
+    asked = client.post(
+        f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True, "reopen": True}, headers=h
+    )
+    assert asked.status_code == 200 and asked.json()["new_link"] is True
+
+
+def test_the_case_link_view_prefers_an_open_link_over_a_newer_ended_one(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, _, _ = _sent_by_applicant(client, h)
+    first = client.get(f"/api/v1/cases/{cid}/link", headers=h).json()["link"]["id"]
+    with engine.begin() as c:  # a newer link that already ended, beside the older open one
+        c.execute(
+            text("""INSERT INTO upload_links (token_hash, officer_id, created_by, case_id, expires_at)
+                    SELECT 'x' || gen_random_uuid()::text, officer_id, created_by, case_id,
+                           now() - interval '1 hour' FROM upload_links WHERE id = :i"""),
+            {"i": first},
+        )
+    shown = client.get(f"/api/v1/cases/{cid}/link", headers=h).json()["link"]
+    assert shown["id"] == first and shown["state"] == "active"
+
+
 def test_asking_for_more_after_the_link_expired_makes_a_new_link_for_the_case(
     client: TestClient, engine: Engine
 ) -> None:  # fmt: skip

@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
+import Breadcrumbs from '../components/Breadcrumbs'
 import StatusChip, { CaseStatusChip } from '../components/StatusChip'
 import { loanLabel } from '../components/LoanTypePicker'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
@@ -66,7 +67,9 @@ export default function AdminOfficerPage() {
   const shown = data ? data.cases.filter(test) : []
   return (
     <div className="officer-page">
-      <Link to="/admin/users">← Users</Link>
+      <Breadcrumbs
+        items={[{ label: 'Users', to: '/admin/users' }, { label: data?.user.name || 'Officer' }]}
+      />
       {loading && <Skeleton lines={4} height={48} />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && (

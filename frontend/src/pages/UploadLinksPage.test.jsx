@@ -58,6 +58,11 @@ describe('UploadLinksPage', () => {
     expect(await screen.findByText('Expired')).toBeInTheDocument()
     expect(screen.queryByText('CASE-2026-0008')).not.toBeInTheDocument()
     expect(screen.getByText(/Set days/, { selector: 'strong' })).toBeInTheDocument()
+    // the breadcrumb leads back to that case
+    expect(screen.getByRole('link', { name: 'Case CASE-2026-0007' })).toHaveAttribute(
+      'href',
+      '/cases/c1',
+    )
     await user.click(screen.getByRole('button', { name: 'Show all links' }))
     expect(await screen.findByText('CASE-2026-0008')).toBeInTheDocument()
   })

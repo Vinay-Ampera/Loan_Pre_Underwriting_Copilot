@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useSession } from '../App'
 import { linkUrl } from '../components/AskApplicantDialog'
+import Breadcrumbs from '../components/Breadcrumbs'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Dialog from '../components/Dialog'
 import { loanLabel, LOAN_TYPES } from '../components/LoanTypePicker'
@@ -277,6 +278,17 @@ export default function UploadLinksPage() {
 
   return (
     <div className="links-page">
+      {caseFilter && (
+        <Breadcrumbs
+          items={[
+            {
+              label: `Case ${caseFilter}`,
+              to: rows[0]?.case_id ? `/cases/${rows[0].case_id}` : undefined,
+            },
+            { label: 'Upload links' },
+          ]}
+        />
+      )}
       <header className="links-head">
         <div>
           <h1>Upload links</h1>

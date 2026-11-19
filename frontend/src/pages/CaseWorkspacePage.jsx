@@ -6,6 +6,7 @@ import { useAsync } from '../hooks/useAsync'
 import { usePolling } from '../hooks/usePolling'
 import ApplicationForm, { stateFromCase, stateFromDesk } from '../components/ApplicationForm'
 import ApplicantRequest from '../components/ApplicantRequest'
+import Breadcrumbs from '../components/Breadcrumbs'
 import LinkWarning from '../components/LinkWarning'
 import ApplicantReview from '../components/ApplicantReview'
 import IntakeDesk from '../components/IntakeDesk'
@@ -230,6 +231,17 @@ export default function CaseWorkspacePage() {
 
   return (
     <div className="workspace">
+      <Breadcrumbs
+        items={
+          isAdmin
+            ? [
+                { label: 'Users', to: '/admin/users' },
+                ...(c.officer_id ? [{ label: c.officer, to: `/admin/users/${c.officer_id}` }] : []),
+                { label: c.case_no },
+              ]
+            : [{ label: 'Cases', to: '/cases' }, { label: c.case_no }]
+        }
+      />
       <header className="ws-head">
         <div className="ws-title">
           <div className="ws-title-row">

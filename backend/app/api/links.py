@@ -96,6 +96,13 @@ class ExpiryIn(BaseModel):
     second_click: bool = False  # needed when this shortens the link
 
 
+class AskIn(SecondClickIn):
+    """`reopen`: when the case's link has expired (not been switched off), open that same link
+    again instead of making a new one, so the address the applicant already has works."""
+
+    reopen: bool = False
+
+
 class ExtendIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -297,7 +304,7 @@ def _reopen_for_more(conn: Connection, case: Any, user: User) -> None:
 
 @router.post("/cases/{case_id}/ask-applicant")
 def ask_applicant(
-    case_id: UUID, body: SecondClickIn, request: Request, user: User = Depends(officer_only),
+    case_id: UUID, body: AskIn, request: Request, user: User = Depends(officer_only),
     conn: Connection = Depends(get_conn), settings: Settings = Depends(get_settings_dep),
 ) -> dict[str, Any]:  # fmt: skip
     """ "Ask the applicant" from the inventory. A case that came in through a link keeps that
@@ -309,10 +316,23 @@ def ask_applicant(
     if case.status not in ("draft", "uploaded", "applicant_submitted"):
         raise HTTPException(409, "This case can no longer receive files.")
     _reopen_for_more(conn, case, user)
-    live = conn.execute(
-        text("""SELECT id, expires_at FROM upload_links
-                WHERE case_id = :c AND disabled_at IS NULL AND expires_at > now()
-                ORDER BY created_at DESC LIMIT 1"""), {"c": case_id}).first()  # fmt: skip
+    live_sql = text("""SELECT id, expires_at FROM upload_links
+                       WHERE case_id = :c AND disabled_at IS NULL AND expires_at > now()
+                       ORDER BY created_at DESC LIMIT 1""")  # fmt: skip
+    live = conn.execute(live_sql, {"c": case_id}).first()
+    if live is None and body.reopen:
+        lapsed = conn.execute(
+            text("""SELECT id, disabled_at FROM upload_links WHERE case_id = :c
+                    ORDER BY created_at DESC LIMIT 1"""), {"c": case_id}).first()  # fmt: skip
+        if lapsed is not None and lapsed.disabled_at is not None:
+            raise HTTPException(409, "This link was switched off. Make a new one.")
+        if lapsed is not None:  # expired, not switched off: the same address works again
+            new_end = datetime.now(UTC) + timedelta(days=settings.upload_link_days)
+            conn.execute(text("UPDATE upload_links SET expires_at = :e WHERE id = :i"),
+                         {"e": new_end, "i": lapsed.id})  # fmt: skip
+            write_audit(conn, user.id, "upload_link_reopened", "upload_link", lapsed.id,
+                        after={"expires_at": new_end.isoformat(), "case_id": str(case_id)})  # fmt: skip
+            live = conn.execute(live_sql, {"c": case_id}).first()
     if live is not None:
         if live.expires_at < datetime.now(UTC) + timedelta(days=settings.upload_link_days):
             new_end = datetime.now(UTC) + timedelta(days=settings.upload_link_days)
@@ -343,8 +363,11 @@ def ask_applicant(
 def case_link(
     case_id: UUID, user: User = Depends(case_reader), conn: Connection = Depends(get_conn)
 ) -> dict[str, Any]:  # fmt: skip
-    """The newest link of a case, without its token (it is not kept)."""
+    """The link of a case that matters most, without its token: an open one if there is one, else the newest."""
     get_case(conn, case_id, user)
-    row = conn.execute(text(f"{_SELECT} WHERE l.case_id = :c ORDER BY l.created_at DESC LIMIT 1"),  # noqa: S608
-                       {"c": case_id}).first()  # fmt: skip
+    row = conn.execute(
+        text(f"""{_SELECT} WHERE l.case_id = :c
+                 ORDER BY (l.disabled_at IS NULL AND l.expires_at > now()) DESC, l.created_at DESC
+                 LIMIT 1"""),  # noqa: S608
+        {"c": case_id}).first()  # fmt: skip
     return {"link": None if row is None else _view(row)}

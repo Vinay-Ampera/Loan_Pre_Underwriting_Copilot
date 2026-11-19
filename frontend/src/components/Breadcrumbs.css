@@ -1,0 +1,33 @@
+.crumbs {
+  font-size: var(--fs-14);
+  color: var(--muted);
+}
+.crumbs-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crumbs-trail li + li::before {
+  content: '›';
+  margin-right: var(--s-1);
+  color: var(--muted);
+}
+.crumbs-trail [aria-current='page'] {
+  color: var(--ink);
+  font-weight: 500;
+}
+.crumbs-back {
+  display: none;
+}
+@media (max-width: 560px) {
+  .crumbs-trail {
+    display: none;
+  }
+  .crumbs-back {
+    display: inline;
+  }
+}

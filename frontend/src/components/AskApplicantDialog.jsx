@@ -1,29 +1,112 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { useAsync } from '../hooks/useAsync'
+import { formatDay } from '../lib/format'
 import ConfirmDialog from './ConfirmDialog'
 import Dialog from './Dialog'
 import SendLinkDialog from './SendLinkDialog'
+import { Skeleton } from './States'
 
 /** The address the applicant opens: this site's own origin plus the link path (`/u#token`). */
 export const linkUrl = (path) => `${window.location.origin}${path}`
 
 /**
- * "Ask the applicant": a link for this case that takes files only. Creating it is an outward
- * action, so it needs the second click. The address is shown once (only its hash is kept), with
- * a copy button and a way to send it as the Stage 9 "Upload link" message.
+ * Which wording fits: the button always names what really happens. No link yet: it creates one.
+ * An open link the applicant has not used to send: it only shows the address. An open link of an
+ * applicant who already sent: it asks for more. An expired link: reopen it or make a new one. A
+ * switched-off link cannot be reopened.
+ */
+export function modeOf(link) {
+  if (!link) return 'create'
+  if (link.state === 'active') return link.sent ? 'more' : 'share'
+  return link.state === 'expired' ? 'expired' : 'disabled'
+}
+
+const COPY = {
+  create: {
+    title: 'Ask the applicant for the rest?',
+    label: 'Create the link',
+  },
+  share: {
+    title: "Share the applicant's link?",
+    label: 'Show the link',
+  },
+  more: {
+    title: 'Ask the applicant for more documents?',
+    label: 'Ask for more',
+  },
+  disabled: {
+    title: 'This link was switched off',
+    label: 'Make a new link',
+  },
+}
+
+function Body({ mode, link }) {
+  if (mode === 'create')
+    return (
+      <p>
+        This makes a secure upload link for this case. It stays open for a limited time, takes files
+        only, and shows the applicant what is still needed. You will see the address once. Nothing
+        is sent until you choose to send it.
+      </p>
+    )
+  if (mode === 'share')
+    return (
+      <p>
+        This case already has an open link, open until {formatDay(link.expires_at)}. Nothing new is
+        made. You will see the address so you can copy it or send it as a message.
+      </p>
+    )
+  if (mode === 'more')
+    return (
+      <p>
+        The applicant&apos;s page will show what is in and what is still needed, and they can add
+        files. Their link stays open until {formatDay(link.expires_at)} (it is extended if it is
+        about to end). Nothing is sent to them until you send the link message.
+      </p>
+    )
+  return (
+    <p>
+      A switched-off link cannot be opened again. Make a new link with a new address; the old one
+      stays switched off.
+    </p>
+  )
+}
+
+function ManageLink({ link }) {
+  if (!link?.case_no) return null
+  return (
+    <p className="small">
+      <Link to={`/links?case=${encodeURIComponent(link.case_no)}`}>
+        Manage this case&apos;s links on the Upload links page
+      </Link>
+    </p>
+  )
+}
+
+/**
+ * "Ask the applicant": a link for this case that takes files only. It is an outward action, so it
+ * needs the second click. The address is shown once (only its hash is kept), with a copy button
+ * and a way to send it as the Stage 9 "Upload link" message.
  */
 export default function AskApplicantDialog({ caseId, recipient, onClose, onDone }) {
+  const info = useAsync(() => api.get(`/cases/${caseId}/link`), [caseId])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [made, setMade] = useState(null)
   const [copied, setCopied] = useState(false)
   const [sending, setSending] = useState(false)
 
-  async function create() {
+  const link = info.data?.link ?? null
+  const mode = modeOf(link)
+
+  async function ask(reopen = false) {
     setBusy(true)
     setError(null)
     try {
-      setMade(await api.post(`/cases/${caseId}/ask-applicant`, { second_click: true }))
+      const body = reopen ? { second_click: true, reopen: true } : { second_click: true }
+      setMade(await api.post(`/cases/${caseId}/ask-applicant`, body))
       onDone?.()
     } catch (e) {
       setError(e.message)
@@ -40,25 +123,64 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
     }
   }
 
-  if (!made) {
+  if (!made && info.loading)
+    return (
+      <Dialog title="Ask the applicant" onClose={onClose} labelledBy="ask-link-title">
+        <Skeleton lines={3} />
+      </Dialog>
+    )
+  if (!made && mode === 'expired')
+    return (
+      <Dialog
+        title="The applicant's link has expired"
+        onClose={onClose}
+        labelledBy="ask-link-title"
+      >
+        <p>
+          The link for <span className="mono">{link.case_no}</span> expired on{' '}
+          {formatDay(link.expires_at)}, so the applicant can no longer use it. Reopen it and the
+          address they already have works again, for the standard period. Or make a new link with a
+          new address.
+        </p>
+        <ManageLink link={link} />
+        {error && (
+          <p className="field-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" className="btn" onClick={onClose} data-autofocus>
+            Cancel
+          </button>
+          <button type="button" className="btn" disabled={busy} onClick={() => ask(false)}>
+            Make a new link
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy}
+            onClick={() => ask(true)}
+          >
+            Reopen this link
+          </button>
+        </div>
+      </Dialog>
+    )
+  if (!made)
     return (
       <ConfirmDialog
-        title="Ask the applicant for the rest?"
-        confirmLabel="Create the link"
+        title={COPY[mode].title}
+        confirmLabel={COPY[mode].label}
         danger={false}
         busy={busy}
         error={error}
         onClose={onClose}
-        onConfirm={create}
+        onConfirm={() => ask(false)}
       >
-        <p>
-          This makes a secure upload link for this case. It stays open for a limited time, takes
-          files only, and shows the applicant what is still needed. You will see the address once.
-          Nothing is sent until you choose to send it.
-        </p>
+        <Body mode={mode} link={link} />
+        {mode === 'disabled' && <ManageLink link={link} />}
       </ConfirmDialog>
     )
-  }
   if (sending) {
     return (
       <SendLinkDialog

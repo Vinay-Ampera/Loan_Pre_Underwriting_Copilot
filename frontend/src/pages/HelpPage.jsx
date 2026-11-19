@@ -178,8 +178,8 @@ function OfficerGuide() {
           <li>
             If the applicant has an open upload link but has not pressed{' '}
             <strong>Send to the bank</strong>, more files may still arrive. Continue then asks you
-            to confirm that you want to go on without waiting; the choice is written to the
-            audit trail of the case.
+            to confirm that you want to go on without waiting; the choice is written to the audit
+            trail of the case.
           </li>
           <li>
             In the application form, the name, date of birth, PAN, Aadhaar last four and address are
@@ -216,8 +216,16 @@ function OfficerGuide() {
             warning.
           </li>
           <li>
-            A link lasts 7 days. Extend it, or disable it at any time (you confirm). Files already
-            received stay on the case. Once you submit the case, the link stops taking files.
+            After the applicant presses Send they see only a thank-you and their reference, also if
+            they refresh. If you need more, choose <strong>Ask for more</strong>: their page then
+            shows what is in and what is still needed until they send again.
+          </li>
+          <li>
+            A link lasts 7 days. Extend it, or disable it at any time (you confirm). If it has
+            expired, <strong>Reopen this link</strong> makes the same address work again; a disabled
+            link cannot be reopened, so make a new one. A warning on the case tells you when the
+            link has ended while the applicant still owes documents. Files already received stay on
+            the case. Once you submit the case, the link stops taking files.
           </li>
         </ol>
         <Callout tone="warn" title="Never share a link in public">
