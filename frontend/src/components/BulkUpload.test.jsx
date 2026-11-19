@@ -46,6 +46,23 @@ describe('BulkUpload', () => {
     expect(screen.getByText('Choose files or a zip')).toBeInTheDocument()
   })
 
+  it('pops a not-accepted file up at the top of the screen as well as listing it', async () => {
+    const upload = vi.fn().mockResolvedValue([
+      {
+        name: 'index.json',
+        status: 'rejected',
+        message: 'Only PDF, JPG and PNG files are accepted.',
+      },
+    ])
+    render(<BulkUpload upload={upload} />)
+    await userEvent
+      .setup()
+      .upload(document.getElementById('bulk-folder'), new File(['x'], 'index.json'))
+    const toast = (await screen.findByText('1 file was not accepted')).closest('.toast')
+    expect(toast).toHaveTextContent('index.json: Only PDF, JPG and PNG files are accepted.')
+    expect(screen.getByTestId('bulk-results')).toHaveTextContent('Not accepted')
+  })
+
   it('shows the refusal of an unsafe archive without hiding earlier results', async () => {
     const upload = vi
       .fn()

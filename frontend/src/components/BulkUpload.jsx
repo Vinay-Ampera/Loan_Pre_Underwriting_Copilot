@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from './Icons'
 import Loader from './Loader'
+import Toast from './Toast'
 import './UploadZone.css'
 import './BulkUpload.css'
 
@@ -72,6 +73,7 @@ export default function BulkUpload({
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)
   const [sending, setSending] = useState(null)
+  const [toast, setToast] = useState(null) // errors also pop up at the top right of the screen
   const [error, setError] = useState(null)
   const [over, setOver] = useState(false)
   const files = useRef(null)
@@ -83,6 +85,7 @@ export default function BulkUpload({
     if (!list.length || disabled) return
     setBusy(true)
     setError(null)
+    setToast(null)
     setResults([])
     setSending({
       count: list.length,
@@ -97,9 +100,19 @@ export default function BulkUpload({
     try {
       const out = await upload(form)
       setResults(out)
+      const bad = out.filter((r) => r.status === 'rejected')
+      if (bad.length)
+        setToast({
+          id: Date.now(),
+          title:
+            bad.length === 1 ? '1 file was not accepted' : `${bad.length} files were not accepted`,
+          lines: bad.slice(0, 3).map((r) => `${r.name}: ${r.message || LABEL.rejected}`),
+          more: bad.length - 3,
+        })
       onUploaded?.(out)
     } catch (e) {
       setError(e.message)
+      setToast({ id: Date.now(), title: 'The upload did not work', lines: [e.message] })
     } finally {
       setBusy(false)
       setSending(null)
@@ -187,6 +200,18 @@ export default function BulkUpload({
           </p>
         )}
       </div>
+      {toast && (
+        <Toast
+          key={toast.id}
+          title={toast.title}
+          lines={
+            toast.more > 0
+              ? [...toast.lines, `and ${toast.more} more, see the list below`]
+              : toast.lines
+          }
+          onClose={() => setToast(null)}
+        />
+      )}
       {error && (
         <p className="field-error" role="alert">
           {error}
