@@ -70,12 +70,12 @@ export default function AdminIssuesPage() {
           </button>
         ))}
       </div>
-      {loading && <Skeleton lines={3} height={48} />}
+      {loading && <Skeleton lines={3} height={48} delayed />}
       {error && <ErrorState error={error} onRetry={reload} />}
-      {data && data.length === 0 && (
+      {!loading && data && data.length === 0 && (
         <EmptyState title="Nothing here">No issues in this list.</EmptyState>
       )}
-      {data && data.length > 0 && (
+      {!loading && data && data.length > 0 && (
         <ul className="card issue-rows">
           {data.map((i) => (
             <li key={i.id}>

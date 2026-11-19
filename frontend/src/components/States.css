@@ -32,3 +32,12 @@
     opacity: 0.55;
   }
 }
+.skeleton-delayed {
+  opacity: 0;
+  animation: skeleton-appear 0.2s var(--ease) 300ms forwards;
+}
+@keyframes skeleton-appear {
+  to {
+    opacity: 1;
+  }
+}

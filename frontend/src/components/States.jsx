@@ -24,9 +24,14 @@ export function ErrorState({ error, onRetry }) {
   )
 }
 
-export function Skeleton({ lines = 3, height = 16 }) {
+/** `delayed` keeps it invisible for the first moments, so a quick tab switch shows no flash. */
+export function Skeleton({ lines = 3, height = 16, delayed = false }) {
   return (
-    <div className="skeleton-block" aria-busy="true" aria-label="Loading">
+    <div
+      className={`skeleton-block${delayed ? ' skeleton-delayed' : ''}`}
+      aria-busy="true"
+      aria-label="Loading"
+    >
       {Array.from({ length: lines }, (_, i) => (
         <div key={i} className="skeleton" style={{ height, width: `${100 - (i % 3) * 14}%` }} />
       ))}

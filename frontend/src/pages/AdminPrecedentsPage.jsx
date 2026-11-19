@@ -49,12 +49,13 @@ export default function AdminPrecedentsPage() {
           </button>
         ))}
       </div>
-      {loading && <Skeleton lines={4} height={40} />}
-      {error && <ErrorState error={error} onRetry={reload} />}
-      {data && data.length === 0 && (
+      {loading && <Skeleton lines={4} height={40} delayed />}
+      {error && !loading && <ErrorState error={error} onRetry={reload} />}
+      {!loading && data && data.length === 0 && (
         <EmptyState title="Nothing here">No {tab === 'all' ? '' : tab} precedents.</EmptyState>
       )}
-      {data &&
+      {!loading &&
+        data &&
         data.map((p) => (
           <PrecedentReviewCard key={p.id} p={p} onApprove={approve} onReject={reject} />
         ))}

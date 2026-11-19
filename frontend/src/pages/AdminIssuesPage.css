@@ -1,4 +1,6 @@
 .admin-issues {
+  min-height: 420px;
+  align-content: start;
   display: flex;
   flex-direction: column;
   gap: var(--s-4);

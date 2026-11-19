@@ -3,6 +3,8 @@
   flex-direction: column;
   gap: var(--s-4);
   max-width: 900px;
+  min-height: 420px;
+  align-content: start;
 }
 .tabs {
   display: flex;
