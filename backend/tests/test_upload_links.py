@@ -9,11 +9,13 @@ import logging
 import re
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, text
 
+from app.api import ingest
 from app.api.links import hash_token
 from app.api.ratelimit import RateLimiter
 from app.api.security import hash_password
@@ -692,6 +694,33 @@ def test_the_wait_ends_when_the_applicant_sends_or_the_link_is_switched_off(
         is False
     )
     assert client.post(f"/api/v1/cases/{cid2}/submit", headers=h).status_code == 202
+
+
+def test_saving_the_form_after_the_applicant_sent_keeps_the_send(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, asked = _ready_case_with_link(client, h)
+    t = tok(asked["token"])
+    sent = client.post("/api/v1/public/send", json={"second_click": True}, headers=t)
+    assert sent.status_code == 200
+    ref = sent.json()["reference"]
+    # the officer saves the application form again after the applicant pressed Send
+    case_name = first_clean_dev_case("PL")
+    offer = client.get(f"/api/v1/cases/{cid}/prefill", headers=h).json()
+    saved = client.put(
+        f"/api/v1/cases/{cid}/form",
+        json={**desk_form(case_name, offer), "identity_confirmed": True},
+        headers=h,
+    )
+    assert saved.status_code == 200, saved.text
+    with engine.connect() as c:
+        form = c.execute(text("SELECT form_data FROM cases WHERE id = :c"), {"c": cid}).scalar_one()
+        assert form["applicant_sent"]["reference"] == ref
+        assert ingest.waiting_for_applicant(c, UUID(cid), form) is False
+    view = client.get("/api/v1/public/link", headers=t).json()
+    assert view["sent"] is True and view["reference"] == ref
+    assert client.post(f"/api/v1/cases/{cid}/submit", headers=h).status_code == 202
 
 
 def test_a_case_with_no_upload_link_is_never_held_back(client: TestClient) -> None:

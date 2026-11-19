@@ -345,7 +345,10 @@ def _merge_masked(
             a.email = stored_emails[a.role]
 
 
-KEPT_FORM_KEYS = ("origin", "request", "request_locked", "intake", "upload_link_id")
+KEPT_FORM_KEYS = (
+    "origin", "request", "request_locked", "intake", "upload_link_id",
+    "applicant_sent", "more_requested",
+)  # fmt: skip
 
 
 def _form_data(

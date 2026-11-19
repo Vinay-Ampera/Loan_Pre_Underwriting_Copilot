@@ -328,6 +328,7 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Backend (no migration):** `public._view` returns `reference`, `more_requested` and no checklist once sent; `_accepting` refuses files and a changed request after the first send until `form_data.more_requested`; Send again is idempotent; a second send keeps the reference and clears `more_requested`. `links._reopen_for_more` (called by Ask the applicant) sets `more_requested`, clears `intake.unsent_ack` and writes `applicant_more_requested`. `ingest.waiting_for_applicant` treats a pending request for more as waiting. The case payload carries `more_requested`.
 - **Frontend:** `ApplicantUploadPage` (thank-you from the server state, "Send the rest of your documents" when asked for more), `LinkWarning` (case page, officer only) and an Upload links page filtered by `?case=`.
 - **Edge cases:** E-73, E-74, E-75.
+- **Fix (2026-11-19):** saving the application form after the applicant pressed Send to the bank erased `form_data.applicant_sent` (and `more_requested`), because `cases._form_data` keeps only `KEPT_FORM_KEYS`. Submit was then blocked with "has not pressed Send to the bank yet" and the applicant's link showed the upload form again. Both keys added to `KEPT_FORM_KEYS`; test `test_saving_the_form_after_the_applicant_sent_keeps_the_send` in `test_upload_links.py`.
 
 ---
 
