@@ -165,7 +165,7 @@ def test_the_page_reads_back_nothing_but_checklist_counts(
     first = client.get("/api/v1/public/link", headers=tok(token)).json()
     assert first == {"active": True, "loan_type": "personal", "expires_on": first["expires_on"],
                      "request_open": True, "request_received": False, "accepting_files": False,
-                     "sent": False, "reference": None, "more_requested": False,
+                     "sent": False, "reference": None, "more_requested": False, "requested": None,
                      "checklist": None}  # fmt: skip
     assert (
         client.post("/api/v1/public/files", files=pfiles("a.pdf"), headers=tok(token)).status_code
