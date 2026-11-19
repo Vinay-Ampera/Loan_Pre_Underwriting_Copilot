@@ -89,21 +89,23 @@ export default function CaseQueuePage() {
           </button>
         </p>
       )}
-      {loading && <Skeleton lines={5} height={36} />}
+      {loading && !data && <Skeleton lines={5} height={36} />}
       {error && <ErrorState error={error} onRetry={reload} />}
-      {shown && shown.length === 0 && (
-        <EmptyState
-          title="No cases yet"
-          action={
-            <Link to="/cases/new" className="btn">
-              Start a new case
-            </Link>
-          }
-        >
-          Cases you create appear here.
-        </EmptyState>
-      )}
-      {shown && shown.length > 0 && <CaseQueueTable cases={shown} />}
+      <div className={loading && data ? 'is-pending' : undefined} aria-busy={loading}>
+        {shown && shown.length === 0 && (
+          <EmptyState
+            title="No cases yet"
+            action={
+              <Link to="/cases/new" className="btn">
+                Start a new case
+              </Link>
+            }
+          >
+            Cases you create appear here.
+          </EmptyState>
+        )}
+        {shown && shown.length > 0 && <CaseQueueTable cases={shown} />}
+      </div>
     </div>
   )
 }

@@ -258,3 +258,11 @@ input[type='radio'] {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* a list that is being refreshed (filter, search, page) stays in place, dimmed, until the new rows
+   arrive: no loader on top of old rows, no jump */
+.is-pending {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s var(--ease);
+}

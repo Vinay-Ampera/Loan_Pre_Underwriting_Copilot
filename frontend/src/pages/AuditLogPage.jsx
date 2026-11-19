@@ -128,13 +128,13 @@ export default function AuditLogPage() {
           {exportError}
         </p>
       )}
-      {loading && <Skeleton lines={5} height={32} />}
+      {loading && !data && <Skeleton lines={5} height={32} />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.rows.length === 0 && (
         <EmptyState title="Nothing logged">No entries match.</EmptyState>
       )}
       {data && data.rows.length > 0 && (
-        <>
+        <div className={loading ? 'is-pending' : undefined} aria-busy={loading}>
           <div className="card aud-wrap">
             <table className="aud-table">
               <thead>
@@ -186,7 +186,7 @@ export default function AuditLogPage() {
               Older
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

@@ -155,7 +155,7 @@ export default function CaseWorkspacePage() {
       )
   }, [c?.status, c?.report, running])
 
-  if (loading && !c) return <Skeleton lines={8} height={28} />
+  if (loading) return <Skeleton lines={8} height={28} />
   if (error && !c) return <ErrorState error={error} onRetry={reload} />
   if (!c) return null
 
@@ -512,10 +512,15 @@ export default function CaseWorkspacePage() {
 
               {tab === 'audit' && (
                 <div className="tab-body card audit-card">
-                  {audit.loading ? (
+                  {audit.data ? (
+                    <div
+                      className={audit.loading ? 'is-pending' : undefined}
+                      aria-busy={audit.loading}
+                    >
+                      <AuditTimeline events={audit.data} />
+                    </div>
+                  ) : audit.loading ? (
                     <Skeleton lines={4} />
-                  ) : audit.data ? (
-                    <AuditTimeline events={audit.data} />
                   ) : null}
                 </div>
               )}

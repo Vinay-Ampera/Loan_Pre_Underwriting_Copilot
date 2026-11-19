@@ -359,7 +359,7 @@ function PromptEditor({ name, summary, onChanged }) {
   }, [name])
 
   if (error) return <ErrorState error={error} onRetry={reload} />
-  if (loading && !data) return <Skeleton lines={6} />
+  if (loading) return <Skeleton lines={6} />
   if (!data || text === null) return null
 
   const inUse = data.editable
