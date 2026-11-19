@@ -1,17 +1,111 @@
 .new-case {
   display: flex;
   flex-direction: column;
-  gap: var(--s-6);
-  max-width: 960px;
+  gap: var(--s-8);
+  max-width: 1200px;
 }
-.new-case section {
+.nc-head {
   display: flex;
   flex-direction: column;
+  gap: var(--s-1);
+}
+
+/* a numbered step: the number (a tick once done), the heading, then the content */
+.nc-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.nc-step-head {
+  display: flex;
+  align-items: flex-start;
   gap: var(--s-3);
+}
+.nc-step-head h2 {
+  font-size: var(--fs-20);
+  line-height: 28px;
+}
+.nc-step-no {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+.nc-step-no.done {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+.nc-step-no.done svg {
+  stroke-width: 2.25;
+}
+.nc-step-hint {
+  color: var(--faint);
+  font-size: var(--fs-13);
+}
+
+/* below the loan cards: the steps on the left, the documents the loan needs on the right */
+.nc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--s-8);
+  align-items: start;
+}
+.nc-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-8);
+  min-width: 0;
+}
+.nc-rail {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--s-6));
 }
 
 .way-pick {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--s-3);
+}
+.nc-go {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.nc-go .field-error {
+  flex-basis: 100%;
+}
+
+@media (max-width: 1080px) {
+  .nc-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nc-rail {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .new-case,
+  .nc-main {
+    gap: var(--s-6);
+  }
 }

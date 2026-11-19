@@ -1,0 +1,86 @@
+.rdp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+}
+.rdp h2 {
+  font-size: var(--fs-16);
+  font-weight: 500;
+}
+.rdp-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rdp-loan {
+  color: var(--muted);
+  font-size: var(--fs-13);
+}
+.rdp-empty {
+  color: var(--muted);
+  font-size: var(--fs-14);
+}
+
+.rdp-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.rdp-group h3 {
+  font-family: var(--font);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--faint);
+}
+.rdp-group ul {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rdp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-14);
+}
+.rdp-item:first-child {
+  border-top: 0;
+}
+.rdp-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--faint);
+}
+.rdp-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.rdp-note {
+  color: var(--faint);
+  font-size: var(--fs-12);
+}
+.rdp-count {
+  flex: none;
+  min-width: 22px;
+  padding: 0 var(--s-1);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-12);
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rdp-foot {
+  color: var(--faint);
+  font-size: var(--fs-12);
+  line-height: 1.5;
+}

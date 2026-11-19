@@ -375,3 +375,9 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Edge cases:** E-86 to E-90. **Docs:** PRD FR-47 to FR-51 (9.11), DATABASE 4d, SECURITY 4f, DESIGN_SYSTEM 13, TESTING 7h, CLAUDE.md decision 17 and status.
 - **Left for Part 3:** a real send checked by hand against Resend, the browser run, the full backend run, the docs sweep, the demo script.
 
+## New case page redesign (2026-11-19)
+
+- Display only, asked for by the user: numbered steps, card radios with icons (`ChoiceCard`), and a "Documents needed" rail for the chosen loan (`RequiredDocsPreview`). Details in `DESIGN_SYSTEM.md` 8.14.
+- `GET /meta/loan-types` now also returns `documents` per loan type from the rules file (read only; no rule, score or route change).
+- Tests: `NewCasePage.test.jsx` (4), `test_api.py::test_case_form_rules_follow_the_loan_type` extended. The e2e selectors (radio names, button names) are unchanged.
+- **Fix found on the way (upload buttons):** "Take a photo" showed on laptops and "Choose a folder" on phones, because the shared `.btn` rule loads after `BulkUpload.css` and won the tie. The rules are now `.btn.bulk-camera` / `.btn.bulk-folder`, and a phone is `(hover: none) and (pointer: coarse)` so a touchscreen laptop counts as a computer. Checked in Chrome (desktop and Pixel 7 emulation); guarded in `BulkUpload.test.jsx`.

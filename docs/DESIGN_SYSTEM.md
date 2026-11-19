@@ -211,6 +211,14 @@ A screen used to paint its heading first and fill in over the next second or two
 - **Applicant link page:** the same loader on its own, in place of the brand header followed by "Opening…".
 - **Fixed on the way:** the documents desk could show an older inventory after a newer save (a slow refetch answered after the employment change); a save now wins over any refetch in flight.
 
+### 8.14 New case page (2026-11-19)
+
+Display only: the case is still opened the same two ways (documents first, or the form first), with the same calls and button wording.
+
+- **Steps.** Numbered steps (1 Loan type, 2 How do you want to start?, 3 the application form); a step's number becomes a tick once it is answered. Step 2 is shown from the start with its two options switched off and "Choose a loan type first." until a loan is picked.
+- **Choice cards** (`ChoiceCard.jsx`): one card radio used for the loan types and the two ways to start: icon tile, name, one line, and a ring that fills with a tick when chosen. Five loan types sit in one row on a wide screen; on phones the icon sits beside the text. New line icons: `wallet`, `cap`, `briefcase`, `car`, `pencil`, `file`.
+- **Documents needed** (`RequiredDocsPreview.jsx`): a 320 px rail beside steps 2 and 3, sticky under the top bar, below them on narrow screens. It lists the documents the chosen loan needs, straight from the rules file through `GET /meta/loan-types` (`documents`): Identity, Income and loan (Student for education), Co-applicant, with "If salaried"-style notes, counts as small mono tags, "A or B" for either-or documents, and the co-applicant rule. Nothing is scored or decided here.
+
 ## 9. Stage 9 design: customer notifications (planned 2026-11-02, built 2026-11-02)
 
 - **Draft dialog** on the case workspace after confirm, override or a stopped run: a template picker (a few short templates plus **Blank**), the recipient (customer email, masked in lists), the subject (fixed), the body (editable), the fixed fraud footer (shown, locked), and the officer's contact lines. A **Send** button opens a second confirmation that shows the final text. A blocked send shows the exact reason (for example "Contains a number that looks like an account number").
@@ -256,7 +264,7 @@ A screen used to paint its heading first and fill in over the next second or two
 ## 11. Stage 10 design: intake desk and applicant link (Parts A to C built 2026-11-04)
 
 - **New case** asks "How do you want to start?": *Start with the documents* (opens the desk) or *Fill in the form first* (the old path, unchanged).
-- **Bulk upload** (`BulkUpload`): one drop area, "Choose files or a zip", "Choose a folder", a one-line summary ("12 received · 1 not accepted · 2 repeats ignored") and a result chip per file (received, received with a note, not accepted with the reason, repeat ignored). The same component serves the applicant's page.
+- **Bulk upload** (`BulkUpload`): one drop area, "Choose files or a zip", "Choose a folder" (computers only), "Take a photo" (applicant page, phones and tablets only), a one-line summary ("12 received · 1 not accepted · 2 repeats ignored") and a result chip per file (received, received with a note, not accepted with the reason, repeat ignored). The same component serves the applicant's page.
 - **Inventory** (`Inventory`) on the Documents tab, one card per person: employment statement (a select), Received (table: File, Type, Person, Used for), Still missing (a list; identity papers carry an "Essential" chip), Extra. Below: Depends on employment type, Needs your attention (Whose is it? / Not recognised), Same document different amounts, Not accepted, Repeats ignored. Type and person are dropdowns that save at once. On a phone the tables stack as label/value rows.
 - **Actions** at the foot: *Download all files (zip)*, *Ask the applicant*, *Proceed anyway* (off while identity papers are missing), *Continue to the application form* (on only when nothing is missing or the officer chose Proceed anyway).
 - **Application form after the desk:** the five identity fields carry a small purple "from documents" tag while they are exactly what the card gave; a field the cards disagree on or could not read is empty with a note; one tick "I confirmed the details marked from documents against the cards" above Save. Claim fields have no tag. A case that came from a link shows the applicant's request above (`ApplicantRequest`): their own statement, not checked, with the reference they were given and a Sent complete / Sent, incomplete chip.

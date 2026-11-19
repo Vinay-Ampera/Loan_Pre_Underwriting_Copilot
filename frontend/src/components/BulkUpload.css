@@ -16,15 +16,18 @@
   background: var(--stopped-bg);
   color: var(--muted);
 }
-/* a camera button only helps on a phone or tablet; a folder picker only helps on a computer */
-.bulk-camera {
+/* a camera button only helps on a phone or tablet; a folder picker only helps on a computer.
+   ".btn." raises the weight above the shared .btn rule, which loads after this file. Phones and
+   tablets are told apart by a touch-only screen (no hover), so a touchscreen laptop counts as a
+   computer. */
+.btn.bulk-camera {
   display: none;
 }
-@media (pointer: coarse) {
-  .bulk-camera {
+@media (hover: none) and (pointer: coarse) {
+  .btn.bulk-camera {
     display: inline-flex;
   }
-  .bulk-folder {
+  .btn.bulk-folder {
     display: none;
   }
 }

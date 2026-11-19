@@ -228,6 +228,15 @@ def test_case_form_rules_follow_the_loan_type(client: TestClient) -> None:
     assert post({**minimal(), "application_date": "2999-01-01"}).status_code == 422
     r = client.get("/api/v1/meta/loan-types", headers=h).json()
     assert r["co_applicant"]["education"] == "required" and r["fields"]["personal"] == []
+    # the documents each loan needs come from the rules file, KYC first, for the New case page
+    docs = r["documents"]
+    assert set(docs) == {"personal", "home", "education", "business", "vehicle"}
+    assert [d["type"] for d in docs["personal"][:3]] == ["pan_card", "aadhaar", "photo"]
+    assert all(d["kyc"] for d in docs["personal"][:3])
+    last = docs["personal"][-1]
+    assert (last["type"], last["min_count"]) == ("bank_statement", 6)
+    assert any(d["applicant"] == "co" for d in docs["education"])
+    assert any(d["any_of"] for d in docs["business"])
 
 
 def test_optional_fields_can_be_left_empty_but_required_ones_cannot(client: TestClient) -> None:

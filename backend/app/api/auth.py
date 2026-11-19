@@ -221,6 +221,15 @@ def me(user: User = Depends(current_user)) -> dict[str, Any]:
 
 
 @router.get("/meta/loan-types")
-def loan_types(_: User = Depends(current_user)) -> dict[str, Any]:
-    """The loan-specific form sections and the co-applicant rule per loan type."""
-    return {"fields": LOAN_FIELDS, "co_applicant": CO_APPLICANT}
+def loan_types(request: Request, _: User = Depends(current_user)) -> dict[str, Any]:
+    """The loan-specific form sections, the co-applicant rule and, from the rules file, the
+    documents each loan type needs (shown on the New case page before the case is opened)."""
+    rs = request.app.state.ruleset
+    documents = {
+        loan: [
+            d.model_dump(include={"type", "kyc", "min_count", "applicant", "when", "any_of"})
+            for d in rs.required_documents(loan)
+        ]
+        for loan in CO_APPLICANT
+    }
+    return {"fields": LOAN_FIELDS, "co_applicant": CO_APPLICANT, "documents": documents}

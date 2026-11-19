@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import BulkUpload, { summarise } from './BulkUpload'
 
@@ -77,5 +78,23 @@ describe('BulkUpload', () => {
     render(<BulkUpload upload={upload} disabled />)
     expect(document.getElementById('bulk-files')).toBeDisabled()
     expect(upload).not.toHaveBeenCalled()
+  })
+
+  it('hides the camera on a computer and the folder on a phone, above the shared .btn rule', () => {
+    // the shared .btn rule (display: inline-flex) loads after this file, so a plain
+    // .bulk-camera { display: none } lost and a laptop showed "Take a photo"
+    const css = readFileSync('src/components/BulkUpload.css', 'utf8')
+    expect(css).toMatch(/\.btn\.bulk-camera\s*\{\s*display:\s*none/)
+    const phone = css.slice(css.indexOf('@media (hover: none) and (pointer: coarse)'))
+    expect(phone).toMatch(/\.btn\.bulk-camera\s*\{\s*display:\s*inline-flex/)
+    expect(phone).toMatch(/\.btn\.bulk-folder\s*\{\s*display:\s*none/)
+  })
+
+  it('offers the camera only on the applicant page', () => {
+    const { unmount } = render(<BulkUpload upload={vi.fn()} />)
+    expect(screen.queryByText('Take a photo')).not.toBeInTheDocument()
+    unmount()
+    render(<BulkUpload upload={vi.fn()} camera />)
+    expect(screen.getByText('Take a photo')).toBeInTheDocument()
   })
 })
