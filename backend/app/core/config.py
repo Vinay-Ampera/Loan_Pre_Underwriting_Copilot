@@ -59,8 +59,21 @@ class Settings(BaseSettings):
     link_rate_per_minute: int = 30  # requests per link per minute (public routes)
     address_rate_per_minute: int = 90  # requests per client address per minute (public routes)
 
-    # Customer messages (Stage 9): v1 delivers to the backend terminal only
+    # Customer messages (Stage 9) and email (Notifications Part 2). console = print in the
+    # terminal; smtp = really send, only to EMAIL_ALLOWLIST (or redirected to EMAIL_REDIRECT_TO)
     notification_sender: str = "console"
+    smtp_host: str = ""
+    smtp_port: int = 465
+    smtp_security: str = "ssl"  # ssl | starttls | none
+    smtp_username: str = ""
+    smtp_password: SecretStr | None = None  # the Resend API key with Resend; never logged
+    smtp_timeout_seconds: int = 15
+    email_from: str = "Pramaan <onboarding@resend.dev>"
+    email_allowlist: str = ""  # exact addresses, comma separated
+    email_redirect_to: str = ""  # demo: other addresses are sent here instead
+    staff_emails_default: bool = True  # new accounts start with notice emails on
+    email_worker_seconds: int = 15  # how often queued staff emails are sent; 0 = never (tests)
+    notice_email_gap_minutes: int = 30  # at most one notice email per person in this time
     branch_contact_email: str = ""  # optional extra contact lines in customer messages
     branch_contact_phone: str = ""
 

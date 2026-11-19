@@ -9,6 +9,7 @@ from sqlalchemy.engine import make_url
 from app.core.config import get_settings
 
 os.environ.setdefault("LANGFUSE_ENABLED", "false")  # tests never send traces to the cloud
+os.environ.setdefault("EMAIL_WORKER_SECONDS", "0")  # tests send queued email by calling it
 get_settings.cache_clear()
 
 

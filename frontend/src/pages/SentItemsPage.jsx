@@ -23,6 +23,13 @@ export function MessageChip({ status }) {
   return <StatusChip tone={tone}>{label}</StatusChip>
 }
 
+// How a sent message went out (Notifications Part 2). Shown beside the status.
+export const DELIVERY = {
+  sent: 'Sent by email',
+  redirected: 'Sent to the demo inbox',
+  printed: 'Printed in the terminal, not emailed',
+}
+
 /** Read one message. A failed one can be sent again: the button here is the second click. */
 function ViewDialog({ id, onClose, onChanged }) {
   const { data: m, error, loading } = useAsync(() => api.get(`/messages/${id}`), [id])
@@ -58,6 +65,7 @@ function ViewDialog({ id, onClose, onChanged }) {
             <span className="mono">{m.case_no}</span> · To {m.recipient} ·{' '}
             <MessageChip status={m.status} />
           </p>
+          {m.delivery && <p className="small muted">{DELIVERY[m.delivery]}</p>}
           <pre className="msg-final">{m.text}</pre>
           {m.status === 'failed' && (
             <p className="small">This message could not be sent. You can send it again.</p>
@@ -227,6 +235,9 @@ export default function SentItemsPage() {
                   <td data-label="To">{m.recipient}</td>
                   <td data-label="Status">
                     <MessageChip status={m.status} />
+                    {m.delivery && (
+                      <span className="sent-delivery small muted">{DELIVERY[m.delivery]}</span>
+                    )}
                   </td>
                   <td className="row-actions">
                     <button type="button" className="btn" onClick={() => setView(m.id)}>

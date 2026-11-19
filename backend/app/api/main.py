@@ -7,9 +7,10 @@ the database engine, the checkpoint saver, the model router and the embedder, wh
 tests run the whole API without network access. If `frontend/dist` exists it is served too.
 """
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator, Callable
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -34,6 +35,7 @@ from app.api import (
     links,
     messages,
     notifications,
+    preferences,
     public,
     users,
 )
@@ -41,7 +43,7 @@ from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
 from app.monitoring import auditor_view
-from app.notifications import inbox
+from app.notifications import inbox, mailer
 from app.notifications.sender import Sender, build_sender
 from app.observability import metrics
 from app.rag.embedder import embed_passages
@@ -50,6 +52,12 @@ from app.services import ai_config
 
 log = logging.getLogger("loan_copilot")
 DIST = REPO_ROOT / "frontend" / "dist"
+
+
+async def _stop(task: "asyncio.Task[None]") -> None:
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
 
 
 def create_app(
@@ -67,6 +75,8 @@ def create_app(
     settings = settings or get_settings()
     # a bad notification text: loud in dev, logged and dropped in production
     inbox.configure(strict=settings.app_env == "dev")
+    mailer.configure(base_url=settings.public_base_url,
+                     gap_minutes=settings.notice_email_gap_minutes)  # fmt: skip
     if settings.app_env != "dev" and settings.jwt_secret.get_secret_value() == DEFAULT_SECRET:
         raise RuntimeError("JWT_SECRET is still the placeholder; set a long random value in .env")
 
@@ -92,8 +102,13 @@ def create_app(
             runner = Runner(Pipeline(ctx, the_saver), eng, settings)
             app.state.settings, app.state.engine, app.state.ruleset = settings, eng, ruleset
             app.state.runner, app.state.embed = runner, embed or embed_passages
-            app.state.sender = sender or build_sender(settings.notification_sender)
+            app.state.sender = sender or build_sender(settings)
             app.state.monitor_engine = auditor_view.build_engine(settings, eng)
+            if settings.email_worker_seconds > 0:  # staff email, sent after each commit
+                mail_task = asyncio.get_running_loop().create_task(
+                    mailer.run_worker(eng, app.state.sender, settings.email_worker_seconds)
+                )
+                stack.push_async_callback(_stop, mail_task)
             if recover:
                 n = runner.recover()
                 if n:
@@ -126,6 +141,7 @@ def create_app(
         messages.router,
         issues.router,
         notifications.router,
+        preferences.router,
         links.router,
         public.router,
     ):

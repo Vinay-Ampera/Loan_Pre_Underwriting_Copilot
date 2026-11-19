@@ -362,3 +362,16 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Edge cases:** E-76 to E-85. **Docs:** PRD FR-43 to FR-46 (section 9.10), DATABASE 4c, SECURITY 4e, DESIGN_SYSTEM 13, TESTING 7g.
 - **Left for Parts 2 and 3:** real email, a browser (Playwright) run of the inbox, the full backend run, the docs sweep and the demo script.
 
+---
+
+## Notifications Part 2 build notes: real email (2026-11-19)
+
+- **Decisions (user, 2026-11-19):** decision 17's "no real email in v1" is lifted; provider Resend, reached over **SMTP** (chosen over Resend's own API: no new package, Mailpit locally, any provider by settings); no verified domain yet, so `onboarding@resend.dev`; allow-list plus a demo redirect (the suggestion taken); contact request and upload link really send; **no** applicant receipt; staff "new notice" emails with a per-person switch; an email when an account is created or a password is reset, **never with the password**. Built, not committed.
+- **Migration 0020** (run `python -m app.db.migrate`): `email_outbox`, `users.notice_emails`, `outbox.delivery`.
+- **Backend:** `notifications/sender.py` (`SmtpSender`, `GuardedSender` with allow-list and redirect, `check_email_settings` at start-up, `build_sender(settings)`); `notifications/mailer.py` (fixed texts, `queue_notice_email` with a 30-minute gap and the person's choice, `queue_account_email`, `deliver_pending` with row locks, three tries and audit, `run_worker` started by the app every `EMAIL_WORKER_SECONDS`); `inbox.notify` queues the notice email; `api/users.py` queues account and reset emails; `api/messages.py` records `delivery`; `api/preferences.py` (`GET`/`PUT /me/preferences`, officer and admin, audited). Settings: `SMTP_*`, `EMAIL_FROM`, `EMAIL_ALLOWLIST`, `EMAIL_REDIRECT_TO`, `STAFF_EMAILS_DEFAULT`, `EMAIL_WORKER_SECONDS`, `NOTICE_EMAIL_GAP_MINUTES` (`.env.example`). Tests set `EMAIL_WORKER_SECONDS=0` and send by calling `deliver_pending`.
+- **Frontend:** the user menu's *Email me about new notices* checkbox; Sent items shows how a message went out; Help lines.
+- **Not emailed (by design):** the auditor; a password; case details in staff email; an account made from the command line (the operator typed its password).
+- **Turn it on:** set `NOTIFICATION_SENDER=smtp` in `.env` and restart the backend. A wrong setup stops the start with the variable named.
+- **Edge cases:** E-86 to E-90. **Docs:** PRD FR-47 to FR-51 (9.11), DATABASE 4d, SECURITY 4f, DESIGN_SYSTEM 13, TESTING 7h, CLAUDE.md decision 17 and status.
+- **Left for Part 3:** a real send checked by hand against Resend, the browser run, the full backend run, the docs sweep, the demo script.
+

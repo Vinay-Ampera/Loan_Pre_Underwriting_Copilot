@@ -28,7 +28,7 @@ SENDABLE = ("confirmed", "overridden", "stopped")
 LINK_SENDABLE = ("draft", "uploaded", "applicant_submitted")  # the upload link goes out early
 _COLUMNS = """o.id, o.case_id, c.case_no, o.sent_by, o.recipient_email, o.template, o.subject,
               o.body, o.final_text, o.case_ref_included, o.status, o.block_reason, o.error,
-              o.created_at, o.sent_at, o.link_id"""
+              o.created_at, o.sent_at, o.link_id, o.delivery"""
 
 
 class PhoneIn(BaseModel):
@@ -102,7 +102,7 @@ def _view(row: Any, preview: str) -> dict[str, Any]:
         "recipient": display.display_text(row.recipient_email), "subject": row.subject,
         "body": row.body, "text": row.final_text or preview, "case_ref_included": row.case_ref_included,
         "status": row.status, "block_reason": row.block_reason, "error": row.error,
-        "created_at": row.created_at, "sent_at": row.sent_at,
+        "created_at": row.created_at, "sent_at": row.sent_at, "delivery": row.delivery,
     }  # fmt: skip
 
 
@@ -278,7 +278,9 @@ def send_message(
         return JSONResponse({"detail": "Not sent: " + "; ".join(reasons) + ".",
                              "reasons": reasons}, 422)  # fmt: skip
     try:
-        _sender(request).send(Outgoing(str(message_id), row.recipient_email, row.subject, final))
+        how = _sender(request).send(
+            Outgoing(str(message_id), row.recipient_email, row.subject, final)
+        )
     except SendError as exc:
         _write_state(conn, message_id, "failed", error=str(exc)[:300], final_text=kept)
         write_audit(conn, user.id, "message_failed", "message", message_id)
@@ -286,8 +288,12 @@ def send_message(
         return JSONResponse({"detail": "The message could not be sent. It is saved as failed; "
                                        "you can retry it from Sent items."}, 502)  # fmt: skip
     _write_state(conn, message_id, "sent", final_text=kept)
+    delivery = how or "printed"  # printed in the terminal, sent by email, or to the demo inbox
+    conn.execute(
+        text("UPDATE outbox SET delivery = :d WHERE id = :i"), {"d": delivery, "i": message_id}
+    )
     write_audit(conn, user.id, "message_sent", "message", message_id,
-                after={"template": row.template})  # fmt: skip
+                after={"template": row.template, "delivery": delivery})  # fmt: skip
     return _view_row(conn, _load(conn, message_id, user), user, settings)
 
 

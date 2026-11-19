@@ -102,7 +102,17 @@ The admin may change which models answer, the model settings and the editable pa
 - **Access:** `case_reader` (officer or admin) on every route; the auditor gets 403; a person reads and marks only their own rows and another person's id is a 404, not a 403, so ids cannot be probed. No delete in v1. The inbox holds no case data beyond the reference; the case itself still follows the case rules (an officer opens only their own case).
 - **Same transaction:** a notification is written inside the transaction of the audit row of its event; if the event rolls back, so does the notification.
 - **No scheduler:** the "link ends within a day" notice is written when its officer next reads the bell or the inbox (claimed by one `UPDATE`, so it is written once per expiry however often it is read).
-- **Real email is not part of this** (decision 17 stands until the user lifts it, Part 2).
+- **Real email:** see 4f.
+
+## 4f. Real email (Notifications Part 2, 2026-11-19; decision 17 changed by the user)
+
+- **Who can receive:** only `EMAIL_ALLOWLIST` (exact addresses). Every other address is sent to `EMAIL_REDIRECT_TO` with the real one masked in the subject (`[demo, for ****@example.test]`), or, without a redirect, printed in the terminal and refused (a customer message is then `failed` with the reason). The redirect must be on the list; the app refuses to start otherwise. `GuardedSender` wraps every real sender, so no code path reaches SMTP unguarded.
+- **The key:** with Resend the API key is `SMTP_PASSWORD` in `.env` (a `SecretStr`). It is never logged, put in an error, chained to an exception or returned; a server error becomes a plain `SendError` (tested with a key-looking string inside the server's own error).
+- **What an email may hold:** customer messages are unchanged (content check, fraud footer, second click). Staff email is fixed text with a sign-in link and nothing from a case. **No email ever carries a password**: account and reset emails tell the person to ask the admin. The auditor gets no email.
+- **After the commit:** staff email is queued in the event's transaction and sent by the app's own loop, so a rolled-back event sends nothing; rows are locked while sent so two workers never send twice; three tries, then failed.
+- **Audit:** `email_sent`, `email_held`, `email_failed` (kind, masked address, delivery) for staff email; `message_sent` now records `delivery`; `notice_emails_changed` when a person changes their choice.
+- **Noise and quota:** at most one notice email per person per 30 minutes (`NOTICE_EMAIL_GAP_MINUTES`); each person can turn them off.
+- **Headers:** plain text, `Auto-Submitted: auto-generated`, a no-reply sender; `onboarding@resend.dev` until a domain is verified (it delivers only to the Resend account's own address).
 
 ## 5. Secrets and logging
 
@@ -160,6 +170,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | Officer reads another officer's messages (Stage 9) | Per-officer outbox access, 404 on others; the admin reads sent messages only (D4) |
 | An admin changes a decision to approve over a hard rule, or decides before the officer (2026-11-03) | Server refuses a correction on a case with a hard-rule finding and on any case the officer has not decided (409); a correction never becomes a precedent; every change keeps the officer's row, a reason and an audit row |
 | An admin edits a prompt to remove a safety rule, or points a step at an untested model (2026-11-18) | Locked part always appended from git; editable text validated; publish needs a passing test of that exact text, a reason and a second click; new models are called before a change is saved; schemas and guardrails still judge every reply; append-only versions and audit rows |
+| A real email reaches a stranger, leaks the SMTP key or a password (2026-11-19) | Allow-list with a demo redirect wrapped around every real sender, start-up check, `SecretStr` key never in errors, no password in any email, masked addresses in the audit, tests |
 | A notification leaks personal data or an outcome, or reaches the auditor (2026-11-19) | Text only from a code table, content check as a safety net, a role guard in the insert, own rows only (404 on others), 403 for the auditor, tests over every template and every row |
 | A key leaks through the AI control page (2026-11-18) | Keys stay in `.env`; the page shows set or missing only; the model test returns the error class only; no key in any response, audit row or log (tested) |
 

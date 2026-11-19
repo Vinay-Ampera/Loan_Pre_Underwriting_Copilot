@@ -120,3 +120,11 @@
 .user-menu-btn .readonly-badge {
   align-self: center;
 }
+
+.user-menu-check[aria-checked='true'] svg {
+  color: var(--primary);
+}
+.user-menu-note {
+  margin: 0;
+  padding: var(--s-1) var(--s-3);
+}

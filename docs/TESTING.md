@@ -188,6 +188,20 @@ Files: `backend/tests/test_inbox.py` (throwaway database), frontend `components/
 - **Frontend:** the bell is a button named with the count (none, 3, 140 with a "99+" badge) and opens the inbox of its role; the sidebar Inbox shows the same count; the provider asks on sign-in, every minute and on focus, keeps the last count when a read fails, asks nothing for an auditor or nobody and stops when the person is gone; the inbox lists unread first, filters (type from the server's list, case number after a pause, nothing-matches state, Clear filters), marks one or all read, opens the case, shows the empty and error states and pages.
 - **Not covered:** a browser (Playwright) run of the inbox (Part 3).
 
+## 7h. Email tests (Notifications Part 2, 2026-11-19)
+
+File: `backend/tests/test_email.py` (no network: a fake SMTP client and recording senders; database tests use the throwaway database). Frontend: `UserMenu.test.jsx`, `SentItemsPage.test.jsx`.
+
+- **Guard:** an allow-listed address (any capitals) gets the message as it is; any other goes to the demo inbox with the real one masked in the subject and never in `To`; with no redirect it is printed and refused; an empty allow-list delivers nothing.
+- **Settings:** console needs nothing; smtp builds a guarded SMTP sender; an unknown sender, an empty host, a wrong security mode, a missing password, a bad From, a bad allow-list entry and a redirect off the list all refuse to start and name the variable, never the key.
+- **SMTP:** SSL signs in with the key as password and sends a plain, no-reply email with the right headers; STARTTLS and a server with no sign-in (Mailpit); a refused sign-in, a refused recipient, a refused message and a network error become plain errors without the key and with nothing chained.
+- **Texts:** every staff email is fixed text with the sign-in link and the footer, no digits in the subject, "never sent by email" for the password.
+- **Queue:** one notice email per person per gap; the person's choice, a disabled account and the auditor get none; a rolled-back event queues nothing; delivery sends, redirects and holds, never twice, audited with masked addresses; a failing server is tried three times and audited once; the worker loop sends and survives.
+- **Accounts and choice:** a new account and a reset are emailed without the password; new accounts start with notice emails on; a person turns them off and on (audited once per change), the auditor gets 403.
+- **Customer messages:** sent, redirected and refused (failed, with the reason) record how they went out in the message and the audit row; the console records printed.
+- **Migration 0020** applies, rolls back to 0019 and applies again.
+- **Not covered:** a real send to Resend (needs the key in `.env`; a manual check), and a browser run (Part 3).
+
 ## 8. Demo checks (Stage 11)
 
 - Clean case per loan type completes with report.

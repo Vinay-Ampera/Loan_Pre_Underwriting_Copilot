@@ -116,6 +116,14 @@ With no rows the file defaults apply. `app_rw` can read and insert the two versi
 
 Migration 0019 also adds `upload_links.expiry_notified_for` (the expiry time a "ends within a day" notice was written for, so each expiry is announced once, also after an extension). `app_rw` and `migrator` have access; `report_ro` has none (the auditor's database role cannot read it).
 
+## 4d. Email (migration 0020)
+
+| Table or column | Purpose |
+|---|---|
+| `email_outbox` | Queue of staff email: `user_id`, `kind` (`notice`, `account_created`, `password_reset`), `recipient` (the staff address), fixed `subject` and `body` (no case data, never a password), `status` (`queued`, `printed`, `sent`, `redirected`, `held`, `failed`), `attempts` (three at most), `last_error`, `created_at`, `sent_at`. Indexes on `(status, created_at)` and `(user_id, kind, created_at DESC)`. `app_rw` and `migrator`; not `report_ro`. |
+| `users.notice_emails` | The person's choice to get "new notice" emails (default true; new accounts take `STAFF_EMAILS_DEFAULT`). |
+| `outbox.delivery` | How a sent customer message went out: `printed`, `sent` or `redirected`. |
+
 ## 5. Mock services (synthetic)
 
 - `mock_identity(pan, name, dob, aadhaar_hash, address)`

@@ -16,6 +16,7 @@ const rows = [
     template_label: 'Please get in touch',
     recipient: '****@example.test',
     status: 'sent',
+    delivery: 'redirected',
     created_at: '2026-11-02T10:00:00Z',
     sent_at: '2026-11-02T10:01:00Z',
   },
@@ -66,6 +67,8 @@ describe('SentItemsPage', () => {
     expect(table.getByText('Sent')).toBeInTheDocument()
     expect(table.getByText('Failed')).toBeInTheDocument()
     expect(table.getByText('Draft')).toBeInTheDocument()
+    expect(table.getByText('Sent to the demo inbox')).toBeInTheDocument() // how it went out
+    expect(table.getAllByText(/demo inbox|by email|terminal/)).toHaveLength(1) // only when sent
   })
 
   it('retries a failed message only from the dialog button (second click)', async () => {

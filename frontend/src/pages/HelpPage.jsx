@@ -307,8 +307,9 @@ function OfficerGuide() {
             ask a customer for an OTP, PIN or password.
           </li>
           <li>
-            Sent items lists your messages. A failed one can be sent again. Messages are printed in
-            the backend terminal in this version; no real email is sent.
+            Sent items lists your messages and how each went out: by email, to the demo inbox, or
+            printed in the backend terminal when email is off. A failed one can be sent again. Only
+            addresses the bank allows receive real email; the rest go to the demo inbox.
           </li>
         </ul>
       </HelpSection>
@@ -334,6 +335,10 @@ function OfficerGuide() {
             case for those.
           </li>
           <li>The count refreshes by itself every minute and when you come back to the window.</li>
+          <li>
+            Email me about new notices, in the menu under your name, sends a short email (at most
+            one every half hour) asking you to sign in. It never holds case details.
+          </li>
         </ul>
       </HelpSection>
 

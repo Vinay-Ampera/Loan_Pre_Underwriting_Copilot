@@ -16,9 +16,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import Connection, text
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import User, admin_only, get_conn, write_audit
+from app.api.deps import User, admin_only, get_conn, get_settings_dep, write_audit
 from app.api.schemas import UserCreateIn
 from app.api.security import hash_password
+from app.core.config import Settings
+from app.notifications import mailer
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 _ALPHABET = string.ascii_letters + string.digits
@@ -133,7 +135,8 @@ def user_activity(
 
 @router.post("/users", status_code=201)
 def create_user(
-    body: UserCreateIn, admin: User = Depends(admin_only), conn: Connection = Depends(get_conn)
+    body: UserCreateIn, admin: User = Depends(admin_only), conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
 ) -> dict[str, Any]:  # fmt: skip
     password = temporary_password()
     try:
@@ -147,6 +150,10 @@ def create_user(
         raise HTTPException(409, "An account with this email already exists.") from None
     write_audit(conn, admin.id, "user_created", "user", created.id,
                 after={"role": body.role, "email": created.email})  # fmt: skip
+    if body.role in ("officer", "admin"):  # sent after the commit; never with the password
+        mailer.queue_account_email(conn, created.id, "account_created")
+    conn.execute(text("UPDATE users SET notice_emails = :n WHERE id = :i"),
+                 {"n": settings.staff_emails_default, "i": created.id})  # fmt: skip
     return {**_row(created), "temporary_password": password}
 
 
@@ -198,4 +205,5 @@ def reset_password(
                     updated_at = now() WHERE id = :i"""),
         {"h": hash_password(password), "i": user_id})  # fmt: skip
     write_audit(conn, admin.id, "user_password_reset", "user", user_id)
+    mailer.queue_account_email(conn, user_id, "password_reset")  # the fact, never the password
     return {"id": target.id, "email": target.email, "temporary_password": password}

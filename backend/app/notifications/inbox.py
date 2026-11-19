@@ -19,6 +19,7 @@ from uuid import UUID
 
 from sqlalchemy import Connection, text
 
+from app.notifications import mailer
 from app.notifications.check import check_notification_text
 
 log = logging.getLogger("loan_copilot.notifications")
@@ -249,6 +250,8 @@ def notify(
         {"u": user_id, "k": kind, "t": title, "b": body, "c": case.id if case else None,
          "r": ref, "roles": list(k.roles)},
     ).scalar_one_or_none()  # fmt: skip
+    if new_id is not None:  # "you have a new notice" by email, if they want it (Part 2)
+        mailer.queue_notice_email(conn, user_id)
     return new_id
 
 

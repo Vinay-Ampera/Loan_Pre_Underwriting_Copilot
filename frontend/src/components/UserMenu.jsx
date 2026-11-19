@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { api } from '../api/client'
 import Dialog from './Dialog'
 import Icon from './Icons'
 import './UserMenu.css'
@@ -9,7 +10,30 @@ const ROLE = { officer: 'Loan officer', admin: 'Admin', auditor: 'Auditor' }
 export default function UserMenu({ user, onSignOut }) {
   const [open, setOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [emails, setEmails] = useState(null) // notice emails on or off; null until read
+  const [prefError, setPrefError] = useState(null)
   const root = useRef(null)
+  const hasInbox = user.role === 'officer' || user.role === 'admin'
+
+  // read the person's choice the first time the menu opens
+  useEffect(() => {
+    if (!open || !hasInbox || emails !== null) return
+    api
+      .get('/me/preferences')
+      .then((p) => setEmails(p.notice_emails))
+      .catch(() => setPrefError('Could not read your email setting.'))
+  }, [open, hasInbox, emails])
+
+  async function toggleEmails() {
+    const next = !emails
+    setPrefError(null)
+    try {
+      const saved = await api.put('/me/preferences', { notice_emails: next })
+      setEmails(saved.notice_emails)
+    } catch {
+      setPrefError('Could not save. Try again.')
+    }
+  }
 
   useEffect(() => {
     if (!open) return undefined
@@ -49,6 +73,23 @@ export default function UserMenu({ user, onSignOut }) {
               <span className="readonly-badge">Read-only: this account changes nothing</span>
             )}
           </div>
+          {hasInbox && emails !== null && (
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked={emails}
+              className="user-menu-check"
+              onClick={toggleEmails}
+            >
+              <Icon name={emails ? 'check' : 'minus'} />
+              Email me about new notices
+            </button>
+          )}
+          {prefError && (
+            <p className="small field-error user-menu-note" role="alert">
+              {prefError}
+            </p>
+          )}
           <button
             type="button"
             role="menuitem"

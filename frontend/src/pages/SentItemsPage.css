@@ -48,3 +48,8 @@
   gap: var(--s-3);
   align-items: flex-end;
 }
+
+.sent-delivery {
+  display: block;
+  margin-top: 2px;
+}
