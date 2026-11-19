@@ -1,5 +1,6 @@
 """Request bodies. Format checks only: ages, ratios and eligibility are decided by `scoring/`."""
 
+import re
 from datetime import date
 from typing import Any, Literal
 from uuid import UUID
@@ -252,8 +253,17 @@ class IssueIn(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     category: Literal["bug", "wrong_result", "access", "other"]
-    case_ref: str | None = Field(default=None, pattern=r"^CASE-[0-9]{4}-[0-9]{4}$")
+    case_ref: str | None = None
     body: str = Field(min_length=10, max_length=1000)
+
+    @field_validator("case_ref")
+    @classmethod
+    def _ref_shape(cls, v: str | None) -> str | None:
+        if v is not None and not re.fullmatch(r"CASE-[0-9]{4}-[0-9]{4}", v):
+            raise ValueError(
+                "A case reference looks like CASE-2026-0001 (CASE, the year, four digits)."
+            )
+        return v
 
     @field_validator("case_ref", mode="before")
     @classmethod

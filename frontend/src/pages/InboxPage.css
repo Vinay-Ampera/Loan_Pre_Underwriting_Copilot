@@ -1,0 +1,114 @@
+.inbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-width: 820px;
+  min-height: 420px;
+  align-content: start;
+}
+.inbox-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+.inbox-tools p {
+  margin: 0;
+}
+.inbox-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* the hover fill follows the card's rounded corners */
+}
+.inbox-rows li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-right: var(--s-4);
+  border-bottom: 1px solid var(--line);
+  transition: background-color var(--t-fast) var(--ease);
+}
+.inbox-rows li:hover,
+.inbox-rows li:focus-within {
+  background: var(--raised);
+}
+.inbox-rows li:last-child {
+  border-bottom: 0;
+}
+.inbox-open {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+/* the whole row is the hover target, so the button itself stays flat */
+.inbox-open:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.inbox-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: transparent;
+}
+.unread .inbox-dot {
+  background: var(--primary);
+}
+.inbox-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.inbox-title {
+  font-weight: 400;
+  color: var(--muted);
+}
+.unread .inbox-title {
+  font-weight: 600;
+  color: var(--ink);
+}
+.inbox-more {
+  align-self: center;
+}
+@media (max-width: 700px) {
+  .inbox-rows li {
+    flex-wrap: wrap;
+    padding-bottom: var(--s-2);
+  }
+}
+
+/* the first tab lines up with the heading; the bar spans the same width as the list */
+.inbox .tabs .tab:first-child {
+  padding-left: 0;
+}
+.inbox-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-3);
+}
+.inbox-filters .field {
+  gap: var(--s-1);
+}
+.inbox-filters .select {
+  min-width: 200px;
+}
+.inbox-filters .input {
+  width: 200px;
+}
+@media (max-width: 700px) {
+  .inbox-filters .field,
+  .inbox-filters .select,
+  .inbox-filters .input {
+    width: 100%;
+  }
+}

@@ -251,7 +251,7 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-23 A code check blocks a send that contains forbidden content (PAN or Aadhaar patterns, account or phone numbers, scores, rule IDs, outcome words such as approved or rejected, a request for an OTP, PIN or password) or lacks the footer. The block shows the reason.
 - FR-24 v1 delivery is a terminal log and a Sent Items list (sent, failed, blocked) per officer. Failed sends can be retried. Every draft, edit, send, block and failure is in the audit log.
 - FR-25 The fraud footer is added by code and cannot be edited out.
-- FR-26 (issue reports) An officer can report a problem to the admin: case reference (text only), category and short text. The same personal-data patterns (PAN, Aadhaar, phone, account number, email) refuse the report. The officer sees only their own reports; the admin reads and closes all of them in an inbox that holds no case data. Filed, read, closed and refused reports are audited.
+- FR-26 (issue reports) An officer can report a problem to the admin: case reference (optional text; when given it must be one of that officer's own cases, else 422, the same answer for a number that does not exist and one that belongs to someone else), category and short text. The same personal-data patterns (PAN, Aadhaar, phone, account number, email) refuse the report. The officer sees only their own reports; the admin reads and closes all of them in an inbox that holds no case data. Filed, read, closed and refused reports are audited.
 - FR-27 The officer's phone number is optional on the user record (set by the officer in the draft dialog) and the customer email is an optional field on the primary applicant, kept out of the application the pipeline reads.
 
 ### 9.7 Guardrails
@@ -276,6 +276,13 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-40 (built) A prompt has an **editable part** (role and style) and a **locked part** (data is not instructions, no arithmetic, "recommended" wording, no protected attributes, the reply format) that always comes from the file in git and is added after the editable part. A draft is saved freely, must pass a test on a fixed synthetic sample (the real schema and guardrails) and is then published with a reason and a second click; any edit after the test clears the pass. Older versions, and the original text, can be restored the same way.
 - FR-41 (built) A change applies to cases that start after it. A case that is already running keeps the configuration it started with; the report records the configuration version and the prompt versions it used.
 - FR-42 (built) The page cannot change scoring weights, bands, hard rules, the age cap, masking, the output schemas or the guardrails. Switching the models off makes every step write its text in code, exactly as an offline run does.
+
+### 9.10 In-app notifications (Notifications Part 1, built 2026-11-19)
+
+- FR-43 (built) Officers and admins have an inbox: a bell with the unread count in the top bar, an Inbox entry in the sidebar with a badge, and a page (`/inbox`, `/admin/inbox`) with an unread filter, a type filter (five groups, only those a role can receive), a case-number search, mark read, mark all read and a click through to the case (or the Issues or Precedents page). The count refreshes every 60 seconds and when the window gets focus; there are no websockets, no Celery and no Redis. The auditor has none (403 on every route).
+- FR-44 (built) A notification carries only a kind, a short fixed title and body from a table in code, the case reference (CASE-YYYY-NNNN) and a link to a page of the app. It never carries a name, PAN, Aadhaar, phone, email, amount, score, band, rule or outcome; the personal-data patterns of the message check run over every text as a safety net (loud in dev and tests, logged and dropped in production).
+- FR-45 (built) A notification is written in the same transaction as the event it reports, so the two cannot drift apart. The officer is told when: the applicant presses Send (also a second time, with its own title), a request arrives from an upload link, a run is ready for the decision, a run stops on a fix, the admin corrects their decision, a case is reassigned to them, a precedent they proposed is added or not added, an upload link ends within a day while the applicant still owes files, a customer message could not be sent. Every active admin is told when: an issue report is filed, a precedent waits for review, a precedent was held by the code check. Overrides, uploads one by one and failed runs are not notified.
+- FR-46 (built) A person reads and changes only their own rows (another person's id is a 404). No delete in v1. Real email stays off (decision 17); Parts 2 and 3 (email, hardening) wait for the user.
 
 ## 10. Evaluation
 
@@ -358,4 +365,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. Stage 11 (hardening, Docker, demo) follows. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins, 2026-11-19) is built; Part 2 (real email, needs decision 17 lifted) and Part 3 (hardening and close-out) are not started and wait for the user. Stage 11 (hardening, Docker, demo) follows. Status is tracked in `PROGRESS.md`.

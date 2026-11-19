@@ -19,7 +19,7 @@ from app.api.deps import User, get_conn, get_settings_dep, officer_only, write_a
 from app.api.links import hash_token
 from app.api.schemas import MessageEditIn, MessageIn, MessageSendIn
 from app.core.config import Settings
-from app.notifications import templates
+from app.notifications import inbox, templates
 from app.notifications.check import check_link_line, check_message
 from app.notifications.sender import Outgoing, Sender, SendError
 
@@ -282,6 +282,7 @@ def send_message(
     except SendError as exc:
         _write_state(conn, message_id, "failed", error=str(exc)[:300], final_text=kept)
         write_audit(conn, user.id, "message_failed", "message", message_id)
+        inbox.notify(conn, user.id, "message_failed", inbox.CaseRef(row.case_id, row.case_no))
         return JSONResponse({"detail": "The message could not be sent. It is saved as failed; "
                                        "you can retry it from Sent items."}, 502)  # fmt: skip
     _write_state(conn, message_id, "sent", final_text=kept)

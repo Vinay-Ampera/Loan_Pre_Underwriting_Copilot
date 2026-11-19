@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDraft } from '../lib/drafts'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
@@ -14,6 +14,9 @@ export const CATEGORIES = [
   ['access', 'I cannot get to something'],
   ['other', 'Something else'],
 ]
+const THANKS_MS = 6000
+const CASE_REF = /^CASE-\d{4}-\d{4}$/
+const BAD_REF = 'A case reference looks like CASE-2026-0001 (CASE, the year, four digits).'
 export const ISSUE_STATUS = {
   open: ['info', 'Open'],
   read: ['refer', 'Read by admin'],
@@ -33,18 +36,33 @@ export default function IssuesPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [done, setDone] = useState(false)
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const set = (k) => (e) => {
+    setDone(false) // starting another report ends the thank-you
+    setForm((f) => ({ ...f, [k]: e.target.value }))
+  }
   const ready = body.trim().length >= 10
+
+  // the thank-you is a passing note: it goes by itself after a few seconds
+  useEffect(() => {
+    if (!done) return undefined
+    const id = setTimeout(() => setDone(false), THANKS_MS)
+    return () => clearTimeout(id)
+  }, [done])
 
   async function submit(e) {
     e.preventDefault()
+    const ref = form.case_ref.trim().toUpperCase()
+    setDone(false)
+    if (ref && !CASE_REF.test(ref)) {
+      setError(BAD_REF) // said here, in plain words, before anything is sent
+      return
+    }
     setBusy(true)
     setError(null)
-    setDone(false)
     try {
       await api.post('/issues', {
         category: form.category,
-        case_ref: form.case_ref.trim().toUpperCase() || null,
+        case_ref: ref || null,
         body: body.trim(),
       })
       setForm({ category: form.category, case_ref: '' })
@@ -91,6 +109,7 @@ export default function IssuesPage() {
             value={form.case_ref}
             onChange={set('case_ref')}
           />
+          <p className="small muted">One of your own cases, or leave it empty.</p>
         </div>
         <div className="field">
           <label htmlFor="i-body">What happened?</label>
@@ -100,7 +119,10 @@ export default function IssuesPage() {
             rows={5}
             maxLength={1000}
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={(e) => {
+              setDone(false)
+              setBody(e.target.value)
+            }}
           />
           <span className="small muted">{body.trim().length}/1000 · at least 10 characters</span>
         </div>

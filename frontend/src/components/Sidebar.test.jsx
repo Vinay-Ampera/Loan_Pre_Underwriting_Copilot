@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import Sidebar from './Sidebar'
@@ -25,10 +25,17 @@ describe('Sidebar', () => {
     expect(items).toContain('Sent items')
   })
 
+  it('gives the officer an Inbox right after Home, and the auditor none', () => {
+    expect(links('officer').slice(0, 2)).toEqual(['Home', 'Inbox'])
+    cleanup()
+    expect(links('auditor')).not.toContain('Inbox')
+  })
+
   it('gives the admin messages but no audit log, case list or creating', () => {
     const items = links('admin')
     expect(items).toEqual([
       'Home',
+      'Inbox',
       'Precedents',
       'Upload links',
       'Messages',

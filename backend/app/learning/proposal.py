@@ -16,6 +16,7 @@ from app.agents.guardrails import ID_PATTERN, check_cites, check_text
 from app.agents.report import Report
 from app.agents.runtime import AgentContext, Asked, ask
 from app.intake.masker import Masker
+from app.notifications import inbox
 from app.observability import metrics
 from app.scoring.models import ScoreReport
 
@@ -113,6 +114,9 @@ async def propose_precedent(
              "e": str(row),
              "j": json.dumps({"case": str(case_uuid), "status": status, "held_reason": held})},
         )  # fmt: skip
+        found = inbox.case_ref_of(conn, case_uuid)
+        inbox.notify_admins(conn, "precedent_held" if held else "precedent_pending",
+                            found[0] if found else None)  # fmt: skip
     metrics.PRECEDENTS.labels(status).inc()
     return {"id": str(row), "status": status, "held_reason": held}
 

@@ -33,6 +33,7 @@ from app.api import (
     issues,
     links,
     messages,
+    notifications,
     public,
     users,
 )
@@ -40,6 +41,7 @@ from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
 from app.monitoring import auditor_view
+from app.notifications import inbox
 from app.notifications.sender import Sender, build_sender
 from app.observability import metrics
 from app.rag.embedder import embed_passages
@@ -63,6 +65,8 @@ def create_app(
     sender: Sender | None = None,
 ) -> FastAPI:  # fmt: skip
     settings = settings or get_settings()
+    # a bad notification text: loud in dev, logged and dropped in production
+    inbox.configure(strict=settings.app_env == "dev")
     if settings.app_env != "dev" and settings.jwt_secret.get_secret_value() == DEFAULT_SECRET:
         raise RuntimeError("JWT_SECRET is still the placeholder; set a long random value in .env")
 
@@ -121,6 +125,7 @@ def create_app(
         users.router,
         messages.router,
         issues.router,
+        notifications.router,
         links.router,
         public.router,
     ):

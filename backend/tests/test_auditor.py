@@ -108,7 +108,15 @@ def test_auditor_gets_403_on_every_route_outside_the_auditor_ones(
         ):
             continue
         url = V1 + path
-        for part in ("case_id", "doc_id", "message_id", "user_id", "precedent_id", "issue_id"):
+        for part in (
+            "case_id",
+            "doc_id",
+            "message_id",
+            "user_id",
+            "precedent_id",
+            "issue_id",
+            "notification_id",
+        ):
             url = url.replace("{" + part + "}", str(uuid.uuid4()))
         for method in methods:
             r = client.request(method.upper(), url, headers=h, json={})

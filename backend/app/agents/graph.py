@@ -36,6 +36,7 @@ from app.agents.submission import DocumentRef, Submission
 from app.agents.supervisor import CasePlan, run_supervisor
 from app.learning.bonus import precedent_bonus
 from app.learning.proposal import propose_precedent
+from app.notifications import inbox
 from app.observability import metrics, tracing
 from app.observability.tracing import stage_span
 from app.rag.schemas import PolicyResult
@@ -344,6 +345,8 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             store.update_case(conn, _case(state), status, report)
             store.audit(conn, "pipeline_finished", state["case_uuid"],
                         {"status": status, "recommendation": report.recommendation})  # fmt: skip
+            inbox.notify_owner(conn, state["case_uuid"],
+                               "run_stopped_fix" if status == "stopped" else "run_ready")  # fmt: skip
         metrics.record_run(report.model_dump(mode="json"), all_calls)
         tracing.score_case(
             str(state["case_uuid"]),

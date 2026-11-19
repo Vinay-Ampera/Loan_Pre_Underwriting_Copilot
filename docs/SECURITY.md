@@ -94,6 +94,16 @@ The admin may change which models answer, the model settings and the editable pa
 - **When it applies:** the runner binds the configuration in force at the start of a run, so a change cannot alter a case halfway; the report's `versions` records the configuration version and every prompt version used. A run resumed after a crash takes the configuration in force at that moment.
 - **Not reachable from here:** scoring weights and bands, hard rules, the age cap, masking, schemas, guardrails, the rules file, policy documents, and the API keys.
 
+## 4e. In-app notifications (Notifications Part 1, 2026-11-19)
+
+- **What a notification may contain:** a kind, a fixed title and body chosen in code (`KINDS` in `app/notifications/inbox.py`, one table, reviewable), the case number (`CASE-YYYY-NNNN`), the case id and a route of the app to open. **Never** a name, PAN, Aadhaar, phone, email, account number, amount, score, band, rule id, status word or outcome (the same boundary as a customer message, decision 17). Nothing is built from free text, a name or a number, so there is nothing to leak; a caller cannot pass text at all.
+- **Safety net:** every title and body also passes the personal-data, score, band, amount, link and outcome patterns of `notifications/check.py` (`check_notification_text`). A hit raises in dev and tests (`inbox.configure(strict=True)`; production, `APP_ENV` not `dev`, logs an error and drops the row so a template slip cannot roll back a real event). A test scans every template and every row written by the flows for digits, names and outcome words.
+- **Who gets what:** the recipient is chosen by the event (the case owner `cases.created_by`, the officer a case was reassigned to, the proposer of a precedent, every active admin for three admin kinds). The insert only matches a user whose role the kind names, so **the auditor can never be a recipient** (decision 9 stays: counts, charts and static tables only) and an officer kind cannot reach an admin or the reverse.
+- **Access:** `case_reader` (officer or admin) on every route; the auditor gets 403; a person reads and marks only their own rows and another person's id is a 404, not a 403, so ids cannot be probed. No delete in v1. The inbox holds no case data beyond the reference; the case itself still follows the case rules (an officer opens only their own case).
+- **Same transaction:** a notification is written inside the transaction of the audit row of its event; if the event rolls back, so does the notification.
+- **No scheduler:** the "link ends within a day" notice is written when its officer next reads the bell or the inbox (claimed by one `UPDATE`, so it is written once per expiry however often it is read).
+- **Real email is not part of this** (decision 17 stands until the user lifts it, Part 2).
+
 ## 5. Secrets and logging
 
 - **E. API keys and secrets in `.env`, never in git.** `.env.example` has placeholders only. Pre-commit secret scanning.
@@ -150,6 +160,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | Officer reads another officer's messages (Stage 9) | Per-officer outbox access, 404 on others; the admin reads sent messages only (D4) |
 | An admin changes a decision to approve over a hard rule, or decides before the officer (2026-11-03) | Server refuses a correction on a case with a hard-rule finding and on any case the officer has not decided (409); a correction never becomes a precedent; every change keeps the officer's row, a reason and an audit row |
 | An admin edits a prompt to remove a safety rule, or points a step at an untested model (2026-11-18) | Locked part always appended from git; editable text validated; publish needs a passing test of that exact text, a reason and a second click; new models are called before a change is saved; schemas and guardrails still judge every reply; append-only versions and audit rows |
+| A notification leaks personal data or an outcome, or reaches the auditor (2026-11-19) | Text only from a code table, content check as a safety net, a role guard in the insert, own rows only (404 on others), 403 for the auditor, tests over every template and every row |
 | A key leaks through the AI control page (2026-11-18) | Keys stay in `.env`; the page shows set or missing only; the model test returns the error class only; no key in any response, audit row or log (tested) |
 
 ## 11. Review checklist (before each release)

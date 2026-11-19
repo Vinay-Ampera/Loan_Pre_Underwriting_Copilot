@@ -150,3 +150,20 @@ def check_request_note(text: str) -> list[str]:
     reasons = [r for r, pattern in PERSONAL if pattern.search(text)]
     reasons += [r for r, pattern in _RULES if r in _NOTE_RULES and pattern.search(text)]
     return list(dict.fromkeys(reasons))
+
+
+# An in-app notification (inbox): fixed text from a table in code. This is the safety net behind
+# that table: the personal-data patterns plus the rules that keep an amount, a score, a band, a
+# rule or an outcome word out. Ordinary words like "documents" are fine here.
+_INBOX_RULES = {
+    "Contains a link",
+    "Contains an amount of money",
+    "Mentions a score, a band or a rule",
+    "Mentions a result of the assessment",
+}
+
+
+def check_notification_text(text: str) -> list[str]:
+    reasons = [r for r, pattern in PERSONAL if pattern.search(text)]
+    reasons += [r for r, pattern in _RULES if r in _INBOX_RULES and pattern.search(text)]
+    return list(dict.fromkeys(reasons))

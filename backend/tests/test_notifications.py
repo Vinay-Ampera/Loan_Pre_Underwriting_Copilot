@@ -381,9 +381,12 @@ def test_an_issue_is_filed_read_and_closed_with_audit_rows(
     client: TestClient, engine: Engine
 ) -> None:
     asha, ben, ada = login(client, "asha"), login(client, "ben"), login(client, "ada")
+    ref = client.get(f"/api/v1/cases/{create(client, asha, minimal())}", headers=asha).json()[
+        "case_no"
+    ]
     r = client.post("/api/v1/issues", headers=asha, json={
-        "category": "wrong_result", "case_ref": "CASE-2026-0001", "body": "The stepper shows the wrong stage."})  # fmt: skip
-    assert r.status_code == 201 and r.json()["status"] == "open"
+        "category": "wrong_result", "case_ref": ref, "body": "The stepper shows the wrong stage."})  # fmt: skip
+    assert r.status_code == 201 and r.json()["status"] == "open" and r.json()["case_ref"] == ref
     iid = r.json()["id"]
     assert [i["id"] for i in client.get("/api/v1/issues", headers=asha).json()] == [iid]
     assert client.get("/api/v1/issues", headers=ben).json() == []
@@ -421,7 +424,29 @@ def test_an_issue_with_personal_data_is_refused_and_not_stored(
         headers=h,
         json={"category": "bug", "case_ref": "x", "body": "long enough text"},
     )
-    assert bad_ref.status_code == 422
+    assert bad_ref.status_code == 422 and "looks like CASE-2026-0001" in str(bad_ref.json())
+    assert "pattern" not in str(bad_ref.json())
+
+
+@pytest.mark.db
+def test_an_issue_may_name_only_one_of_the_officers_own_cases(
+    client: TestClient, engine: Engine
+) -> None:
+    asha, ben = login(client, "asha"), login(client, "ben")
+    mine = client.get(f"/api/v1/cases/{create(client, asha, minimal())}", headers=asha).json()
+    body = {"category": "bug", "body": "The page froze when I saved."}
+    wrong = client.post("/api/v1/issues", headers=asha, json={**body, "case_ref": "CASE-2026-0909"})
+    theirs = client.post("/api/v1/issues", headers=ben, json={**body, "case_ref": mine["case_no"]})
+    for r in (wrong, theirs):  # the same answer: a number that is not yours says nothing more
+        assert r.status_code == 422 and "not one of your cases" in r.json()["detail"]
+    assert wrong.json() == theirs.json()
+    with engine.connect() as c:
+        assert c.execute(text("SELECT count(*) FROM issue_reports")).scalar_one() == 0
+        assert c.execute(text("SELECT count(*) FROM notifications")).scalar_one() == 0
+    # optional: no reference is fine, and so is the officer's own
+    assert client.post("/api/v1/issues", headers=ben, json=body).status_code == 201
+    own = client.post("/api/v1/issues", headers=asha, json={**body, "case_ref": mine["case_no"]})
+    assert own.status_code == 201 and own.json()["case_ref"] == mine["case_no"]
 
 
 @pytest.mark.db

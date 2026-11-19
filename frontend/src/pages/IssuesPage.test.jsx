@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -55,5 +55,46 @@ describe('IssuesPage', () => {
       case_ref: null,
       body: 'Another problem here',
     })
+  })
+
+  it('lets the thank-you go: after a few seconds, or when a new report is started', async () => {
+    api.post.mockResolvedValue({ id: '2' })
+    const user = userEvent.setup()
+    const send = async () => {
+      await user.type(screen.getByLabelText('What happened?'), 'Another problem here')
+      await user.click(screen.getByRole('button', { name: 'Send report' }))
+      return screen.findByRole('status')
+    }
+    render(<IssuesPage />)
+    await send()
+    await user.type(screen.getByLabelText('What happened?'), 'N') // a new report begins
+    expect(screen.queryByRole('status')).toBeNull()
+
+    await user.clear(screen.getByLabelText('What happened?'))
+    await user.type(screen.getByLabelText('What happened?'), 'Yet another problem')
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      await user.click(screen.getByRole('button', { name: 'Send report' }))
+      expect(await screen.findByRole('status')).toBeInTheDocument()
+      await act(async () => {
+        vi.advanceTimersByTime(6500)
+      })
+      expect(screen.queryByRole('status')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('explains a badly formed case reference in plain words and sends nothing', async () => {
+    const user = userEvent.setup()
+    render(<IssuesPage />)
+    await user.type(screen.getByLabelText(/Case reference/), 'CASE-2026-000')
+    await user.type(screen.getByLabelText('What happened?'), 'The page froze today')
+    await user.click(screen.getByRole('button', { name: 'Send report' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'A case reference looks like CASE-2026-0001',
+    )
+    expect(screen.getByRole('alert')).not.toHaveTextContent('pattern')
+    expect(api.post).not.toHaveBeenCalled()
   })
 })

@@ -30,6 +30,7 @@ from app.api.ratelimit import RateLimiter
 from app.api.schemas import CO_APPLICANT, LoanType, SendIn
 from app.core.config import Settings
 from app.intake import archive
+from app.notifications import inbox
 
 router = APIRouter(prefix="/public", tags=["applicant upload link"])
 GENERIC = "This link is not active."
@@ -224,6 +225,9 @@ def send_request(
                     after={"case_id": str(case_id)})  # fmt: skip
         write_audit(conn, None, "case_created", "case", case_id,
                     after={"case_no": case_no, "loan_type": loan_type, "via": "upload_link"})  # fmt: skip
+        inbox.notify(
+            conn, link.officer_id, "applicant_request_received", inbox.CaseRef(case_id, case_no)
+        )
         return JSONResponse({"received": True}, headers=NO_CACHE)
 
     form = dict(case.form_data)
@@ -414,4 +418,5 @@ def send_to_bank(
     write_audit(conn, None, "applicant_sent", "case", case.id,
                 after={"link_id": str(link.id), "incomplete": incomplete,
                        "again": bool(before)})  # fmt: skip
+    inbox.notify_owner(conn, case.id, "applicant_sent", variant="again" if before else None)
     return JSONResponse({"reference": reference, "incomplete": incomplete}, headers=NO_CACHE)

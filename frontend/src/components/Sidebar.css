@@ -112,3 +112,30 @@
     flex: 0 1 auto;
   }
 }
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+@media (max-width: 1024px) {
+  .sidebar-nav a {
+    position: relative;
+  }
+  .nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 16px;
+    padding: 0 4px;
+    font-size: var(--fs-12);
+    line-height: 16px;
+  }
+}

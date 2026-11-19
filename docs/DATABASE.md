@@ -108,6 +108,14 @@ Each report stores the policy and rules version used.
 
 With no rows the file defaults apply. `app_rw` can read and insert the two version tables and read, write and delete drafts; `report_ro` reads the two version tables.
 
+## 4c. Notifications (migration 0019)
+
+| Table | Purpose |
+|---|---|
+| `notifications` | One row per thing a person should know: `id`, `user_id` (recipient, an officer or an admin), `kind` (CHECK list of 13, kept equal to `KINDS` in `app/notifications/inbox.py` by a test), `title` and `body` (fixed text from code, no personal data), `case_id` (nullable, `ON DELETE CASCADE`), `case_ref` (nullable, `CASE-YYYY-NNNN`, the same check as `issue_reports`), `created_at`, `read_at` (null = unread). Index on `(user_id, read_at, created_at DESC)`. No update of text, no delete route. |
+
+Migration 0019 also adds `upload_links.expiry_notified_for` (the expiry time a "ends within a day" notice was written for, so each expiry is announced once, also after an extension). `app_rw` and `migrator` have access; `report_ro` has none (the auditor's database role cannot read it).
+
 ## 5. Mock services (synthetic)
 
 - `mock_identity(pan, name, dob, aadhaar_hash, address)`
@@ -129,7 +137,7 @@ Used only by the monitoring report. Agents and the scoring code have no access; 
 
 | DB role | Access |
 |---|---|
-| `app_rw` | Read and write on case, pipeline, policy and precedent tables; no access to `fairness_attributes`; insert-only on `audit_log` |
+| `app_rw` | Read and write on case, pipeline, policy, precedent and notification tables; no access to `fairness_attributes`; insert-only on `audit_log` |
 | `report_ro` | Read-only on `fairness_attributes` and result tables for monitoring |
 | `migrator` | Schema changes only, used in CI and setup |
 

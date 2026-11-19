@@ -3,7 +3,9 @@
 Only a case reference (plain text, not a link), a category and short text. The same personal-data
 patterns the customer-message check uses (PAN, Aadhaar, phone, account number, email) block the
 report, so the admin inbox never receives personal data and never joins to case data. An officer
-sees only their own reports; the admin sees all of them.
+sees only their own reports; the admin sees all of them. A case reference is optional, but when
+given it must be one of the reporting officer's own cases (the same refusal for a number that does
+not exist and one that belongs to someone else).
 """
 
 from typing import Any
@@ -16,6 +18,7 @@ from sqlalchemy import Connection, text
 from app.api.deps import User, admin_only, get_conn, officer_only, write_audit
 from app.api.schemas import IssueIn
 from app.notifications.check import check_issue_text
+from app.notifications.inbox import CaseRef, notify_admins
 
 router = APIRouter(tags=["issues"])
 _COLUMNS = "i.id, i.case_ref, i.category, i.body, i.status, i.created_at, i.read_at, i.closed_at"
@@ -36,12 +39,22 @@ def file_issue(
         write_audit(conn, user.id, "issue_blocked", "issue", None, after={"reasons": reasons})
         return JSONResponse({"detail": "Not sent: " + "; ".join(reasons).lower()
                              + ". Remove personal details and try again."}, 422)  # fmt: skip
+    if (
+        body.case_ref
+        and not conn.execute(
+            text("SELECT 1 FROM cases WHERE case_no = :r AND created_by = :u"),
+            {"r": body.case_ref, "u": user.id},
+        ).first()
+    ):  # the same answer for a number that does not exist and one that is not theirs
+        return JSONResponse({"detail": "That case reference is not one of your cases. "
+                             "Check the number or leave it empty."}, 422)  # fmt: skip
     r = conn.execute(
         text(f"""INSERT INTO issue_reports AS i (reported_by, case_ref, category, body)
                  VALUES (:u, :c, :k, :b) RETURNING {_COLUMNS}"""),  # noqa: S608
         {"u": user.id, "c": body.case_ref, "k": body.category, "b": body.body},
     ).one()
     write_audit(conn, user.id, "issue_filed", "issue", r.id, after={"category": body.category})
+    notify_admins(conn, "issue_filed", CaseRef(None, r.case_ref))
     return _row(r)
 
 

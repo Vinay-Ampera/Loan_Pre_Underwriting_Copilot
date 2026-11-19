@@ -56,6 +56,7 @@ const OFFICER = [
   ['report', 'Reading the report', 'precedent'],
   ['confirm', 'Confirm or override', 'shield'],
   ['contact', 'Contact the customer', 'mail'],
+  ['inbox', 'Your inbox', 'bell'],
   ['problem', 'Report a problem', 'flag'],
   ['agents', 'What each agent does', 'users'],
   ['score', 'Score weights and bands', 'home'],
@@ -67,6 +68,7 @@ const ADMIN = [
   ['adm-case', 'Open and correct a case', 'cases'],
   ['adm-reassign', 'Reassign a case', 'users'],
   ['adm-records', "Messages and a case's history", 'mail'],
+  ['adm-inbox', 'Your inbox', 'bell'],
   ['issues', 'Read issue reports', 'flag'],
   ['precedents', 'The precedent queue', 'precedent'],
   ['ai-control', 'AI control: models and prompts', 'sliders'],
@@ -311,11 +313,36 @@ function OfficerGuide() {
         </ul>
       </HelpSection>
 
+      <HelpSection id="inbox" icon="bell" title="Your inbox">
+        <p>
+          The bell at the top right and Inbox in the menu show how many notices are unread. A notice
+          says what happened and which case it is about, for example that the applicant sent their
+          files, that a check is finished and waits for your decision, that it stopped and needs a
+          fix, that the admin corrected a decision or sent you a case, that a precedent you proposed
+          was added or not added, that an upload link ends within a day, or that a customer message
+          could not be sent.
+        </p>
+        <ul>
+          <li>
+            Click a notice to open the case; it is marked read. Mark read keeps you on the page.
+          </li>
+          <li>
+            Unread shows what is new; All keeps the older notices. Mark all read clears the count.
+          </li>
+          <li>
+            A notice never holds the applicant&apos;s name, numbers, a score or an outcome. Open the
+            case for those.
+          </li>
+          <li>The count refreshes by itself every minute and when you come back to the window.</li>
+        </ul>
+      </HelpSection>
+
       <HelpSection id="problem" icon="flag" title="Report a problem">
         <p>
-          Use Report a problem in the menu to tell the admin about something wrong. Add a case
-          reference if it helps. Never paste personal data: a report with a PAN, Aadhaar, phone,
-          account number or email is refused. You can see the status of your own reports there.
+          Use Report a problem in the menu to tell the admin about something wrong. Add one of your
+          own case references if it helps. Never paste personal data: a report with a PAN, Aadhaar,
+          phone, account number or email is refused. You can see the status of your own reports
+          there.
         </p>
       </HelpSection>
 
@@ -449,6 +476,16 @@ function AdminGuide() {
           officer, template, case and date. Each case has an Audit tab with that case&apos;s own
           history. The system-wide audit log belongs to the auditor alone, so that nobody reviews
           their own actions.
+        </p>
+      </HelpSection>
+
+      <HelpSection id="adm-inbox" icon="bell" title="Your inbox">
+        <p>
+          The bell and Inbox tell you about three things only: a new issue report, a precedent
+          waiting for your review, and a precedent the code check held back. Every active admin gets
+          each notice. Overrides by officers and your own corrections do not send one. A notice
+          names the case and never holds applicant details; click it to open the Issues or
+          Precedents page, then use Mark read or Mark all read to clear the count.
         </p>
       </HelpSection>
 

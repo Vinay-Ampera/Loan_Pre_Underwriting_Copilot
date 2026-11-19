@@ -15,6 +15,8 @@ import SessionGuard from './components/SessionGuard'
 import Sidebar from './components/Sidebar'
 import UserMenu from './components/UserMenu'
 import ThemeToggle from './components/ThemeToggle'
+import NotificationBell from './components/NotificationBell'
+import { UnreadProvider } from './components/UnreadProvider'
 import AppFooter from './components/AppFooter'
 import Loader from './components/Loader'
 import { LoadingProvider, Reveal, useBooted } from './components/Loading'
@@ -38,6 +40,7 @@ import ApplicantUploadPage from './pages/ApplicantUploadPage'
 import UploadLinksPage from './pages/UploadLinksPage'
 import SentItemsPage from './pages/SentItemsPage'
 import IssuesPage from './pages/IssuesPage'
+import InboxPage from './pages/InboxPage'
 import AdminIssuesPage from './pages/AdminIssuesPage'
 import './App.css'
 
@@ -58,6 +61,7 @@ function Shell({ role, children }) {
       <Sidebar user={session.user} />
       <div className="page-col">
         <header className="topbar">
+          {session.user.role !== 'auditor' && <NotificationBell user={session.user} />}
           <ThemeToggle />
           <UserMenu user={session.user} onSignOut={signOut} />
         </header>
@@ -176,6 +180,22 @@ function Routing() {
         element={
           <Shell role="officer">
             <SentItemsPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/inbox"
+        element={
+          <Shell role="officer">
+            <InboxPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/inbox"
+        element={
+          <Shell role="admin">
+            <InboxPage />
           </Shell>
         }
       />
@@ -305,12 +325,20 @@ function SessionProvider({ children }) {
   )
 }
 
+// The unread count belongs to the signed-in person, so it is read here, beside the session.
+function WithUnread({ children }) {
+  const { session } = useSession()
+  return <UnreadProvider user={session?.user}>{children}</UnreadProvider>
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <LoadingProvider>
         <SessionProvider>
-          <Routing />
+          <WithUnread>
+            <Routing />
+          </WithUnread>
         </SessionProvider>
       </LoadingProvider>
     </BrowserRouter>

@@ -17,7 +17,7 @@ from app.api import display
 from app.api.decisions import REASSIGNABLE, decision_in_force, override_block
 from app.api.deps import User, admin_only, get_conn, write_audit
 from app.api.schemas import AdminOverrideIn, ReassignIn
-from app.notifications import templates
+from app.notifications import inbox, templates
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 MIN_REASON = 15
@@ -68,6 +68,7 @@ def override_case(
     conn.execute(text("UPDATE cases SET updated_at = now() WHERE id = :c"), {"c": case_id})
     write_audit(conn, admin.id, "admin_override", "case", case_id,
                 before={"decision": current}, after={"final": body.final_decision})  # fmt: skip
+    inbox.notify(conn, row.created_by, "decision_corrected", inbox.CaseRef(case_id, row.case_no))
     return {"decision_in_force": body.final_decision}
 
 
@@ -100,6 +101,7 @@ def reassign_case(
     )
     write_audit(conn, admin.id, "case_reassigned", "case", case_id,
                 before={"officer": previous}, after={"officer": target.name, "reason": reason})  # fmt: skip
+    inbox.notify(conn, target.id, "case_reassigned", inbox.CaseRef(case_id, row.case_no))
     return {"officer": target.name}
 
 

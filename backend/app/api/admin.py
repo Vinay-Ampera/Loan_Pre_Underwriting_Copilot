@@ -14,6 +14,7 @@ from sqlalchemy import Connection, text
 
 from app.api.deps import User, admin_only, get_conn, write_audit
 from app.api.schemas import PrecedentApproveIn, PrecedentRejectIn
+from app.notifications import inbox
 from app.rag.precedents import precedent_text
 from app.scoring.rules import RuleSet
 
@@ -81,6 +82,11 @@ def _pending(conn: Connection, precedent_id: UUID) -> Any:
     return row
 
 
+def _tell_proposer(conn: Connection, row: Any, kind: str) -> None:
+    """The officer who proposed the precedent hears the admin's answer (and nothing more)."""
+    inbox.notify(conn, row.proposed_by, kind, inbox.CaseRef(row.source_case_id, row.case_no))
+
+
 @router.post("/precedents/{precedent_id}/approve")
 def approve_precedent(
     precedent_id: UUID, body: PrecedentApproveIn, request: Request,
@@ -101,6 +107,7 @@ def approve_precedent(
     )  # fmt: skip
     write_audit(conn, user.id, "precedent_approved", "precedent", precedent_id,
                 before={"status": "pending"}, after={"status": "approved", "valid_until": valid_until})  # fmt: skip
+    _tell_proposer(conn, row, "precedent_added")
     return {"id": precedent_id, "status": "approved", "valid_until": valid_until}
 
 
@@ -109,11 +116,12 @@ def reject_precedent(
     precedent_id: UUID, body: PrecedentRejectIn, user: User = Depends(admin_only),
     conn: Connection = Depends(get_conn),
 ) -> dict[str, Any]:  # fmt: skip
-    _pending(conn, precedent_id)
+    row = _pending(conn, precedent_id)
     conn.execute(
         text("UPDATE precedents SET status = 'rejected', reviewed_by = :u, reviewed_at = now() WHERE id = :i"),
         {"u": user.id, "i": precedent_id},
     )  # fmt: skip
     write_audit(conn, user.id, "precedent_rejected", "precedent", precedent_id,
                 before={"status": "pending"}, after={"status": "rejected", "note": body.note})  # fmt: skip
+    _tell_proposer(conn, row, "precedent_not_added")
     return {"id": precedent_id, "status": "rejected"}
