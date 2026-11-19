@@ -20,7 +20,7 @@ from starlette.concurrency import run_in_threadpool
 from app.agents import store
 from app.agents.state import DB_STAGES
 from app.agents.submission import DocumentRef, Submission
-from app.api import display, identity
+from app.api import display, identity, ingest
 from app.api.decisions import admin_actions, decision_in_force, override_block
 from app.api.deps import (
     User,
@@ -614,6 +614,8 @@ def _prepare_submit(engine: Engine, request: Request, case_id: UUID, user: User)
         row = get_case(conn, case_id, user, lock=True)
         if row.status not in SUBMITTABLE:
             raise HTTPException(409, "This case has already been submitted.")
+        if ingest.pending_bundles(conn, case_id):
+            raise HTTPException(409, ingest.PENDING_BUNDLE_MESSAGE)
         form = _case_form(row)
         if not form.get("applicants"):
             raise HTTPException(422, "Fill in the application form before submitting.")
@@ -665,6 +667,8 @@ def _prepare_resume(
         row = get_case(conn, case_id, user, lock=True)
         if row.status != "stopped" or row.stop_class != "fix":
             raise HTTPException(409, "Only a case stopped for a correction can be resumed.")
+        if ingest.pending_bundles(conn, case_id):
+            raise HTTPException(409, ingest.PENDING_BUNDLE_MESSAGE)
         if body.case is not None:
             if body.case.loan_type != row.loan_type:
                 raise HTTPException(422, "The loan type cannot be changed.")

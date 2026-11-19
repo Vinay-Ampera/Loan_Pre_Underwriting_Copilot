@@ -3,12 +3,19 @@ import Icon from './Icons'
 import './UploadZone.css'
 import './BulkUpload.css'
 
-const ICON = { accepted: 'check', warning: 'alert-circle', rejected: 'x', ignored: 'copy' }
+const ICON = {
+  accepted: 'check',
+  warning: 'alert-circle',
+  rejected: 'x',
+  ignored: 'copy',
+  bundle: 'alert-circle',
+}
 const LABEL = {
   accepted: 'Received',
   warning: 'Received with a note',
   rejected: 'Not accepted',
   ignored: 'Repeat, ignored',
+  bundle: 'Several documents, check the split',
 }
 
 /** One summary line: "12 received · 1 not accepted · 2 repeats ignored". */
@@ -18,13 +25,14 @@ export function summarise(results) {
     [n('accepted', 'warning'), 'received'],
     [n('rejected'), 'not accepted'],
     [n('ignored'), 'repeats ignored'],
+    [n('bundle'), 'to split'],
   ].filter(([c]) => c > 0)
   return parts.map(([c, t]) => `${c} ${t}`).join(' · ')
 }
 
 /**
  * Add a zip, a whole folder or many files in one go. `upload(form)` sends them and returns
- * [{ name, status, message }] (status: accepted | warning | rejected | ignored). The same box
+ * [{ name, status, message }] (status: accepted | warning | rejected | ignored | bundle). The same box
  * serves the officer's desk and the applicant's page. Choosing files needs no confirmation.
  */
 export default function BulkUpload({

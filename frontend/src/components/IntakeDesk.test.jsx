@@ -164,6 +164,42 @@ describe('IntakeDesk: second click only where the plan says', () => {
   })
 })
 
+describe('IntakeDesk: a PDF with several documents', () => {
+  const waiting = {
+    id: 'b1',
+    name: 'all.pdf',
+    pages: 3,
+    segments: [{ page_from: 1, page_to: 3, doc_type: 'pan_card' }],
+    proposed: [{ page_from: 1, page_to: 3, doc_type: 'pan_card' }],
+  }
+
+  it('cannot continue while a PDF waits for its split, and says why', () => {
+    setup(
+      inventory({
+        bundles: [waiting],
+        counts: { ...inventory().counts, bundles: 1 },
+        complete: false,
+        proceeded: true,
+        people: [{ ...inventory().people[0], missing: [] }],
+      }),
+    )
+    expect(screen.getByLabelText('Split all.pdf')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue to the application form' })).toBeDisabled()
+    expect(screen.getByText(/waiting for you to confirm how it is split/)).toBeInTheDocument()
+  })
+
+  it('a desk with only a waiting PDF still shows the split', () => {
+    setup(
+      inventory({
+        bundles: [waiting],
+        people: [{ ...inventory().people[0], received: [], missing: [] }],
+        counts: { ...inventory().counts, received: 0, bundles: 1 },
+      }),
+    )
+    expect(screen.getByLabelText('Split all.pdf')).toBeInTheDocument()
+  })
+})
+
 describe('IntakeDesk: no dialog for the easy things', () => {
   it('changing a file type or its person saves at once', async () => {
     const { user, setInventory } = setup()

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import { downloadFile } from '../lib/download'
 import AskApplicantDialog from './AskApplicantDialog'
-import BulkUpload from './BulkUpload'
+import BulkUpload, { summarise } from './BulkUpload'
 import ConfirmDialog from './ConfirmDialog'
 import Inventory from './Inventory'
 import './IntakeDesk.css'
@@ -30,12 +30,14 @@ export default function IntakeDesk({
   const [proceed, setProceed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [splitNote, setSplitNote] = useState(null)
 
   const c = inventory.counts
-  const nothingYet = c.received + c.unassigned + c.unrecognised === 0
+  const toSplit = inventory.bundles?.length ?? 0
+  const nothingYet = c.received + c.unassigned + c.unrecognised + toSplit === 0
   const missingNow = c.missing > 0 || inventory.depends_on_employment.length > 0
   const blocked = inventory.essential_missing > 0
-  const ready = !blocked && (!missingNow || inventory.proceeded)
+  const ready = !blocked && toSplit === 0 && (!missingNow || inventory.proceeded)
 
   async function upload(form) {
     const res = await api.upload(`/cases/${caseId}/intake/files`, form)
@@ -76,6 +78,7 @@ export default function IntakeDesk({
       {!nothingYet && (
         <Inventory
           caseId={caseId}
+          onSplit={(results) => setSplitNote(resultsOf({ results }))}
           inventory={inventory}
           docTypes={docTypes}
           editable={editable}
@@ -85,6 +88,11 @@ export default function IntakeDesk({
           }}
           onError={setError}
         />
+      )}
+      {splitNote && (
+        <p className="small" role="status">
+          Split done: <strong>{summarise(splitNote)}</strong>
+        </p>
       )}
       {error && (
         <p className="field-error" role="alert">
@@ -105,8 +113,14 @@ export default function IntakeDesk({
             <button
               type="button"
               className="btn"
-              disabled={blocked}
-              title={blocked ? 'The identity documents are needed first.' : undefined}
+              disabled={blocked || toSplit > 0}
+              title={
+                blocked
+                  ? 'The identity documents are needed first.'
+                  : toSplit > 0
+                    ? 'Split the PDF first.'
+                    : undefined
+              }
               onClick={() => setProceed(true)}
             >
               Proceed anyway
@@ -129,6 +143,11 @@ export default function IntakeDesk({
           </button>
         )}
       </div>
+      {toSplit > 0 && (
+        <p className="small muted">
+          A PDF with several documents is waiting for you to confirm how it is split.
+        </p>
+      )}
       {blocked && !nothingYet && (
         <p className="small muted">
           The PAN card, the Aadhaar card and the photograph are needed for every person before the

@@ -1,5 +1,6 @@
 import { api } from '../api/client'
 import { docLabel, WHO } from '../lib/docLabels'
+import BundleSplit from './BundleSplit'
 import Icon from './Icons'
 import StatusChip from './StatusChip'
 import './Inventory.css'
@@ -106,7 +107,15 @@ function FileTable({ files, people, docTypes, onPatch, disabled, showUsed }) {
  * Employment type is a claim, so the officer states it here (or the applicant's request did);
  * until it is known the items that depend on it are listed apart and not counted as missing.
  */
-export default function Inventory({ caseId, inventory, docTypes, editable, onChange, onError }) {
+export default function Inventory({
+  caseId,
+  inventory,
+  docTypes,
+  editable,
+  onChange,
+  onError,
+  onSplit,
+}) {
   const roles = inventory.people.map((p) => p.role)
 
   async function patch(docId, body) {
@@ -124,14 +133,37 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
     }
   }
   const c = inventory.counts
+  const bundles = inventory.bundles ?? []
+  const splits = inventory.splits ?? []
 
   return (
     <div className="inventory" data-testid="inventory">
+      {bundles.map((b) => (
+        <BundleSplit
+          key={b.id}
+          caseId={caseId}
+          bundle={b}
+          docTypes={docTypes}
+          editable={editable}
+          onChange={(inv, results) => {
+            onChange(inv)
+            if (results) onSplit?.(results)
+          }}
+          onError={onError}
+        />
+      ))}
+
       <p className="inv-counts" aria-label="Summary">
         <strong>{c.received}</strong> received · <strong>{c.missing}</strong> still missing ·{' '}
         <strong>{c.extra}</strong> extra · <strong>{c.unassigned + c.unrecognised}</strong> need
         your attention · <strong>{c.rejected}</strong> not accepted ·{' '}
         <strong>{c.duplicates}</strong> repeats ignored
+        {bundles.length > 0 && (
+          <>
+            {' '}
+            · <strong>{bundles.length}</strong> PDF to split
+          </>
+        )}
       </p>
 
       {inventory.people.map((p) => (
@@ -271,6 +303,20 @@ export default function Inventory({ caseId, inventory, docTypes, editable, onCha
               <li key={d.id}>
                 <span className="mono">{d.name}</span> repeats <span className="mono">{d.of}</span>{' '}
                 but the amounts differ. Both are kept and flagged for review.
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {splits.length > 0 && (
+        <section className="card inv-card" aria-label="PDFs that were split">
+          <h3>PDFs that were split</h3>
+          <ul>
+            {splits.map((d) => (
+              <li key={d.id}>
+                <span className="mono">{d.name}</span> was split into {d.pieces}{' '}
+                {d.pieces === 1 ? 'document' : 'documents'}. The original is kept.
               </li>
             ))}
           </ul>

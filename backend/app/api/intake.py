@@ -48,8 +48,9 @@ from app.api.deps import (
 )
 from app.api.schemas import CO_APPLICANT, CaseIn, LoanType, SendIn
 from app.core.config import Settings
-from app.intake import archive
+from app.intake import archive, bundle
 from app.intake.inventory import Row, build_inventory
+from app.intake.models import DocType
 
 router = APIRouter(prefix="/cases", tags=["intake"])
 
@@ -68,6 +69,22 @@ class DocPatchIn(BaseModel):
 
     doc_type: str | None = Field(default=None, max_length=40)
     role: Literal["primary", "co", "none"] | None = None
+
+
+class SegmentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    page_from: int = Field(ge=1, le=1000)
+    page_to: int = Field(ge=1, le=1000)
+    doc_type: str = Field(max_length=40)
+
+
+class SplitIn(BaseModel):
+    """The officer's split of a bundle: every page belongs to exactly one document."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    segments: list[SegmentIn] = Field(min_length=1, max_length=60)
 
 
 class IntakeStateIn(BaseModel):
@@ -117,9 +134,33 @@ def inventory_for(conn: Connection, rs: Any, row: Any) -> dict[str, Any]:
         details=form.get("loan_details", {}),
         co_added=bool(form.get("intake", {}).get("co")) or "co" in people,
     )
+    inv.update(_bundles(conn, row.id))
+    inv["complete"] = bool(inv["complete"]) and not inv["bundles"]
+    inv["counts"]["bundles"] = len(inv["bundles"])
     inv["proceeded"] = bool(form.get("intake", {}).get("proceeded"))
     inv["stage"] = "form" if form.get("applicants") else "intake"
     return inv
+
+
+def _bundles(conn: Connection, case_id: UUID) -> dict[str, Any]:
+    """PDFs that hold several documents: the ones waiting for a split (with the proposal and the
+    officer's current version of it) and the ones already split (with how many pieces)."""
+    waiting, done = [], []
+    for r in conn.execute(
+        text("""SELECT d.id, d.original_name, d.status, d.page_count, d.upload_checks,
+                       (SELECT count(*) FROM documents p WHERE p.parent_document_id = d.id) AS pieces
+                FROM documents d WHERE d.case_id = :c AND d.status IN ('bundle', 'split')
+                ORDER BY d.uploaded_at, d.original_name"""), {"c": case_id}):  # fmt: skip
+        info = (r.upload_checks or {}).get("bundle", {})
+        if r.status == "bundle":
+            waiting.append({"id": str(r.id), "name": r.original_name,
+                            "pages": r.page_count or info.get("pages"),
+                            "segments": info.get("segments", []),
+                            "proposed": info.get("proposed", [])})  # fmt: skip
+        else:
+            done.append({"id": str(r.id), "name": r.original_name, "pieces": int(r.pieces),
+                         "pages": r.page_count})  # fmt: skip
+    return {"bundles": waiting, "splits": done}
 
 
 # --------------------------------------------------------------------------- start, upload
@@ -234,6 +275,72 @@ def correct_document(
     return inventory_for(conn, _ruleset(request), get_case(conn, case_id, user))
 
 
+def _own_bundle(conn: Connection, case_id: UUID, doc_id: UUID) -> Any:
+    d = conn.execute(
+        text("""SELECT id, original_name, status, file_path, page_count, upload_checks
+                FROM documents WHERE id = :d AND case_id = :c"""),
+        {"d": doc_id, "c": case_id}).first()  # fmt: skip
+    if d is None or d.status != "bundle" or not d.file_path:
+        raise HTTPException(404, "There is no PDF waiting to be split with this id.")
+    return d
+
+
+def _split_of(raw: list[dict[str, Any]], bundle_row: Any) -> list[bundle.Segment]:
+    try:
+        return bundle.validate(raw, int(bundle_row.page_count or 0), {t.value for t in DocType})
+    except bundle.SplitError as exc:
+        raise HTTPException(422, str(exc)) from None
+
+
+@router.put("/{case_id}/documents/{doc_id}/split")
+def edit_split(
+    case_id: UUID, doc_id: UUID, body: SplitIn, request: Request,
+    user: User = Depends(officer_only), conn: Connection = Depends(get_conn),
+) -> dict[str, Any]:  # fmt: skip
+    """Save the officer's version of the split (move a boundary, merge, relabel). Nothing is cut
+    yet and no confirmation is needed: it is only a proposal until the second click."""
+    import json
+
+    row = get_case(conn, case_id, user, lock=True)
+    if row.status not in SUBMITTABLE and not (row.status == "stopped" and row.stop_class == "fix"):
+        raise HTTPException(409, "Files can be changed only before assessment.")
+    d = _own_bundle(conn, case_id, doc_id)
+    segments = _split_of([s.model_dump() for s in body.segments], d)
+    checks = dict(d.upload_checks or {})
+    checks["bundle"] = {**checks.get("bundle", {}), "segments": [s.as_dict() for s in segments]}
+    conn.execute(text("UPDATE documents SET upload_checks = CAST(:u AS jsonb) WHERE id = :d"),
+                 {"u": json.dumps(checks), "d": doc_id})  # fmt: skip
+    write_audit(conn, user.id, "bundle_split_edited", "case", case_id,
+                after={"document_id": str(doc_id), "documents": len(segments)})  # fmt: skip
+    return inventory_for(conn, _ruleset(request), get_case(conn, case_id, user))
+
+
+@router.post("/{case_id}/documents/{doc_id}/split/confirm")
+def confirm_bundle(
+    case_id: UUID, doc_id: UUID, body: SendIn, request: Request,
+    user: User = Depends(officer_only), conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
+) -> dict[str, Any]:  # fmt: skip
+    """Cut the PDF at the saved split and file each piece (the second click). The original PDF
+    stays untouched on disk; each piece is a file of its own with the normal checks and the
+    normal duplicate rules."""
+    if not body.second_click:
+        raise HTTPException(422, "This needs a second confirmation click.")
+    row = get_case(conn, case_id, user, lock=True)
+    if row.status not in SUBMITTABLE and not (row.status == "stopped" and row.stop_class == "fix"):
+        raise HTTPException(409, "Files can be changed only before assessment.")
+    d = _own_bundle(conn, case_id, doc_id)
+    info = (d.upload_checks or {}).get("bundle", {})
+    segments = _split_of(info.get("segments", []), d)
+    try:
+        results = ingest.confirm_split(conn, file_store(settings), settings, _ruleset(request),
+                                       row, d, segments, actor=user.id)  # fmt: skip
+    except bundle.SplitError as exc:
+        raise HTTPException(422, str(exc)) from None
+    fresh = get_case(conn, case_id, user)
+    return {"results": results, "inventory": inventory_for(conn, _ruleset(request), fresh)}
+
+
 @router.put("/{case_id}/intake")
 def set_intake_state(
     case_id: UUID, body: IntakeStateIn, request: Request, user: User = Depends(officer_only),
@@ -277,6 +384,8 @@ def proceed_anyway(
     row = get_case(conn, case_id, user, lock=True)
     if row.status not in SUBMITTABLE:
         raise HTTPException(409, "This case can no longer be changed.")
+    if ingest.pending_bundles(conn, case_id):
+        raise HTTPException(409, ingest.PENDING_BUNDLE_MESSAGE)
     inv = inventory_for(conn, _ruleset(request), row)
     if inv["essential_missing"]:
         raise HTTPException(

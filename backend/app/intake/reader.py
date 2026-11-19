@@ -23,6 +23,7 @@ class PageText:
     index: int
     kind: PageKind
     cells: list[ocr.Cell]  # reading order; digital text gets x/y from the layout too
+    tables: list[list[list[str]]] = field(default_factory=list)  # this page's pdfplumber tables
 
     @property
     def lines(self) -> list[str]:
@@ -37,6 +38,21 @@ class ReadDocument:
     )  # pdfplumber tables, digital PDFs only
     pdf_meta: dict[str, str] = field(default_factory=dict)
     ocr_engine: str | None = None
+
+    def subset(self, indexes: list[int], *, keep_meta: bool = True) -> "ReadDocument":
+        """The pages at these positions as a document of their own (a piece of a bundle), pages
+        renumbered from 0. Nothing is read again. `keep_meta=False` drops the PDF metadata: a
+        bundle's metadata describes the tool that merged it, not the document in it."""
+        pages = [
+            PageText(new, self.pages[i].kind, self.pages[i].cells, self.pages[i].tables)
+            for new, i in enumerate(indexes)
+        ]
+        return ReadDocument(
+            pages,
+            [t for p in pages for t in p.tables],
+            dict(self.pdf_meta) if keep_meta else {},
+            self.ocr_engine if any(p.kind is not PageKind.DIGITAL for p in pages) else None,
+        )
 
     @property
     def cells(self) -> list[ocr.Cell]:
@@ -86,8 +102,9 @@ def _read_pdf(data: bytes, check: UploadCheck) -> ReadDocument:
             for info in check.pages:
                 page = doc[info.index]
                 if info.kind is PageKind.DIGITAL:
-                    pages.append(PageText(info.index, info.kind, _digital_cells(page)))
-                    tables += [_clean_table(t) for t in plumber.pages[info.index].extract_tables()]
+                    found = [_clean_table(t) for t in plumber.pages[info.index].extract_tables()]
+                    pages.append(PageText(info.index, info.kind, _digital_cells(page), found))
+                    tables += found
                 else:
                     pix = page.get_pixmap(dpi=SCAN_DPI, alpha=False)
                     img = quality.decode(pix.tobytes("png"))

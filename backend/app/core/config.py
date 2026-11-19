@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     login_lock_minutes: int = 15
     cors_origins: str = ""  # comma separated; empty = same origin (dev server proxies /api)
 
+    # Several documents in one PDF (Stage 10, Part D). Off = a multi-page PDF is one document, as
+    # before. The limits are the bundle's own: more pages and a larger file than a single document.
+    bundle_split_enabled: bool = True
+    bundle_max_pages: int = 120
+    bundle_max_mb: int = 25
+
     # Applicant upload link (Stage 10, Part C)
     upload_link_days: int = 7  # how long a new link stays open; an officer can extend it
     public_base_url: str = "http://localhost:5173"  # where the applicant page is served

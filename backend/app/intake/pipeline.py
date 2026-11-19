@@ -80,15 +80,23 @@ def _gst_months(read: ReadDocument) -> list[float]:
 
 
 def process_file(data: bytes, filename: str, *, as_of: date | None = None,
-                 max_bytes: int | None = None) -> IntakeResult:  # fmt: skip
-    """All local stages. Never raises on a bad upload; a rejection is a result."""
+                 max_bytes: int | None = None,
+                 pre: tuple[UploadCheck, ReadDocument] | None = None,
+                 from_bundle: bool = False) -> IntakeResult:  # fmt: skip
+    """All local stages. Never raises on a bad upload; a rejection is a result.
+
+    `pre` is a check and a read made earlier for these same bytes (the intake desk reads a PDF
+    once to look for several documents in it, then must not read it again). `from_bundle` marks
+    a piece cut from a bundle: its PDF metadata is the merging tool's, so it is not judged."""
     as_of = as_of or date.today()
     limit = max_bytes if max_bytes is not None else get_settings().max_upload_mb * 1024 * 1024
-    check = upload.check_upload(data, filename, limit)
-    if not check.accepted:
-        return IntakeResult(upload=check, sha256=duplicates.sha256_hex(data))
-
-    read = read_document(data, check)
+    if pre is not None:
+        check, read = pre
+    else:
+        check = upload.check_upload(data, filename, limit)
+        if not check.accepted:
+            return IntakeResult(upload=check, sha256=duplicates.sha256_hex(data))
+        read = read_document(data, check)
     cells = read.cells
     photo_like = check.pages[0].kind is PageKind.PHOTO and len(cells) <= PHOTO_MAX_CELLS
     doc_type, cls_conf = classifier.classify(read.lines, has_photo_only=photo_like)
@@ -113,6 +121,8 @@ def process_file(data: bytes, filename: str, *, as_of: date | None = None,
     flds = checks.apply_confidence_rules(flds, issues)
 
     flags: list[str] = list(check.warnings)
+    if from_bundle:
+        flags.append("from_bundle")
     if read.is_ocr:
         flags.append("read_by_ocr")
     if doc_type is DocType.UNKNOWN:

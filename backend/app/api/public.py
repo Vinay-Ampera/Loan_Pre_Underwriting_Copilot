@@ -244,7 +244,7 @@ def add_files(
                  {"ids": [r["id"] for r in results]})  # fmt: skip
     fresh = _case(conn, link)
     shown = {"accepted": "received", "warning": "received", "ignored": "already received",
-             "rejected": "not accepted"}  # fmt: skip
+             "rejected": "not accepted", "bundle": "received"}  # fmt: skip
     return JSONResponse({
         # only the applicant's own file name, what happened to it in plain words, and why not
         "files": [{"name": r["name"], "result": shown[r["status"]],

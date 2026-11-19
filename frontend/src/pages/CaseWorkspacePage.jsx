@@ -419,6 +419,10 @@ export default function CaseWorkspacePage() {
                                 </StatusChip>
                               ) : d.status === 'ignored' ? (
                                 <StatusChip tone="neutral">Repeat, ignored</StatusChip>
+                              ) : d.status === 'bundle' ? (
+                                <StatusChip tone="refer">Several documents, to be split</StatusChip>
+                              ) : d.status === 'split' ? (
+                                <StatusChip tone="neutral">Split into documents</StatusChip>
                               ) : d.warnings.length ? (
                                 <StatusChip tone="refer">Accepted with a warning</StatusChip>
                               ) : (
