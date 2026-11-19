@@ -6,6 +6,7 @@ import { formatDay } from '../lib/format'
 import ConfirmDialog from './ConfirmDialog'
 import Dialog from './Dialog'
 import SendLinkDialog from './SendLinkDialog'
+import RequestedItems, { isComplete, toBody } from './RequestedItems'
 import { Skeleton } from './States'
 
 /** The address the applicant opens: this site's own origin plus the link path (`/u#token`). */
@@ -90,22 +91,33 @@ function ManageLink({ link }) {
  * needs the second click. The address is shown once (only its hash is kept), with a copy button
  * and a way to send it as the Stage 9 "Upload link" message.
  */
-export default function AskApplicantDialog({ caseId, recipient, onClose, onDone }) {
+export default function AskApplicantDialog({ caseId, recipient, docTypes = [], onClose, onDone }) {
   const info = useAsync(() => api.get(`/cases/${caseId}/link`), [caseId])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [made, setMade] = useState(null)
   const [copied, setCopied] = useState(false)
   const [sending, setSending] = useState(false)
+  const [req, setReq] = useState({ items: [], note: '' })
 
   const link = info.data?.link ?? null
   const mode = modeOf(link)
+  // after the applicant has sent, asking for more must say what is needed
+  const needsRequest = Boolean(link?.sent) && mode !== 'share'
+  const ready = !needsRequest || isComplete(req)
+  const fields = needsRequest && (
+    <RequestedItems docTypes={docTypes} value={req} onChange={setReq} />
+  )
 
   async function ask(reopen = false) {
     setBusy(true)
     setError(null)
     try {
-      const body = reopen ? { second_click: true, reopen: true } : { second_click: true }
+      const body = {
+        second_click: true,
+        ...(reopen ? { reopen: true } : {}),
+        ...(needsRequest ? toBody(req) : {}),
+      }
       setMade(await api.post(`/cases/${caseId}/ask-applicant`, body))
       onDone?.()
     } catch (e) {
@@ -143,6 +155,7 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
           new address.
         </p>
         <ManageLink link={link} />
+        {fields}
         {error && (
           <p className="field-error" role="alert">
             {error}
@@ -152,13 +165,18 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
           <button type="button" className="btn" onClick={onClose} data-autofocus>
             Cancel
           </button>
-          <button type="button" className="btn" disabled={busy} onClick={() => ask(false)}>
+          <button
+            type="button"
+            className="btn"
+            disabled={busy || !ready}
+            onClick={() => ask(false)}
+          >
             Make a new link
           </button>
           <button
             type="button"
             className="btn btn-primary"
-            disabled={busy}
+            disabled={busy || !ready}
             onClick={() => ask(true)}
           >
             Reopen this link
@@ -172,13 +190,14 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
         title={COPY[mode].title}
         confirmLabel={COPY[mode].label}
         danger={false}
-        busy={busy}
+        busy={busy || !ready}
         error={error}
         onClose={onClose}
         onConfirm={() => ask(false)}
       >
         <Body mode={mode} link={link} />
         {mode === 'disabled' && <ManageLink link={link} />}
+        {fields}
       </ConfirmDialog>
     )
   if (sending) {
@@ -192,6 +211,36 @@ export default function AskApplicantDialog({ caseId, recipient, onClose, onDone 
       />
     )
   }
+  // the applicant already has this address: the page now shows the request, so say that first
+  if (needsRequest && made.new_link === false)
+    return (
+      <Dialog title="Your request is saved" onClose={onClose} labelledBy="ask-link-title">
+        <p>
+          The applicant&apos;s page now shows what you asked for. Tell them to open the link they
+          already have.
+        </p>
+        {error && (
+          <p className="field-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          {made.token && (
+            <>
+              <button type="button" className="btn" onClick={copy}>
+                {copied ? 'Copied' : 'Copy the link'}
+              </button>
+              <button type="button" className="btn" onClick={() => setSending(true)}>
+                Send it as a message
+              </button>
+            </>
+          )}
+          <button type="button" className="btn btn-primary" onClick={onClose} data-autofocus>
+            Done
+          </button>
+        </div>
+      </Dialog>
+    )
   return (
     <Dialog title="The applicant's link" onClose={onClose} labelledBy="ask-link-title">
       {made.token ? (

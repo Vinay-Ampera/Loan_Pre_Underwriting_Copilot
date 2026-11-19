@@ -30,6 +30,9 @@ from tests.test_api import (
 from tests.test_intake_desk import as_files, case_files, desk_form, push, say_employment, start
 
 pytestmark = pytest.mark.db
+# what the officer says they need when they ask for more
+MORE = {"second_click": True, "items": [{"type": "payslip", "count": 2}],
+        "note": "Please send the two most recent months."}  # fmt: skip
 FIX = Path(__file__).parent / "fixtures"
 PAYSLIP = (FIX / "payslip_clean.pdf").read_bytes()
 REQUEST = {"loan_type": "personal", "loan_amount": 250000, "tenure_months": 24,
@@ -354,18 +357,19 @@ def test_the_officer_asking_for_more_reopens_the_page_until_the_applicant_sends_
         client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()["waiting_for_applicant"]
         is False
     )
-    asked = client.post(
-        f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h
-    )
+    asked = client.post(f"/api/v1/cases/{cid}/ask-applicant", json=MORE, headers=h)
     assert asked.status_code == 200
     assert client.get(f"/api/v1/cases/{cid}", headers=h).json()["more_requested"]
-    # the applicant's page shows what is in and what is still needed, and takes files again
+    # the applicant's page shows exactly what was asked for, not the general list, and takes files
     view = client.get("/api/v1/public/link", headers=t).json()
-    assert view["more_requested"] is True and view["checklist"] is not None
+    assert view["more_requested"] is True and view["checklist"] is None
+    assert view["requested"] == {
+        "items": [{"type": "payslip", "count": 2}],
+        "note": "Please send the two most recent months.",
+    }
     assert view["accepting_files"] is True and view["reference"] == ref
-    assert (
-        client.post("/api/v1/public/files", files=pfiles("more.pdf"), headers=t).status_code == 200
-    )
+    more = client.post("/api/v1/public/files", files=pfiles("more.pdf"), headers=t)
+    assert more.status_code == 200 and more.json()["checklist"] is None
     # the officer is now waiting for the new files, until the applicant sends again
     inv = client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()
     assert inv["waiting_for_applicant"] is True
@@ -383,16 +387,96 @@ def test_the_officer_asking_for_more_reopens_the_page_until_the_applicant_sends_
     assert timeline.count("applicant_more_requested") == 1 and timeline.count("applicant_sent") == 2
 
 
+def test_asking_for_more_must_say_what_is_needed_and_the_note_is_screened(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, _, t = _sent_by_applicant(client, h)
+    url = f"/api/v1/cases/{cid}/ask-applicant"
+    empty = client.post(url, json={"second_click": True}, headers=h)
+    assert empty.status_code == 422 and "Say what you need" in empty.json()["detail"]
+    for note, reason in (
+        ("Quote ABCDE1234F please", "pan"),
+        ("Call 9876543210", "phone"),
+        ("Your loan was approved, send more", "result"),
+        ("Pay Rs 5000 first", "amount"),
+        ("See https://example.test/x", "link"),
+        ("Send your OTP", "otp"),
+    ):
+        r = client.post(url, json={"second_click": True, "note": note}, headers=h)
+        assert r.status_code == 422 and "cannot be shown" in r.json()["detail"], (note, reason)
+    unknown = client.post(
+        url, json={"second_click": True, "items": [{"type": "salary_of_the_year"}]}, headers=h
+    )
+    assert unknown.status_code == 422
+    too_long = client.post(url, json={"second_click": True, "note": "x" * 201}, headers=h)
+    assert too_long.status_code == 422
+    # nothing was changed by any refusal: the applicant's page is still closed
+    closed = client.get("/api/v1/public/link", headers=t).json()
+    assert closed["more_requested"] is False and closed["requested"] is None
+    assert not client.get(f"/api/v1/cases/{cid}", headers=h).json()["more_requested"]
+    # words about documents are fine here, unlike in a customer message
+    ok = client.post(
+        url,
+        json={"second_click": True, "note": "Please send three months of bank statements."},
+        headers=h,
+    )
+    assert ok.status_code == 200
+    shown = client.get("/api/v1/public/link", headers=t).json()
+    assert shown["requested"] == {
+        "items": [],
+        "note": "Please send three months of bank statements.",
+    }
+    blob = json.dumps(shown).lower()
+    for word in ("score", "recommend", "approved", "rejected", "outcome"):
+        assert word not in blob
+
+
+def test_what_was_asked_for_is_on_the_officers_case_and_in_the_audit_trail(
+    client: TestClient, engine: Engine
+) -> None:  # fmt: skip
+    h = login(client, "asha")
+    cid, _, _ = _sent_by_applicant(client, h)
+    both = {
+        **MORE,
+        "items": [
+            {"type": "payslip", "count": 2},
+            {"type": "payslip", "count": 3},  # the same type twice: one entry, the larger count
+            {"type": "bank_statement"},
+        ],
+    }
+    assert (
+        client.post(f"/api/v1/cases/{cid}/ask-applicant", json=both, headers=h).status_code == 200
+    )
+    asked = client.get(f"/api/v1/cases/{cid}", headers=h).json()["more_requested"]
+    assert asked["items"] == [
+        {"type": "payslip", "count": 3},
+        {"type": "bank_statement", "count": 1},
+    ]
+    assert asked["note"] == "Please send the two most recent months."
+    with engine.connect() as c:
+        after = c.execute(
+            text("SELECT after FROM audit_log WHERE action = 'applicant_more_requested'")
+        ).scalar_one()
+    assert after["items"] == asked["items"] and after["note"] == asked["note"]
+    # before the first send there is nothing to reopen, so nothing is asked of the officer
+    other = start(client, h, "personal")
+    plain = client.post(
+        f"/api/v1/cases/{other}/ask-applicant", json={"second_click": True}, headers=h
+    )
+    assert plain.status_code == 200
+
+
 def test_asking_for_more_cancels_an_earlier_choice_to_go_on_without_waiting(
     client: TestClient, engine: Engine
 ) -> None:  # fmt: skip
     h = login(client, "asha")
     cid, _, t = _sent_by_applicant(client, h)
-    client.post(f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h)
+    client.post(f"/api/v1/cases/{cid}/ask-applicant", json=MORE, headers=h)
     unsent = f"/api/v1/cases/{cid}/intake/continue-unsent"
     done = client.post(unsent, json={"second_click": True}, headers=h).json()
     assert done["waiting_for_applicant"] is False
-    client.post(f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h)
+    client.post(f"/api/v1/cases/{cid}/ask-applicant", json=MORE, headers=h)
     inv = client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()
     assert inv["waiting_for_applicant"] is True  # a new request is a new wait
 
@@ -408,7 +492,7 @@ def test_reopen_brings_the_expired_link_back_with_the_same_address(
     assert client.get("/api/v1/public/link", headers=old).status_code == 404
     url = f"/api/v1/cases/{cid}/ask-applicant"
     assert client.post(url, json={"reopen": True}, headers=h).status_code == 422  # second click
-    asked = client.post(url, json={"second_click": True, "reopen": True}, headers=h).json()
+    asked = client.post(url, json={**MORE, "reopen": True}, headers=h).json()
     assert asked["new_link"] is False and asked["token"] == old["X-Upload-Token"]
     view = client.get("/api/v1/public/link", headers=old).json()  # the address the applicant has
     assert view["more_requested"] is True and view["reference"] == ref
@@ -438,10 +522,10 @@ def test_a_switched_off_link_cannot_be_reopened_but_a_new_one_can_be_made(
     link_id = client.get(f"/api/v1/cases/{cid}/link", headers=h).json()["link"]["id"]
     client.post(f"/api/v1/links/{link_id}/disable", json={"second_click": True}, headers=h)
     url = f"/api/v1/cases/{cid}/ask-applicant"
-    refused = client.post(url, json={"second_click": True, "reopen": True}, headers=h)
+    refused = client.post(url, json={**MORE, "reopen": True}, headers=h)
     assert refused.status_code == 409 and "switched off" in refused.json()["detail"]
     assert client.get("/api/v1/public/link", headers=old).status_code == 404  # still dead
-    fresh = client.post(url, json={"second_click": True}, headers=h).json()
+    fresh = client.post(url, json=MORE, headers=h).json()
     assert fresh["new_link"] is True and fresh["token"] != old["X-Upload-Token"]
 
 
@@ -481,9 +565,7 @@ def test_asking_for_more_after_the_link_expired_makes_a_new_link_for_the_case(
                   {"c": cid})  # fmt: skip
     assert client.get("/api/v1/public/link", headers=old).status_code == 404  # the old one is dead
     assert client.get(f"/api/v1/cases/{cid}/link", headers=h).json()["link"]["state"] == "expired"
-    asked = client.post(
-        f"/api/v1/cases/{cid}/ask-applicant", json={"second_click": True}, headers=h
-    ).json()
+    asked = client.post(f"/api/v1/cases/{cid}/ask-applicant", json=MORE, headers=h).json()
     assert asked["new_link"] is True and asked["token"]
     view = client.get("/api/v1/public/link", headers=tok(asked["token"])).json()
     assert view["more_requested"] is True and view["reference"] == ref

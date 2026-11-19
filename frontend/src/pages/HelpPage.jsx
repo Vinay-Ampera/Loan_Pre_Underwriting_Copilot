@@ -217,8 +217,9 @@ function OfficerGuide() {
           </li>
           <li>
             After the applicant presses Send they see only a thank-you and their reference, also if
-            they refresh. If you need more, choose <strong>Ask for more</strong>: their page then
-            shows what is in and what is still needed until they send again.
+            they refresh. If you need more, choose <strong>Ask for more</strong>, tick the documents
+            you need (and how many) and add a short note. Their page then shows only that until they
+            send again. Do not write personal numbers or anything about the result in the note.
           </li>
           <li>
             A link lasts 7 days. Extend it, or disable it at any time (you confirm). If it has

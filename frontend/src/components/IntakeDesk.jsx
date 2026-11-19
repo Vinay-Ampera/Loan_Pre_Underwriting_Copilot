@@ -184,6 +184,7 @@ export default function IntakeDesk({
         <AskApplicantDialog
           caseId={caseId}
           recipient={recipient}
+          docTypes={docTypes}
           onClose={() => setAsk(false)}
           onDone={onChanged}
         />

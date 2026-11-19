@@ -55,6 +55,30 @@ function Checklist({ checklist }) {
   )
 }
 
+/** What the loan officer asked for, in their own words: the kinds of document with counts and a
+ * short note. It replaces the general list while a request for more is open. */
+function Requested({ requested }) {
+  return (
+    <section className="card ap-card" aria-label="What your loan officer asked for">
+      <h2>Your loan officer has asked for</h2>
+      {requested.items.length > 0 && (
+        <ul className="ap-list">
+          {requested.items.map((i) => (
+            <li key={i.type}>
+              <Icon name="alert-circle" size={16} className="ap-mark" />
+              <span>
+                {docLabel(i.type)}
+                {i.count > 1 && <span className="muted"> ({i.count})</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {requested.note && <p>{requested.note}</p>}
+    </section>
+  )
+}
+
 /**
  * What this applicant sent through this link, with a way to look at each file and to take it
  * back. It shows the file's name and a plain result, nothing the bank read from it. Taking a file
@@ -386,11 +410,11 @@ export default function ApplicantUploadPage() {
   return shell(
     <>
       <h1>
-        {view.more_requested ? 'Send the rest of your documents' : 'Send your documents'}
+        {view.more_requested ? 'Send the documents we asked for' : 'Send your documents'}
         {view.loan_type && <span className="muted"> · {loanLabel(view.loan_type)}</span>}
       </h1>
       <p className="muted">This link is open until {view.expires_on}.</p>
-      {view.more_requested && (
+      {view.more_requested && !view.requested && (
         <p role="status">
           Your loan officer has asked for more documents. The list below shows what is in and what
           is still needed.
@@ -427,7 +451,11 @@ export default function ApplicantUploadPage() {
 
       {canFiles && (
         <>
-          <Checklist checklist={view.checklist} />
+          {view.requested ? (
+            <Requested requested={view.requested} />
+          ) : (
+            <Checklist checklist={view.checklist} />
+          )}
           <section className="card ap-card">
             <h2>{view.request_open ? '2. Your documents' : 'Your documents'}</h2>
             {view.accepting_files ? (
@@ -474,9 +502,11 @@ export default function ApplicantUploadPage() {
           onConfirm={send}
         >
           <p>
-            {missing
-              ? 'Some items are still missing. The bank will see that your submission is incomplete.'
-              : 'Everything on the list is in.'}{' '}
+            {view.requested
+              ? 'You are sending what your loan officer asked for.'
+              : missing
+                ? 'Some items are still missing. The bank will see that your submission is incomplete.'
+                : 'Everything on the list is in.'}{' '}
             Sending lets the loan officer start. You will get a reference number.
           </p>
         </ConfirmDialog>

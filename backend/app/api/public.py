@@ -105,6 +105,23 @@ def _accepting(case: Any) -> bool:
     return not form.get("applicant_sent") or bool(form.get("more_requested"))
 
 
+def _asked_for(form: dict[str, Any]) -> dict[str, Any] | None:
+    """What the officer asked for when they reopened the page: the document kinds with counts and
+    a short note, or None."""
+    asked = form.get("more_requested") or {}
+    if not (asked.get("items") or asked.get("note")):
+        return None
+    return {"items": asked.get("items", []), "note": asked.get("note", "")}
+
+
+def _shown_counts(request: Request, conn: Connection, case: Any) -> dict[str, Any] | None:
+    """The checklist the applicant may see: none while the officer's own list of what is needed
+    is on the page, because then the general checklist would only confuse."""
+    if case is not None and _asked_for(case.form_data):
+        return None
+    return _counts(request, conn, case)
+
+
 def _counts(request: Request, conn: Connection, case: Any) -> dict[str, Any] | None:
     """The checklist for this link and nothing else: item names and how many are in."""
     if case is None:
@@ -143,8 +160,11 @@ def _view(request: Request, conn: Connection, link: Any) -> dict[str, Any]:
         "reference": sent.get("reference"),
         # the officer asked for more: the checklist and the upload box come back
         "more_requested": asked_again,
-        # once sent the applicant sees no checklist until the officer asks for more
-        "checklist": None if closed else _counts(request, conn, case),
+        # what the officer asked for, in their own words and kinds of document
+        "requested": _asked_for(form) if asked_again else None,
+        # once sent the applicant sees no checklist until the officer asks for more, and then
+        # only what was asked for
+        "checklist": None if closed else _shown_counts(request, conn, case),
     }  # fmt: skip
 
 
@@ -269,7 +289,7 @@ def add_files(
         # only the applicant's own file name, what happened to it in plain words, and why not
         "files": [{"name": r["name"], "result": shown[r["status"]],
                    "reason": r["message"] if r["status"] == "rejected" else ""} for r in results],
-        "checklist": _counts(request, conn, fresh),
+        "checklist": _shown_counts(request, conn, fresh),
     }, headers=NO_CACHE)  # fmt: skip
 
 

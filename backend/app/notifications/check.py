@@ -132,3 +132,21 @@ def check_link_line(final_text: str, allowed_url: str | None) -> list[str]:
     if allowed_url is None:
         return ["Contains a link"] if found else []
     return [] if found == [allowed_url] else ["Contains a link other than the upload link"]
+
+
+# The note the officer writes for the applicant's own page when asking for more documents. It may
+# talk about documents (that is its job), so only the personal-data patterns and the leak rules
+# apply: no links, amounts, scores, assessment words or requests for secrets.
+_NOTE_RULES = {
+    "Contains a link",
+    "Contains an amount of money",
+    "Mentions a score, a band or a rule",
+    "Mentions a result of the assessment",
+    "Asks for an OTP, PIN, password or card detail",
+}
+
+
+def check_request_note(text: str) -> list[str]:
+    reasons = [r for r, pattern in PERSONAL if pattern.search(text)]
+    reasons += [r for r, pattern in _RULES if r in _NOTE_RULES and pattern.search(text)]
+    return list(dict.fromkeys(reasons))

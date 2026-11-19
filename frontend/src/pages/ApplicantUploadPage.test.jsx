@@ -112,21 +112,69 @@ describe('ApplicantUploadPage', () => {
     }
   })
 
-  it('when the officer asks for more, the list and the upload box come back, and sending again thanks them', async () => {
+  it('when the officer asks for specific things, only those are shown, then sending thanks them', async () => {
     const user = userEvent.setup()
     pub.link.mockResolvedValue(
-      view({ sent: true, reference: 'PRM-0A1B2C3D', more_requested: true, request_open: false }),
+      view({
+        sent: true,
+        reference: 'PRM-0A1B2C3D',
+        more_requested: true,
+        request_open: false,
+        checklist: null,
+        requested: {
+          items: [
+            { type: 'payslip', count: 2 },
+            { type: 'bank_statement', count: 1 },
+          ],
+          note: 'Please send the two most recent months.',
+        },
+      }),
     )
     pub.send.mockResolvedValue({ reference: 'PRM-0A1B2C3D', incomplete: false })
     render(<ApplicantUploadPage />)
-    expect(await screen.findByText('What to send')).toBeInTheDocument()
-    expect(screen.getByText(/asked for more documents/)).toBeInTheDocument()
-    expect(screen.getByText('Send the rest of your documents')).toBeInTheDocument()
+    expect(await screen.findByText('Your loan officer has asked for')).toBeInTheDocument()
+    expect(screen.getByText('Payslips')).toBeInTheDocument()
+    expect(screen.getByText('(2)')).toBeInTheDocument()
+    expect(screen.getByText('Bank statement')).toBeInTheDocument()
+    expect(screen.getByText('Please send the two most recent months.')).toBeInTheDocument()
+    // the general checklist and its green ticks are not shown: they would only confuse
+    expect(screen.queryByText('What to send')).not.toBeInTheDocument()
+    expect(screen.getByText('Send the documents we asked for')).toBeInTheDocument()
     expect(screen.queryByText('Change my request')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Send to the bank' }))
+    expect(screen.getByText(/what your loan officer asked for/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Yes, send' }))
     expect(await screen.findByText('PRM-0A1B2C3D')).toBeInTheDocument()
-    expect(screen.queryByText('What to send')).not.toBeInTheDocument()
+    expect(screen.queryByText('Your loan officer has asked for')).not.toBeInTheDocument()
+  })
+
+  it('a note alone is shown as written, with no document list', async () => {
+    pub.link.mockResolvedValue(
+      view({
+        sent: true,
+        reference: 'PRM-0A1B2C3D',
+        more_requested: true,
+        request_open: false,
+        checklist: null,
+        requested: { items: [], note: 'Please send three months of statements.' },
+      }),
+    )
+    render(<ApplicantUploadPage />)
+    expect(await screen.findByText('Please send three months of statements.')).toBeInTheDocument()
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    const text = document.body.textContent.toLowerCase()
+    for (const word of ['score', 'recommend', 'approved', 'rejected', 'status', 'outcome']) {
+      expect(text).not.toContain(word)
+    }
+  })
+
+  it('an older request with no detail still shows the list of what is in and what is needed', async () => {
+    pub.link.mockResolvedValue(
+      view({ sent: true, reference: 'PRM-0A1B2C3D', more_requested: true, request_open: false }),
+    )
+    render(<ApplicantUploadPage />)
+    expect(await screen.findByText('What to send')).toBeInTheDocument()
+    expect(screen.getByText(/asked for more documents/)).toBeInTheDocument()
   })
 
   it("asks for the request first on a new link and sends it as the applicant's own statement", async () => {

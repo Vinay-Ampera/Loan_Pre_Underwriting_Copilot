@@ -337,3 +337,12 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Backend (no migration):** `POST /cases/{id}/ask-applicant` takes `reopen` (expired link: extend it by the standard period and reuse it, audit `upload_link_reopened`; switched-off: 409; no link: creates one). `GET /cases/{id}/link` prefers an open link over a newer ended one.
 - **Frontend:** `AskApplicantDialog` (fetches the case link, `modeOf`), `Breadcrumbs` on the case page, the admin officer page and the filtered Upload links page.
 - **Edge case:** E-75 updated.
+
+---
+
+## Ask for more says what is needed (2026-11-19)
+
+- **Decision (user, 2026-11-19):** a request for more must state what is needed, as ticked document kinds with counts and/or a short note; the applicant's page shows only that. Built, not committed. Inbox and email (Parts 1 and 2) still **not built**.
+- **Backend (no migration):** `POST /cases/{id}/ask-applicant` takes `items` (`{type, count}`, types from the document list) and `note` (max 200, screened by `check_request_note`); after the applicant has sent, at least one is required (422), and nothing is written on a refusal. `form_data.more_requested` is `{at, items, note}`. The public link read returns `requested` and no general checklist while it is open (also not in the upload answer). The audit row records the items and note.
+- **Frontend:** `RequestedItems` (count box can be emptied while typing), `AskApplicantDialog` (fields, "Your request is saved" without re-showing the address), `ApplicantUploadPage` ("Your loan officer has asked for"), `ApplicantReview` (what was asked).
+- **Edge case:** E-74 updated.

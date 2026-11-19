@@ -17,7 +17,7 @@ from uuid import UUID
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import Connection, text
 
 from app.api.cases import get_case
@@ -32,6 +32,8 @@ from app.api.deps import (
 )
 from app.api.schemas import LoanType
 from app.core.config import Settings
+from app.intake.models import DocType
+from app.notifications.check import check_request_note
 
 router = APIRouter(tags=["upload links"])
 link_manager = require_role("officer", "admin")
@@ -96,11 +98,36 @@ class ExpiryIn(BaseModel):
     second_click: bool = False  # needed when this shortens the link
 
 
+class RequestedItem(BaseModel):
+    """One kind of document the officer wants, and how many."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    count: int = Field(default=1, ge=1, le=12)
+
+    @field_validator("type")
+    @classmethod
+    def _known(cls, v: str) -> str:
+        if v == "other" or (v in {t.value for t in DocType} and v != DocType.UNKNOWN):
+            return v
+        raise ValueError("Unknown document type.")
+
+
 class AskIn(SecondClickIn):
     """`reopen`: when the case's link has expired (not been switched off), open that same link
-    again instead of making a new one, so the address the applicant already has works."""
+    again instead of making a new one, so the address the applicant already has works.
+    `items` and `note`: what the officer needs, shown on the applicant's page. Required when the
+    applicant has already sent, so a request for more always says what it is for."""
 
     reopen: bool = False
+    items: list[RequestedItem] = Field(default_factory=list, max_length=12)
+    note: str = Field(default="", max_length=200)
+
+    @field_validator("note")
+    @classmethod
+    def _tidy(cls, v: str) -> str:
+        return " ".join(v.split())
 
 
 class ExtendIn(BaseModel):
@@ -286,20 +313,34 @@ def regenerate(
     return {"id": link_id, "path": link_path(token), "expires_at": row.expires_at}
 
 
-def _reopen_for_more(conn: Connection, case: Any, user: User) -> None:
+def _reopen_for_more(conn: Connection, case: Any, user: User, body: AskIn) -> None:
     """The officer asks for more after the applicant has already sent: the applicant's page opens
-    again (checklist and upload box) until they send once more, and an earlier choice to go on
-    without waiting no longer counts. Before the first send there is nothing to reopen."""
+    again, showing exactly what was asked for, until they send once more, and an earlier choice to
+    go on without waiting no longer counts. Before the first send there is nothing to reopen.
+    Nothing is written unless the request is complete and clean."""
     form = dict(case.form_data)
     if not form.get("applicant_sent"):
         return
-    form["more_requested"] = {"at": date.today().isoformat()}
+    items: dict[str, int] = {}
+    for item in body.items:  # one entry per type, the larger count wins
+        items[item.type] = max(items.get(item.type, 0), item.count)
+    if not items and not body.note:
+        raise HTTPException(422, "Say what you need: tick a document or write a short note.")
+    reasons = check_request_note(body.note)
+    if reasons:
+        raise HTTPException(
+            422, "The note cannot be shown to the applicant: " + "; ".join(reasons).lower() + "."
+        )
+    asked = {"at": date.today().isoformat(), "note": body.note,
+             "items": [{"type": t, "count": n} for t, n in items.items()]}  # fmt: skip
+    form["more_requested"] = asked
     intake = dict(form.get("intake") or {})
     intake.pop("unsent_ack", None)
     form["intake"] = intake
     conn.execute(text("UPDATE cases SET form_data = CAST(:f AS jsonb), updated_at = now() "
                       "WHERE id = :c"), {"f": json.dumps(form), "c": case.id})  # fmt: skip
-    write_audit(conn, user.id, "applicant_more_requested", "case", case.id)
+    write_audit(conn, user.id, "applicant_more_requested", "case", case.id,
+                after={"items": asked["items"], "note": body.note})  # fmt: skip
 
 
 @router.post("/cases/{case_id}/ask-applicant")
@@ -315,7 +356,7 @@ def ask_applicant(
     case = get_case(conn, case_id, user, lock=True)
     if case.status not in ("draft", "uploaded", "applicant_submitted"):
         raise HTTPException(409, "This case can no longer receive files.")
-    _reopen_for_more(conn, case, user)
+    _reopen_for_more(conn, case, user, body)
     live_sql = text("""SELECT id, expires_at FROM upload_links
                        WHERE case_id = :c AND disabled_at IS NULL AND expires_at > now()
                        ORDER BY created_at DESC LIMIT 1""")  # fmt: skip

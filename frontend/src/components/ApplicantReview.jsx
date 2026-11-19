@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { docLabel } from '../lib/docLabels'
 import AskApplicantDialog from './AskApplicantDialog'
 import Inventory from './Inventory'
 import StatusChip from './StatusChip'
@@ -93,6 +94,19 @@ export default function ApplicantReview({
         />
       )}
 
+      {c.more_requested && (
+        <p className="small" role="status">
+          <strong>You asked the applicant for:</strong>{' '}
+          {[
+            ...(c.more_requested.items || []).map(
+              (i) => `${docLabel(i.type)}${i.count > 1 ? ` (${i.count})` : ''}`,
+            ),
+          ].join(', ') || 'what your note says'}
+          {c.more_requested.note && <> · “{c.more_requested.note}”</>}. Waiting for them to send
+          again.
+        </p>
+      )}
+
       <div className="review-actions">
         <button type="button" className="btn" onClick={() => setAsk(true)}>
           Ask for more
@@ -110,6 +124,7 @@ export default function ApplicantReview({
         <AskApplicantDialog
           caseId={c.id}
           recipient={recipient}
+          docTypes={docTypes}
           onClose={() => setAsk(false)}
           onDone={onChanged}
         />
