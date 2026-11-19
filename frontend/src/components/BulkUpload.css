@@ -28,3 +28,14 @@
     display: none;
   }
 }
+.bulk-working {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4) 0;
+}
+.bulk-working .loader-label {
+  max-width: 44ch;
+  text-align: center;
+}

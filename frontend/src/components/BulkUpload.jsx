@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from './Icons'
+import Loader from './Loader'
 import './UploadZone.css'
 import './BulkUpload.css'
 
@@ -30,6 +31,32 @@ export function summarise(results) {
   return parts.map(([c, t]) => `${c} ${t}`).join(' · ')
 }
 
+const sizeOf = (bytes) =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`
+
+/** What the officer sees while a zip, a folder or many files are being sent and read. */
+function Working({ sending }) {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setSeconds((s) => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const what = sending.zip
+    ? 'your zip'
+    : `${sending.count} ${sending.count === 1 ? 'file' : 'files'}`
+  return (
+    <div className="bulk-working" data-testid="bulk-working">
+      <Loader label={`Uploading ${what} (${sizeOf(sending.bytes)}) and reading the documents`} />
+      <p className="small muted">
+        Each file is checked and identified. A zip or a folder can take a minute. Please keep this
+        page open{seconds >= 3 ? ` · ${seconds} s` : ''}.
+      </p>
+    </div>
+  )
+}
+
 /**
  * Add a zip, a whole folder or many files in one go. `upload(form)` sends them and returns
  * [{ name, status, message }] (status: accepted | warning | rejected | ignored | bundle). The same box
@@ -44,16 +71,26 @@ export default function BulkUpload({
 }) {
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)
+  const [sending, setSending] = useState(null)
   const [error, setError] = useState(null)
   const [over, setOver] = useState(false)
   const files = useRef(null)
   const folder = useRef(null)
   const photo = useRef(null)
+  const zone = useRef(null)
 
   async function send(list) {
     if (!list.length || disabled) return
     setBusy(true)
     setError(null)
+    setResults([])
+    setSending({
+      count: list.length,
+      bytes: list.reduce((n, f) => n + f.size, 0),
+      zip: list.length === 1 && /\.zip$/i.test(list[0].name),
+    })
+    // the box can sit below the fold on a desk page: bring the progress into view
+    setTimeout(() => zone.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 50)
     const form = new FormData()
     // a folder sends each file's path inside it, which the server only uses as a label
     list.forEach((f) => form.append('files', f, f.webkitRelativePath || f.name))
@@ -65,6 +102,7 @@ export default function BulkUpload({
       setError(e.message)
     } finally {
       setBusy(false)
+      setSending(null)
       if (files.current) files.current.value = ''
       if (folder.current) folder.current.value = ''
       if (photo.current) photo.current.value = ''
@@ -74,6 +112,7 @@ export default function BulkUpload({
   return (
     <div className="bulk">
       <div
+        ref={zone}
         className={`dropzone${over ? ' over' : ''}${disabled ? ' off' : ''}`}
         onDragOver={(e) => {
           e.preventDefault()
@@ -86,26 +125,29 @@ export default function BulkUpload({
           send([...e.dataTransfer.files])
         }}
       >
-        <p>{intro || 'Drop a zip or your files here, or choose them below.'}</p>
-        <div className="bulk-buttons">
-          <label className={`btn${busy || disabled ? ' disabled' : ''}`} htmlFor="bulk-files">
-            {busy ? 'Checking files…' : 'Choose files or a zip'}
-          </label>
-          {camera && (
-            <label
-              className={`btn bulk-camera${busy || disabled ? ' disabled' : ''}`}
-              htmlFor="bulk-photo"
-            >
-              Take a photo
+        {sending && <Working sending={sending} />}
+        {!busy && <p>{intro || 'Drop a zip or your files here, or choose them below.'}</p>}
+        {!busy && (
+          <div className="bulk-buttons">
+            <label className={`btn${busy || disabled ? ' disabled' : ''}`} htmlFor="bulk-files">
+              Choose files or a zip
             </label>
-          )}
-          <label
-            className={`btn bulk-folder${busy || disabled ? ' disabled' : ''}`}
-            htmlFor="bulk-folder"
-          >
-            Choose a folder
-          </label>
-        </div>
+            {camera && (
+              <label
+                className={`btn bulk-camera${busy || disabled ? ' disabled' : ''}`}
+                htmlFor="bulk-photo"
+              >
+                Take a photo
+              </label>
+            )}
+            <label
+              className={`btn bulk-folder${busy || disabled ? ' disabled' : ''}`}
+              htmlFor="bulk-folder"
+            >
+              Choose a folder
+            </label>
+          </div>
+        )}
         <input
           id="bulk-files"
           ref={files}
@@ -138,10 +180,12 @@ export default function BulkUpload({
           disabled={busy || disabled}
           onChange={(e) => send([...e.target.files])}
         />
-        <p className="small muted">
-          PDF, JPG, PNG or a zip of them. Each file up to 10 MB. Password-protected PDFs and very
-          blurry photos are not accepted.
-        </p>
+        {!busy && (
+          <p className="small muted">
+            PDF, JPG, PNG or a zip of them. Each file up to 10 MB. Password-protected PDFs and very
+            blurry photos are not accepted.
+          </p>
+        )}
       </div>
       {error && (
         <p className="field-error" role="alert">

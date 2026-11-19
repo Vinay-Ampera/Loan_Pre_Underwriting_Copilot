@@ -32,6 +32,20 @@ describe('BulkUpload', () => {
     expect(screen.getByText('Too blurry.')).toBeInTheDocument()
   })
 
+  it('shows an uploading panel with the file count while the files are sent and read', async () => {
+    let finish
+    const upload = vi.fn(() => new Promise((resolve) => (finish = resolve)))
+    render(<BulkUpload upload={upload} />)
+    const files = [new File(['x'], 'a.pdf'), new File(['y'], 'b.pdf')]
+    await userEvent.setup().upload(document.getElementById('bulk-files'), files)
+    expect(await screen.findByTestId('bulk-working')).toHaveTextContent('Uploading 2 files')
+    expect(screen.queryByText('Choose files or a zip')).not.toBeInTheDocument()
+    finish([{ name: 'a.pdf', status: 'accepted', message: '' }])
+    expect(await screen.findByText('1 received')).toBeInTheDocument()
+    expect(screen.queryByTestId('bulk-working')).not.toBeInTheDocument()
+    expect(screen.getByText('Choose files or a zip')).toBeInTheDocument()
+  })
+
   it('shows the refusal of an unsafe archive without hiding earlier results', async () => {
     const upload = vi
       .fn()
