@@ -26,7 +26,7 @@ from app.scoring.engine import score_case
 from app.scoring.rules import RuleSet, load_rules
 from tests.rag_helpers import fake_embed_passages, fake_vector
 from tests.scoring_cases import income_docs, kyc_docs, person, personal_case
-from tests.test_pipeline import make_ctx, new_case
+from tests.test_pipeline import ScriptedRouter, make_ctx, new_case
 
 
 @pytest.fixture(autouse=True)
@@ -100,11 +100,13 @@ def test_summary_is_masked_and_names_the_rules(rs: RuleSet) -> None:
     assert "refer" in out and "approve" in out and len(out) <= 600
 
 
-def run_override(engine: Engine, case: str, final: str) -> tuple[Any, dict[str, Any]]:
+def run_override(
+    engine: Engine, case: str, final: str, router: Any = None
+) -> tuple[Any, dict[str, Any]]:
     async def go() -> dict[str, Any]:
         async with memory_saver() as saver:
             sub, cid = new_case(engine, case)
-            pipe = Pipeline(make_ctx(engine), saver)
+            pipe = Pipeline(make_ctx(engine, router), saver)
             await pipe.start(sub, cid)
             with engine.begin() as conn:
                 officer = store.ensure_system_user(conn)
@@ -135,6 +137,25 @@ def test_override_creates_a_pending_precedent(engine: Engine) -> None:
             ).scalar_one()
             == 1
         )
+
+
+@pytest.mark.db
+def test_the_precedent_summary_call_is_logged_and_kept_when_the_run_logs_are_rewritten(
+    engine: Engine,
+) -> None:
+    run_override(engine, "SYN-PL-D03", "approve", ScriptedRouter("good"))
+    with engine.connect() as c:
+        case_id, n = c.execute(
+            text("SELECT case_id, count(*) FROM llm_calls WHERE stage = 'precedent' "
+                 "AND role = 'decision' AND stage_run_id IS NULL GROUP BY case_id")
+        ).one()  # fmt: skip
+        summary = c.execute(text("SELECT report_summary FROM precedents")).scalar_one()
+    assert n == 1 and summary.startswith("Recommended as refer")
+    with engine.begin() as c:  # a run writing its logs again replaces only its own rows
+        store.save_logs(c, case_id, [], [])
+    with engine.connect() as c:
+        stages = {r[0] for r in c.execute(text("SELECT stage FROM llm_calls"))}
+    assert stages == {"precedent"}
 
 
 @pytest.mark.db

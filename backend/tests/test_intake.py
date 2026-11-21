@@ -78,6 +78,22 @@ def test_masker_keeps_amounts_and_is_stable() -> None:
     assert m.mask("FIZPS3074G FIZPS3074G").split()[0] == m.mask("FIZPS3074G").split()[0]
 
 
+def test_the_leak_check_finds_phone_and_account_numbers_but_not_ids_or_amounts() -> None:
+    assert find_leaks("call 9944650191") == ["PHONE", "ACCT"]
+    assert find_leaks("call +91 9944650191") == ["PHONE", "ACCT"]
+    assert find_leaks("account 6657984552123") == ["ACCT"]
+    with pytest.raises(MaskingError):
+        assert_masked("phone 9944650191")
+    for fine in (
+        "case 2f1b6c1e-6a0d-4c43-9a3e-123456789012",  # a UUID whose last part is all digits
+        "trace 4bf92f3577b34da6a3ce929d0e0e4736 span a1234567890b",
+        "pay 1,23,456.00 of 12,00,000",
+        "CASE-2026-0001 on 2026-11-21, score 72.5",
+        Masker().mask("ph 9944650191 ac 6657984552"),
+    ):
+        assert find_leaks(fine) == [], fine
+
+
 def test_assert_masked_and_safe_do_not_echo_values() -> None:
     with pytest.raises(MaskingError) as e:
         assert_masked("pan FIZPS3074G")

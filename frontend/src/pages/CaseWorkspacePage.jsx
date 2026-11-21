@@ -515,6 +515,7 @@ export default function CaseWorkspacePage() {
                       caseId={id}
                       caseNo={c.case_no}
                       report={report}
+                      loanType={c.loan_type}
                       readOnly={isAdmin}
                       officerAction={c.officer_action}
                     />

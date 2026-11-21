@@ -15,23 +15,24 @@ Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.m
 ## 1. Supervisor
 
 - **Model:** Gemini Flash.
-- **Does:** opens the case, reads loan type and application form, builds the required-document checklist from the rules file, flags missing documents, hands each agent its task, handles retries and fallbacks, assembles the final output and the final summary.
-- **Does not:** choose the route (fixed graph).
+- **Does:** opens the case, reads loan type and application form, and builds the required-document checklist from the rules file **in code**. The model writes only a short briefing note for the officer (`Briefing.notes`, at most 600 characters, masked input, checked for wording and invented numbers); without a model the note is written by code. Missing documents are filled in after Extraction has classified the uploads.
+- **Does not:** choose the route (fixed graph), retry other agents (each node's model call retries itself, `app/agents/runtime.py` `ask`; provider fallbacks are LiteLLM's), or assemble the report (Decision does). It decides nothing about the case.
 - **Output:** `CasePlan { checklist[], missing[], applicants[], notes }`.
 - **Missing documents:** run continues and flags, except missing KYC documents, which is a fix-type hard fail.
 
 ## 2. Document Extraction
 
-- **Model:** Gemini Flash (masked text only).
-- **Pipeline:** per-page type detection → PyMuPDF/pdfplumber or OpenCV + OCR → classify document → mask PII → LLM extracts fields into a schema → code validators.
+- **Model:** Gemini Flash (masked text only), and only for some documents.
+- **Pipeline:** per-page type detection → PyMuPDF/pdfplumber for digital pages, or OpenCV clean-up and local OCR for scans → classify document → fields read by code → code validators. OCR is RapidOCR first (the PaddleOCR PP-OCR models run through onnxruntime), then PaddleOCR when installed, then Tesseract (`app/intake/ocr.py`).
+- **When the model is called:** only when a document's required fields are still missing after the code read, or its type is unknown. One masked pass fills the gaps (`app/intake/llm_extract.py`); its values are un-masked locally and go through the same validators, and a value that does not occur in the source text has its confidence cut, so it shows as low confidence to the officer. Most digital documents never reach the model.
 - **Output:** `ExtractedDocument { doc_type, fields[{name, value, confidence, page}], quality_flags[], tamper_hints[] }`. Documents score (15 points) is computed from completeness and quality.
 - **Gate:** low-confidence fields are flagged to the officer, never guessed.
 - **Code checks:** schema valid; totals tie out (net = gross − deductions); dates plausible; statement running balance consistent; field present in source text.
 
 ## 3. KYC and Compliance
 
-- **Model:** Groq gpt-oss-20b (used for ambiguous matches and explanations; rule outcomes come from code).
-- **Does:** completeness of KYC set; PAN, Aadhaar, GSTIN and Udyam format and checksum; name, DOB, PAN and address matching across documents and the application form (fuzzy thresholds in rules file); mock identity lookup; co-applicant checks.
+- **Model:** Groq gpt-oss-20b, for explanations only: it writes one plain-language line for each check that did not pass cleanly. Every rule outcome, including the fuzzy name and address matches, comes from code.
+- **Does (in code, `app.scoring`):** completeness of KYC set; PAN, Aadhaar, GSTIN and Udyam format and checksum; name, DOB, PAN and address matching across documents and the application form (fuzzy thresholds in rules file); mock identity lookup; co-applicant checks.
 - **Output:** `KycResult { checks[{rule_id, passed, evidence}], hard_fail, fail_class, score }` (20 points).
 - **Hard fail:** stops the run. Fix-type (missing, mismatch, invalid) asks for correction; eligibility-type (age, non-resident) recommends reject.
 - **Code checks:** every rule result reproduced by code; hard fail flag consistent with rule set.
@@ -84,7 +85,9 @@ Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.m
 
 **Pause and resume.** After every node the state is checkpointed in Postgres (thread id = `cases.id`). `Pipeline.resume(case)` continues a killed run from its last checkpoint and gives the same result, because nodes are functions of the state and the files, and every database write replaces its own rows. `Pipeline.resume_after_fix(case, replace_docs=...)` takes a fix-type stop, replaces files or the form, and re-enters at Extraction (everything derived from the files is stale, so earlier stages are not reused). `Pipeline.officer_action(...)` resumes the paused case: confirm needs the second click; override also needs a written reason and a final decision. The officer's values are validated before the graph is resumed.
 
-**Online evaluation.** Each agent writes code checks to `eval_scores` (schema valid, rules reproduced, citation validity, recomputed FOIR/DTI/LTV match, total equals code, wording clean). A check that code cannot settle is stored as inconclusive and, only then, the judge model is asked (`method = judge`).
+**Online evaluation.** Each agent writes code checks to `eval_scores` (schema valid, rules reproduced, citation validity, recomputed FOIR/DTI/LTV match, total equals code, wording clean). A check that code cannot settle is stored as inconclusive and, only then, the judge model is asked (`method = judge`). The judge sees the same masked facts the Decision writer saw, never the raw report (changed 2026-11-21).
+
+**Call log.** Every model call is a row in `llm_calls` with the `stage` that asked and the model `role` (migration 0022): the Supervisor's calls (no stage row, so `stage_run_id` is null), each agent's calls, the judge's calls (`stage = decision`, `role = judge`) and the precedent summary written at an override (`stage = precedent`, kept when a run rewrites its own rows).
 
 **Models off.** `--no-llm` (router `None`) skips every model call: explanations are left out, Policy and Decision text is code-written, nothing is marked `unverified` because of it. The same run with models on fills in explanations and the narrative.
 

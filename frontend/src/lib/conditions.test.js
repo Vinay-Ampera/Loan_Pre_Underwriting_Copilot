@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { conditionsFrom, threeC } from './conditions'
+import { collateralNote, conditionsFrom, threeC } from './conditions'
 
 const report = {
   findings: [
@@ -23,5 +23,18 @@ describe('report helpers', () => {
       credit: null,
       collateral: null,
     })
+  })
+  it('says where collateral is checked for each loan type, without a number of its own', () => {
+    expect(collateralNote('home')).toEqual({
+      value: 'Checked in Policy fit',
+      note: 'Loan-to-value limit, scored in Policy fit',
+    })
+    expect(collateralNote('vehicle').value).toBe('Checked in Policy fit')
+    expect(collateralNote('education').note).toMatch(/Collateral above a set loan amount/)
+    expect(collateralNote('personal')).toEqual({
+      value: 'Not checked',
+      note: 'No collateral rule for this loan type',
+    })
+    expect(collateralNote('business').value).toBe('Not checked')
   })
 })

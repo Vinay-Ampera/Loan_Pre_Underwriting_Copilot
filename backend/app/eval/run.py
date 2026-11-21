@@ -5,8 +5,11 @@
     python -m app.eval.run --split dev --pipeline --no-llm  also run the agent pipeline (needs DB)
 
 The default (code) metrics need no database and no model: every case is rebuilt from its
-structured data and scored by the rules engine, so this is what GitHub Actions runs on a PR. The
-model-judged suites (RAGAS, DeepEval) are in `app.eval.judge` and run locally with your keys.
+structured data and scored by the rules engine, so this is what GitHub Actions runs on a PR.
+Retrieval quality has its own runner (`python -m app.rag.evaluate`). The only model-judged check
+today is inside the pipeline: when code cannot tie a claim in the Decision summary to a finding,
+the judge model grades it (`app.agents.evals.judge_claim`, stored in `eval_scores` with method
+`judge`). No RAGAS or DeepEval suite is built yet.
 
 A run fails (exit 1) when a metric is below its floor in `docs/baselines/thresholds.json` or has
 dropped more than `max_drop` below the stored baseline. The held-out test split needs --allow-test.

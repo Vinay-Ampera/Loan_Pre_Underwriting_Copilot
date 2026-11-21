@@ -163,7 +163,7 @@ A display-only regrouping on the report, computed from existing stage scores by 
 
 - **Credit:** the Credit and behaviour stage score.
 - **Capacity:** the Income and FOIR stage score.
-- **Collateral:** not scored in v1. Shown as "Not scored in v1" for every loan type; for home, vehicle and education the existing collateral and margin facts may be listed as notes, with no points.
+- **Collateral:** has no score of its own. For home and vehicle the cell reads "Checked in Policy fit" with "Loan-to-value limit, scored in Policy fit"; for education "Checked in Policy fit" with "Collateral above a set loan amount, scored in Policy fit"; for personal and business "Not checked" with "No collateral rule for this loan type" (changed 2026-11-21 from "Not scored in v1", which hid the LTV and collateral rules in Policy fit). The words come from `collateralNote` in `lib/conditions.js`; no number is shown.
 
 Scoring weights, bands and hard rules do not change.
 
@@ -238,7 +238,7 @@ Display only: the case is still opened the same two ways (documents first, or th
 - **Files:** tokens in `styles/tokens.css` (light default; dark under `:root[data-theme='dark']` and, with no stored choice, `@media (prefers-color-scheme: dark)`; the two dark blocks are kept identical by a test). Fonts in `styles/fonts.css` (`@fontsource/inter` 400 and 600, `@fontsource/outfit` 500 and 600, Latin subset). Theme logic in `lib/theme.js`; `index.html` sets `data-theme` before first paint. The stored key is `lc.theme` in `localStorage` (`system` stores nothing).
 - **Routes:** `/` is Home (officer tiles and recent cases, or admin summary), `/cases` the list (a tile opens `/cases?view=awaiting|referred|stopped|progress`, filtered in the browser), `/cases/new`, `/cases/:id`, `/admin/precedents`, `/admin/users`. The old top bar is gone.
 - **Stepper (`lib/journey.js`):** derived from the case status, the `stage_runs` rows and `report.stopped_stage`. Officer sign-off is "in progress" while the case awaits confirmation and "done" only after an officer confirms or overrides.
-- **3C strip and Conditions (`lib/conditions.js`):** Credit shows the Credit and behaviour stage score and Capacity the Income and FOIR stage score exactly as the report holds them; Collateral reads "Not scored in v1". Conditions lists the document-stage findings that are not plain notes. No backend change and no numbers added.
+- **3C strip and Conditions (`lib/conditions.js`):** Credit shows the Credit and behaviour stage score and Capacity the Income and FOIR stage score exactly as the report holds them; Collateral says where it is checked for the loan type (8.6). Conditions lists the document-stage findings that are not plain notes. No backend change and no numbers added.
 - **Users screen:** create (name, email, role), disable and reset each behind a second dialog, enable directly. The temporary password is shown once in a dialog.
 - **Login:** brand panel (headline, the five stages, the 20/15/30/25/10 bar, bands, "A human confirms every case", sample-bank note) beside the sign-in form; the theme toggle sits top right. The panel stacks above the form under 900 px.
 - **Motion:** rise, ring fill, stepper pulse, score-bar grow, drifting login glow, typing effect. The global `prefers-reduced-motion` override in `base.css` zeroes every animation and transition; the typing effect also checks the media query.

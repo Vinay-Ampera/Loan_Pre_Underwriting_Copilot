@@ -12,6 +12,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Connection, text
 
+from app.agents import store
 from app.agents.guardrails import ID_PATTERN, check_cites, check_text
 from app.agents.report import Report
 from app.agents.runtime import AgentContext, Asked, ask
@@ -91,10 +92,11 @@ async def propose_precedent(
     report: Report, final_decision: str, reason: str,
 ) -> dict[str, str | None]:  # fmt: skip
     """Write the proposal. Returns {"id", "status", "held_reason"}; one proposal per case."""
-    summary, _ = await summarise(ctx, score, report.recommendation, final_decision, reason)
+    summary, asked = await summarise(ctx, score, report.recommendation, final_decision, reason)
     held = hard_rule_breach(score, final_decision)
     status = "held" if held else "pending"
     with ctx.engine.begin() as conn:
+        store.add_calls(conn, case_uuid, asked.calls)  # the summary's calls, stage "precedent"
         existing = conn.execute(
             text(
                 "SELECT id FROM precedents "

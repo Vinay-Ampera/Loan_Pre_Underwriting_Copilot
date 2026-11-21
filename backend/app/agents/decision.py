@@ -219,5 +219,6 @@ async def run_decision(
                   "models": models},
     )  # fmt: skip
     meta = {"needs_judge": asked.output is not None and needs_judge(
-        summary, [r.label for r in report.stage_scores]), "known_ids": sorted(known), "version": version}  # fmt: skip
+        summary, [r.label for r in report.stage_scores]), "known_ids": sorted(known), "version": version,
+        "evidence": masker.mask(source)}  # fmt: skip
     return report, asked, meta

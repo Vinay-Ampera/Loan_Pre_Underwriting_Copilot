@@ -139,6 +139,7 @@ def inventory_for(conn: Connection, rs: Any, row: Any) -> dict[str, Any]:
     inv["counts"]["bundles"] = len(inv["bundles"])
     inv["proceeded"] = bool(form.get("intake", {}).get("proceeded"))
     inv["waiting_for_applicant"] = ingest.waiting_for_applicant(conn, row.id, form)
+    inv["asked_for_more"] = ingest.asked_for_more(form)
     inv["stage"] = "form" if form.get("applicants") else "intake"
     return inv
 

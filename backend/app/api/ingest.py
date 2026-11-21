@@ -156,6 +156,20 @@ UNSENT_MESSAGE = (
     "The applicant has not pressed Send to the bank yet, so more files may still arrive. "
     "Wait for them, or choose Continue anyway on the intake desk."
 )
+MORE_UNSENT_MESSAGE = (
+    "You asked the applicant for more files and they have not sent them yet. "
+    "Wait for them, or choose Continue anyway on the intake desk."
+)
+
+
+def asked_for_more(form: dict[str, Any]) -> bool:
+    """The applicant had sent, then the officer asked for more: the wait is for the new files."""
+    return bool(form.get("applicant_sent") and form.get("more_requested"))
+
+
+def unsent_message(form: dict[str, Any]) -> str:
+    """Why a case is held for the applicant, in words that fit what happened so far."""
+    return MORE_UNSENT_MESSAGE if asked_for_more(form) else UNSENT_MESSAGE
 
 
 def waiting_for_applicant(conn: Connection, case_id: UUID, form: dict[str, Any]) -> bool:

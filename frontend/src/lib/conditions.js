@@ -14,3 +14,18 @@ export function threeC(report) {
     collateral: null,
   }
 }
+
+// Collateral has no score of its own. Where the rules file checks it, the check sits in the
+// Policy fit stage: the loan-to-value limit for home and vehicle, the collateral needed above
+// an amount for education. Personal and business loans have no collateral rule.
+const COLLATERAL = {
+  home: 'Loan-to-value limit, scored in Policy fit',
+  vehicle: 'Loan-to-value limit, scored in Policy fit',
+  education: 'Collateral above a set loan amount, scored in Policy fit',
+}
+export function collateralNote(loanType) {
+  const note = COLLATERAL[loanType]
+  return note
+    ? { value: 'Checked in Policy fit', note }
+    : { value: 'Not checked', note: 'No collateral rule for this loan type' }
+}

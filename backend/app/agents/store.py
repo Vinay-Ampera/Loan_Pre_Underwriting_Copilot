@@ -149,23 +149,41 @@ def stage_run_ids(conn: Connection, case_id: UUID) -> dict[str, UUID]:
     return {r[0]: r[1] for r in rows}
 
 
+# Calls made after the run (the precedent summary at an override) belong to the case, not to
+# the run, so a run that writes its logs again leaves them in place.
+AFTER_RUN_STAGES = ("precedent",)
+
+
+def add_calls(conn: Connection, case_id: UUID, calls: list[LLMCallRecord]) -> None:
+    """Write LLM-call rows for the case. Each row names the stage that asked and the model role;
+    `stage_run_id` links it to the stage row when there is one (the Supervisor and the
+    precedent summary have none)."""
+    ids = stage_run_ids(conn, case_id)
+    trace_id = tracing.trace_id_for(str(case_id))
+    for c in calls:
+        conn.execute(
+            text("""INSERT INTO llm_calls (case_id, stage_run_id, stage, role, provider, model, tokens_in,
+                        tokens_out, cost_usd, latency_ms, fallback_used, langfuse_trace_id)
+                    VALUES (:c, :s, :st, :ro, :p, :m, :ti, :to, :cost, :lat, :fb, :tr)"""),
+            {"c": case_id, "s": ids.get(c.stage), "st": c.stage, "ro": c.role,
+             "p": c.provider or "unknown", "m": c.model, "ti": c.tokens_in, "to": c.tokens_out,
+             "cost": c.cost_usd, "lat": c.latency_ms, "fb": c.fallback_used, "tr": trace_id},
+        )  # fmt: skip
+
+
 def save_logs(
     conn: Connection, case_id: UUID, calls: list[LLMCallRecord], evals: list[EvalRecord]
 ) -> None:
     """Replace the case's LLM-call and evaluation logs with the run's (idempotent)."""
     ids = stage_run_ids(conn, case_id)
-    trace_id = tracing.trace_id_for(str(case_id))
-    conn.execute(text("DELETE FROM llm_calls WHERE case_id = :c"), {"c": case_id})
+    conn.execute(
+        text(
+            "DELETE FROM llm_calls WHERE case_id = :c AND coalesce(stage, '') <> ALL(CAST(:after AS text[]))"
+        ),
+        {"c": case_id, "after": list(AFTER_RUN_STAGES)},
+    )
     conn.execute(text("DELETE FROM eval_scores WHERE case_id = :c"), {"c": case_id})
-    for c in calls:
-        conn.execute(
-            text("""INSERT INTO llm_calls (case_id, stage_run_id, provider, model, tokens_in, tokens_out,
-                        cost_usd, latency_ms, fallback_used, langfuse_trace_id)
-                    VALUES (:c, :s, :p, :m, :ti, :to, :cost, :lat, :fb, :tr)"""),
-            {"c": case_id, "s": ids.get(c.stage), "p": c.provider or "unknown", "m": c.model,
-             "ti": c.tokens_in, "to": c.tokens_out, "cost": c.cost_usd, "lat": c.latency_ms,
-             "fb": c.fallback_used, "tr": trace_id},
-        )  # fmt: skip
+    add_calls(conn, case_id, calls)
     for e in evals:
         if e.value is None:
             continue

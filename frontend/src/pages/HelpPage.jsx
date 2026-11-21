@@ -181,9 +181,9 @@ function OfficerGuide() {
           </li>
           <li>
             If the applicant has an open upload link but has not pressed{' '}
-            <strong>Send to the bank</strong>, more files may still arrive. Continue then asks you
-            to confirm that you want to go on without waiting; the choice is written to the audit
-            trail of the case.
+            <strong>Send to the bank</strong> (or, after you asked for more, has not sent the new
+            files yet), more files may still arrive. Continue then asks you to confirm that you want
+            to go on without waiting; the choice is written to the audit trail of the case.
           </li>
           <li>
             In the application form, the name, date of birth, PAN, Aadhaar last four and address are

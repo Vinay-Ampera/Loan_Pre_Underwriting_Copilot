@@ -39,6 +39,10 @@ export default function IntakeDesk({
   const missingNow = c.missing > 0 || inventory.depends_on_employment.length > 0
   const blocked = inventory.essential_missing > 0
   const waiting = Boolean(inventory.waiting_for_applicant)
+  // after the officer asked for more, the applicant had already sent once: say what is awaited
+  const unsentNote = inventory.asked_for_more
+    ? 'You asked the applicant for more files and they have not sent them yet'
+    : 'The applicant has not pressed Send to the bank yet'
   const ready = !blocked && toSplit === 0 && (!missingNow || inventory.proceeded)
 
   async function upload(form) {
@@ -165,7 +169,7 @@ export default function IntakeDesk({
       </div>
       {editable && waiting && !nothingYet && (
         <p className="small muted" role="status">
-          The applicant has not pressed Send to the bank yet, so more files may still arrive.
+          {unsentNote}, so more files may still arrive.
         </p>
       )}
       {toSplit > 0 && (
@@ -199,9 +203,8 @@ export default function IntakeDesk({
           onConfirm={goOnUnsent}
         >
           <p>
-            The applicant has not pressed Send to the bank, so more files may still arrive. If you
-            continue now, the case is checked with the files received so far. The link stays open
-            until you submit.
+            {unsentNote}, so more files may still arrive. If you continue now, the case is checked
+            with the files received so far. The link stays open until you submit.
           </p>
         </ConfirmDialog>
       )}

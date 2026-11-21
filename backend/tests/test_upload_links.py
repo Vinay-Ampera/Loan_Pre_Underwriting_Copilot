@@ -375,6 +375,7 @@ def test_the_officer_asking_for_more_reopens_the_page_until_the_applicant_sends_
     # the officer is now waiting for the new files, until the applicant sends again
     inv = client.get(f"/api/v1/cases/{cid}/inventory", headers=h).json()
     assert inv["waiting_for_applicant"] is True
+    assert inv["asked_for_more"] is True  # the desk says the new files are awaited, not a Send
     sent = client.post("/api/v1/public/send", json={"second_click": True}, headers=t).json()
     assert sent["reference"] == ref  # the same reference: it is the same submission
     closed = client.get("/api/v1/public/link", headers=t).json()
@@ -387,6 +388,15 @@ def test_the_officer_asking_for_more_reopens_the_page_until_the_applicant_sends_
     assert not client.get(f"/api/v1/cases/{cid}", headers=h).json()["more_requested"]
     timeline = [a["action"] for a in client.get(f"/api/v1/cases/{cid}/audit", headers=h).json()]
     assert timeline.count("applicant_more_requested") == 1 and timeline.count("applicant_sent") == 2
+
+
+def test_the_hold_message_says_what_the_officer_is_waiting_for() -> None:
+    first = ingest.unsent_message({})
+    assert first == ingest.UNSENT_MESSAGE and "has not pressed Send" in first
+    more = ingest.unsent_message({"applicant_sent": True, "more_requested": {"items": []}})
+    assert more.startswith("You asked the applicant for more files")
+    assert "pressed Send" not in more
+    assert not ingest.asked_for_more({"more_requested": {"items": []}})  # never sent: a first wait
 
 
 def test_asking_for_more_must_say_what_is_needed_and_the_note_is_screened(

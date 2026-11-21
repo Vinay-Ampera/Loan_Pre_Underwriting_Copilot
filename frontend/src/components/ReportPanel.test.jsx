@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import ReportPanel from './ReportPanel'
@@ -42,6 +42,18 @@ describe('ReportPanel', () => {
     expect(screen.getByText('Recommended: refer for manual review')).toBeInTheDocument()
     expect(screen.getByText('Awaiting your confirmation.')).toBeInTheDocument()
     expect(screen.queryByText(/\bapproved\b/i)).not.toBeInTheDocument()
+  })
+
+  it('the 3C strip says where collateral is checked for the loan type', () => {
+    const { unmount } = render(
+      <ReportPanel caseId="c1" caseNo="CASE-2026-0001" report={report} loanType="home" />,
+    )
+    const strip = screen.getByRole('region', { name: 'Credit, Capacity and Collateral' })
+    expect(within(strip).getByText('Checked in Policy fit')).toBeInTheDocument()
+    expect(within(strip).getByText('Loan-to-value limit, scored in Policy fit')).toBeInTheDocument()
+    unmount()
+    render(<ReportPanel caseId="c1" caseNo="CASE-2026-0001" report={report} loanType="personal" />)
+    expect(screen.getByText('No collateral rule for this loan type')).toBeInTheDocument()
   })
 
   it('shows unverified stages plainly and a stage that did not run', () => {

@@ -20,8 +20,17 @@ _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("PHONE", re.compile(r"(?<!\d)(?:\+91[ -]?|0)?[6-9]\d{9}(?!\d)")),
     ("ACCT", re.compile(r"(?<![\d,.])\d{9,18}(?![\d,]|\.\d)")),
 )
-# What must never reach an LLM: used by the guard and by the CI leak test.
-_LEAK_PATTERNS = (_PATTERNS[1], _PATTERNS[2], _PATTERNS[3], _PATTERNS[0])
+# What must never reach an LLM: used by the guard and by the CI leak test. Phone and account
+# numbers are checked only when they stand alone (not inside a word, a hex id or a UUID), so the
+# guard never trips on a trace id; anything it does flag, `mask` would have replaced.
+_LEAK_PATTERNS = (
+    _PATTERNS[1],
+    _PATTERNS[2],
+    _PATTERNS[3],
+    _PATTERNS[0],
+    ("PHONE", re.compile(r"(?<![0-9A-Za-z])(?:\+91[ -]?|0)?[6-9]\d{9}(?![0-9A-Za-z])")),
+    ("ACCT", re.compile(r"(?<![0-9A-Za-z,.-])\d{9,18}(?![0-9A-Za-z,]|\.\d)")),
+)
 _TOKEN = re.compile(r"<([A-Z]+)_(\d+)>")
 
 

@@ -77,7 +77,14 @@ function Citations({ report }) {
 }
 
 /** Summary, stage cards, findings by person, citations, rejection reason and PDF export. */
-export default function ReportPanel({ caseId, caseNo, report, officerAction, readOnly = false }) {
+export default function ReportPanel({
+  caseId,
+  caseNo,
+  report,
+  officerAction,
+  loanType,
+  readOnly = false,
+}) {
   const [pdfError, setPdfError] = useState(null)
   const byStage = (stage) => report.findings.filter((f) => f.stage === stage)
   const known = new Set(report.stage_scores.map((s) => s.stage))
@@ -164,7 +171,7 @@ export default function ReportPanel({ caseId, caseNo, report, officerAction, rea
         </p>
       </section>
 
-      {report.status !== 'stopped' && <CreditStrip report={report} />}
+      {report.status !== 'stopped' && <CreditStrip report={report} loanType={loanType} />}
 
       <section className="card report-block conditions">
         <h3>Conditions</h3>

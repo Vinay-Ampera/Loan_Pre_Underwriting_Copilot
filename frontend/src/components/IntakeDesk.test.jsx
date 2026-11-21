@@ -113,6 +113,17 @@ describe('IntakeDesk: second click only where the plan says', () => {
     await vi.waitFor(() => expect(onContinue).toHaveBeenCalled())
   })
 
+  it('after asking for more, the note says the new files are awaited, not a first Send', () => {
+    const full = inventory({ complete: true, waiting_for_applicant: true, asked_for_more: true })
+    full.people[0].missing = []
+    full.counts.missing = 0
+    setup(full)
+    expect(
+      screen.getByText(/You asked the applicant for more files and they have not sent them yet/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/has not pressed Send/)).not.toBeInTheDocument()
+  })
+
   it('Continue goes straight on when no link is waiting for the applicant', async () => {
     const full = inventory({ complete: true, waiting_for_applicant: false })
     full.people[0].missing = []

@@ -319,17 +319,19 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
         new_evals = evals.decision_evals(
             report, score, set(meta["known_ids"]) | {c.clause_id for c in report.citations}
         )
+        new_calls = list(asked.calls)
         if meta["needs_judge"] and ctx.judge_inconclusive:
-            new_evals.append(
-                await evals.judge_claim(
-                    ctx, "decision", report.summary, report.model_dump_json()[:3000]
-                )
+            # the judge sees the same masked facts the writer saw, never the raw report
+            verdict, judge_calls = await evals.judge_claim(
+                ctx, "decision", report.summary, meta["evidence"]
             )
+            new_evals.append(verdict)
+            new_calls += judge_calls
         status = "stopped" if report.status == "stopped" else "awaiting_confirmation"
         stage_status = "unverified" if asked.unverified else "passed"
         all_calls = [
             LLMCallRecord.model_validate(c) for c in state.get("llm_calls", [])
-        ] + asked.calls
+        ] + new_calls
         all_evals = [EvalRecord.model_validate(e) for e in state.get("evals", [])] + new_evals
         run_no = int(state.get("run_no", 1))
         with ctx.engine.begin() as conn:
@@ -354,7 +356,7 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
         return {
             "report": report.model_dump(mode="json"),
             "status": status,
-            "llm_calls": _dump(asked.calls),
+            "llm_calls": _dump(new_calls),
             "evals": _dump(new_evals),
             "stage_status": {"decision": stage_status},
         }

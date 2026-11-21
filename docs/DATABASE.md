@@ -37,7 +37,7 @@ The token (192 random bits) is never stored, only its SHA-256. `outbox` gains th
 
 **stage_runs**
 `id, case_id, applicant_id (nullable), stage (extraction|kyc|policy|risk|decision), status (passed|failed|stopped|unverified), score, max_score, hard_fail bool, fail_class, findings jsonb, model_used, prompt_version, retries, fallback_used, started_at, finished_at`
-One row per (case, stage); a stage that runs again (resume, correction) replaces its row. `applicant_id` stays null: per-person detail lives in `rule_results.evidence.role` and the report sections. A stage that was not run (after a hard stop, or Policy beside a Risk stop) has no row. The Supervisor has no row (it scores nothing); its calls are in `llm_calls` with a null `stage_run_id`.
+One row per (case, stage); a stage that runs again (resume, correction) replaces its row. `applicant_id` stays null: per-person detail lives in `rule_results.evidence.role` and the report sections. A stage that was not run (after a hard stop, or Policy beside a Risk stop) has no row. The Supervisor has no row (it scores nothing); its calls are in `llm_calls` with a null `stage_run_id` and `stage = supervisor`.
 
 **rule_results**
 `id, stage_run_id, rule_id, kind (hard|soft), passed, points_awarded, points_max, evidence jsonb, clause_id`
@@ -50,7 +50,8 @@ One row per (case, stage); a stage that runs again (resume, correction) replaces
 `id, case_id, stage_run_id, metric, value, method (code|judge), created_at`
 
 **llm_calls**
-`id, case_id, stage_run_id, provider, model, tokens_in, tokens_out, cost_usd, latency_ms, langfuse_trace_id, fallback_used, created_at`
+`id, case_id, stage_run_id, stage, role, provider, model, tokens_in, tokens_out, cost_usd, latency_ms, langfuse_trace_id, fallback_used, created_at`
+`stage` and `role` (migration 0022) say which part of the work made the call and with which model role: `supervisor`, `extraction`, `kyc`, `policy`, `risk`, `decision` (the judge's calls have `role = judge`) and `precedent` (the summary written at an override, no stage row). A run that writes its logs again replaces its own rows and keeps the `precedent` ones. Rows from before 0022 got the stage of their stage row; the rest are null.
 
 ## 3. Human actions and learning
 

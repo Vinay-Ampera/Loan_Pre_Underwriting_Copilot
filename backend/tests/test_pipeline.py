@@ -69,7 +69,14 @@ class ScriptedRouter:
                 else "Please review this item."
             )
             return {"explanations": [{"key": k, "text": text_} for k in _keys(user)]}
+        if role == "decision" and user.startswith("<case>"):  # the precedent summary note
+            return {
+                "summary": "Recommended as refer; the officer chose otherwise on the reason given."
+            }
         if role == "decision":
+            if self.mode == "causal":  # a claim code cannot tie to a finding: the judge is asked
+                return {"summary": "Recommended outcome follows the rules engine because the file "
+                                   "looks thin. Awaiting your confirmation.", "rejection_reason": None}  # fmt: skip
             if self.mode == "evil":
                 return {
                     "summary": "The loan is approved. Total score is 100.",
@@ -242,6 +249,36 @@ def test_model_text_is_used_logged_and_masked(engine: Engine) -> None:
     with engine.connect() as c:
         n, tokens = c.execute(text("SELECT count(*), sum(tokens_in) FROM llm_calls")).one()
         assert n >= 2 and tokens > 0
+        rows = c.execute(text("SELECT stage, role, stage_run_id FROM llm_calls")).all()
+    # every call says which part of the run asked; only the Supervisor has no stage row
+    assert all(r.stage and r.role for r in rows)
+    assert {r.stage for r in rows if r.stage_run_id is None} == {"supervisor"}
+    assert ("supervisor", "supervisor") in {(r.stage, r.role) for r in rows}
+
+
+def test_the_judge_models_calls_are_logged_beside_its_score(engine: Engine) -> None:
+    router = ScriptedRouter("causal")
+    state = one_shot(engine, "SYN-PL-D02", router)
+    assert state["report"]["summary_source"] == "model"
+    assert any(c["role"] == "judge" for c in state["llm_calls"])
+    judge_prompts = [m for m in router.seen if "<claim>" in m[-1]["content"]]
+    names = [
+        a["full_name"]
+        for a in load_case_dir(OUTPUT / "cases" / "SYN-PL-D02").application["applicants"]
+    ]
+    assert judge_prompts and all(  # the judge gets masked facts, not the raw report
+        not find_leaks(m["content"]) and not any(n in m["content"] for n in names)
+        for msgs in judge_prompts for m in msgs
+    )  # fmt: skip
+    with engine.connect() as c:
+        judged = c.execute(
+            text("SELECT count(*) FROM llm_calls WHERE stage = 'decision' AND role = 'judge' "
+                 "AND stage_run_id IS NOT NULL")
+        ).scalar_one()  # fmt: skip
+        method = c.execute(
+            text("SELECT method FROM eval_scores WHERE metric = 'narrative_supported'")
+        ).scalar_one()
+    assert judged == 1 and method == "judge"
 
 
 def poisoned(tmp_path: Path, case: str, line: str) -> Submission:
