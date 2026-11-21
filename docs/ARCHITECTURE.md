@@ -85,6 +85,10 @@ zip / folder / files / applicant link
 
 `app/services/ai_config.py` holds the configuration the pipeline uses: models per role, router settings, the model switch, temperature and length per role, and the published prompt texts, loaded from `ai_config_versions` and `ai_prompt_versions` over the file defaults (`llm_models.yaml`, `prompts/*.md`). The API starts with a `ConfiguredRouter` that looks like a LiteLLM router to the agents but forwards each call to the router of the configuration **bound to the running case**. `Runner` binds the active snapshot (a context variable) as each run starts, after a cheap check of the two version stamps, so a published change reaches the next case and never changes a running one. `AgentContext.models()` is the router or `None` when the admin switched models off (the agents then write their text in code). `app/api/ai_control.py` is the admin-only API; `app/agents/prompt_check.py` tries a draft prompt on a fixed synthetic sample with the real schema and guardrails.
 
+## 3f. Knowledge base (admin, 2026-11-21)
+
+Policy text lives in the database (`policy_documents.body`, one row per version with a lifecycle `status`); the files in `data/policy` are starting data imported by the re-index command when their label is new. `app/rag/policy_admin.py` is pure code (upload conversion, format check, auto-fix, comparison, rule-number drift, old-format import); `app/rag/policy_store.py` is the service behind `app/api/knowledge.py` (drafts in `policy_drafts`, staged and embedded when they pass, the retrieval check, publish, schedule, restore, retire, search, index health); `app/rag/versions.py` decides what is in force: it switches a scheduled version in when its date has come (on the next read, under an advisory lock, no scheduler) and gives the runner the set a new run binds (a context variable, like the AI configuration), which `PolicyRetriever` and the report's version stamp read. `app/learning/maintenance.py` pauses, confirms again and retires precedents and records their uses. The rules file is not reachable from the browser.
+
 ## 4. Model routing
 
 | Agent | Primary | Why |
@@ -115,7 +119,7 @@ Full controls: `SECURITY.md`.
 
 ## 6. Learning loop in the architecture
 
-Override → proposed precedent (reason + LLM summary + embedding) → hard-rule check in code, then admin approval → stored in `precedents` with an expiry. The Policy agent retrieves approved precedents only for borderline cases, same loan type, above a similarity threshold. A precedent can add a capped bonus and relabel a borderline case; it never overrides a hard rule. Main policy files are never edited by learning.
+Override → proposed precedent (reason + LLM summary + embedding) → hard-rule check in code, then admin approval → stored in `precedents` with an expiry. The Policy agent retrieves approved precedents only for borderline cases, same loan type, above a similarity threshold. A precedent can add a capped bonus and relabel a borderline case; it never overrides a hard rule. Main policy files are never edited by learning. A published policy change pauses the precedents whose rules use a changed clause until the admin confirms them again (section 3f).
 
 Built in Stage 7 (`app/learning/`): the `await_officer` node calls `propose_precedent` on an override. A masked LLM summary (code-written if the model fails its checks) is stored with the officer's reason; `hard_rule_breach` holds any proposal that would approve a case with a failed hard rule or a stop (`held`, never in the queue). The Decision node asks `precedent_bonus` for points (approve-final precedents only, `bonus_max` × similarity) and re-runs `score_case`, which refuses the bonus unless the case is refer band with no stop and no cap-to-refer rule. The report carries `precedents` and `precedent_bonus`.
 

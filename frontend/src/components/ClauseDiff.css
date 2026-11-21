@@ -1,0 +1,43 @@
+.clause-diff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-5);
+}
+.clause-diff h4 {
+  font-size: var(--fs-16);
+}
+.clause-diff ins {
+  text-decoration: none;
+  background: var(--approve-bg);
+  color: var(--approve);
+  border-radius: 3px;
+}
+.clause-diff del {
+  background: var(--reject-bg);
+  color: var(--reject);
+  border-radius: 3px;
+}
+.cd-item {
+  border-left: 3px solid var(--line-strong);
+  padding-left: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.cd-changed {
+  border-left-color: var(--refer);
+}
+.cd-added {
+  border-left-color: var(--approve);
+}
+.cd-removed {
+  border-left-color: var(--reject);
+}
+.cd-head {
+  font-size: var(--fs-13);
+  color: var(--muted);
+}
+.cd-words {
+  line-height: 1.7;
+}

@@ -32,6 +32,7 @@ from app.api import (
     cases,
     intake,
     issues,
+    knowledge,
     links,
     messages,
     notifications,
@@ -47,6 +48,7 @@ from app.notifications import inbox, mailer
 from app.notifications.sender import Sender, build_sender
 from app.observability import metrics
 from app.rag.embedder import embed_passages
+from app.rag.retrieve import PolicyRetriever
 from app.scoring.rules import load_rules
 from app.services import ai_config
 
@@ -102,6 +104,7 @@ def create_app(
             runner = Runner(Pipeline(ctx, the_saver), eng, settings)
             app.state.settings, app.state.engine, app.state.ruleset = settings, eng, ruleset
             app.state.runner, app.state.embed = runner, embed or embed_passages
+            app.state.retriever_factory = ctx.retriever_factory or PolicyRetriever  # search tools
             app.state.sender = sender or build_sender(settings)
             app.state.monitor_engine = auditor_view.build_engine(settings, eng)
             if settings.email_worker_seconds > 0:  # staff email, sent after each commit
@@ -135,6 +138,7 @@ def create_app(
         admin.router,
         admin_cases.router,
         ai_control.router,
+        knowledge.router,
         auditor.router,
         auditor_view.router,
         users.router,

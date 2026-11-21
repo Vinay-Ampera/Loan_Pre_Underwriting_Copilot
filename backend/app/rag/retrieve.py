@@ -1,6 +1,9 @@
 """Policy retrieval: pgvector search, cross-encoder rerank, metadata filters.
 
-Filters: the active policy version only, and only the common policy plus the case's loan type.
+Filters: the policy versions in force, and only the common policy plus the case's loan type.
+"In force" is the set the run bound when it started (`app/rag/versions.py`), or the set given as
+`docs` (the knowledge base swaps a draft in to preview it), or else the active versions. A clause
+is marked `active` when its version is in that set, which is what the grounding check reads.
 `relevance` is the rerank score (0..1); with `rerank=False` it is the cosine similarity, which is
 the baseline the retrieval evaluation compares against.
 """
@@ -10,6 +13,7 @@ from typing import Any
 
 from sqlalchemy import Connection, Row, text
 
+from app.rag import versions
 from app.rag.config import RagConfig, load_rag_config
 from app.rag.embedder import embed_query, rerank_scores
 from app.rag.schemas import RetrievedClause
@@ -17,18 +21,19 @@ from app.rag.schemas import RetrievedClause
 EmbedQuery = Callable[[str], list[float]]
 Rerank = Callable[[str, list[str]], list[float]]
 
+_IN_FORCE = "(CASE WHEN CAST(:docs AS uuid[]) IS NULL THEN d.active ELSE d.id = ANY(CAST(:docs AS uuid[])) END)"
 SEARCH_SQL = text(
-    """SELECT c.clause_id, c.text, c.metadata, d.loan_type, d.version, d.active,
+    f"""SELECT c.clause_id, c.text, c.metadata, d.loan_type, d.version, {_IN_FORCE} AS active,
               1 - (c.embedding <=> CAST(:q AS vector)) AS similarity
        FROM policy_chunks c JOIN policy_documents d ON d.id = c.policy_document_id
-       WHERE d.active AND d.loan_type = ANY(:types) AND c.embedding IS NOT NULL
+       WHERE {_IN_FORCE} AND d.loan_type = ANY(:types) AND c.embedding IS NOT NULL
        ORDER BY c.embedding <=> CAST(:q AS vector)
        LIMIT :n"""
 )
 BY_ID_SQL = text(
-    """SELECT c.clause_id, c.text, c.metadata, d.loan_type, d.version, d.active
+    f"""SELECT c.clause_id, c.text, c.metadata, d.loan_type, d.version, {_IN_FORCE} AS active
        FROM policy_chunks c JOIN policy_documents d ON d.id = c.policy_document_id
-       WHERE d.active AND d.loan_type = ANY(:types) AND c.clause_id = ANY(:ids)"""
+       WHERE {_IN_FORCE} AND d.loan_type = ANY(:types) AND c.clause_id = ANY(:ids)"""
 )
 
 
@@ -43,11 +48,17 @@ class PolicyRetriever:
         config: RagConfig | None = None,
         embed: EmbedQuery = embed_query,
         rerank_fn: Rerank = rerank_scores,
+        docs: dict[str, str] | None = None,
     ) -> None:
         self.conn = conn
         self.cfg = config or load_rag_config()
         self._embed = embed
         self._rerank = rerank_fn
+        self.docs = docs  # loan type -> policy_documents.id; None = the run's bound set
+
+    def _docs(self) -> list[str] | None:
+        docs = self.docs if self.docs is not None else versions.bound()
+        return None if docs is None else sorted(docs.values())
 
     def search(
         self,
@@ -62,7 +73,7 @@ class PolicyRetriever:
         rows = self.conn.execute(
             SEARCH_SQL,
             {"q": str(self._embed(query)), "types": allowed_types(loan_type),
-             "n": candidates or self.cfg.candidates},
+             "n": candidates or self.cfg.candidates, "docs": self._docs()},
         ).all()  # fmt: skip
         rows = [r for r in rows if r.similarity >= self.cfg.min_vector_similarity]
         if not rows:
@@ -86,7 +97,12 @@ class PolicyRetriever:
         if not clause_ids:
             return []
         rows = self.conn.execute(
-            BY_ID_SQL, {"types": allowed_types(loan_type), "ids": sorted(set(clause_ids))}
+            BY_ID_SQL,
+            {
+                "types": allowed_types(loan_type),
+                "ids": sorted(set(clause_ids)),
+                "docs": self._docs(),
+            },
         ).all()
         return [_clause(r, 1.0, None, "rule") for r in rows]
 

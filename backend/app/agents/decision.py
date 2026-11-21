@@ -30,6 +30,7 @@ from app.agents.risk import RiskResult
 from app.agents.runtime import AgentContext, Asked, ask, prompt_text
 from app.agents.state import Flag
 from app.intake.masker import Masker
+from app.rag import versions
 from app.rag.retrieve import PolicyRetriever
 from app.rag.schemas import PolicyResult, RetrievedClause
 from app.scoring.models import ScoreReport
@@ -48,11 +49,14 @@ class Narrative(BaseModel):
 
 
 def version_info(conn: Connection, loan_type: str) -> dict[str, str]:
+    """The policy versions this run used: the set it bound at the start, else the active ones."""
+    docs = versions.bound()
     rows = conn.execute(
         text(
-            "SELECT loan_type, version FROM policy_documents WHERE active AND loan_type = ANY(:t)"
+            "SELECT loan_type, version FROM policy_documents WHERE loan_type = ANY(:t) AND "
+            "(CASE WHEN CAST(:d AS uuid[]) IS NULL THEN active ELSE id = ANY(CAST(:d AS uuid[])) END)"
         ),
-        {"t": ["common", loan_type]},
+        {"t": ["common", loan_type], "d": None if docs is None else sorted(docs.values())},
     ).all()
     return {r[0]: str(r[1]) for r in rows}
 

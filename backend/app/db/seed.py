@@ -62,34 +62,12 @@ def seed_rules(conn: Connection) -> int:
 
 
 def seed_policy(conn: Connection) -> int:
-    n = 0
-    for doc in load_all():
-        doc_id = conn.execute(
-            text(
-                """INSERT INTO policy_documents (loan_type, title, version, source_tag, file_path,
-                       effective_from, active)
-                   VALUES (:lt, :title, :version, 'sample', :path, :eff, true)
-                   ON CONFLICT (loan_type, version) DO UPDATE SET title = EXCLUDED.title,
-                       file_path = EXCLUDED.file_path, effective_from = EXCLUDED.effective_from
-                   RETURNING id"""
-            ),
-            {"lt": doc.loan_type, "title": doc.title, "version": doc.version,
-             "path": str(doc.path.relative_to(REPO_ROOT)), "eff": doc.effective_from},
-        ).scalar_one()  # fmt: skip
-        for c in doc.clauses:
-            conn.execute(
-                text(
-                    """INSERT INTO policy_chunks (policy_document_id, clause_id, text, metadata)
-                       VALUES (:d, :cid, :t, CAST(:m AS jsonb))
-                       ON CONFLICT (policy_document_id, clause_id)
-                       DO UPDATE SET text = EXCLUDED.text, metadata = EXCLUDED.metadata,
-                                     embedding = NULL"""
-                ),
-                {"d": doc_id, "cid": c.clause_id, "t": c.text,
-                 "m": json.dumps({"source_tag": c.source_tag, "title": c.title})},
-            )  # fmt: skip
-            n += 1
-    return n
+    """Import the policy files without embeddings (`python -m app.rag.reindex` adds them). The
+    same import rules as the re-index command apply: a version already in the database is kept."""
+    from app.rag.index import reindex  # noqa: PLC0415 - keeps the seed free of the model imports
+
+    reindex(conn, load_all(), embed=None)
+    return sum(len(d.clauses) for d in load_all())
 
 
 def _records(out: Path, name: str) -> list[dict[str, Any]]:

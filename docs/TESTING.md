@@ -202,6 +202,20 @@ File: `backend/tests/test_email.py` (no network: a fake SMTP client and recordin
 - **Migration 0020** applies, rolls back to 0019 and applies again.
 - **Not covered:** a real send to Resend (needs the key in `.env`; a manual check), and a browser run (Part 3).
 
+## 7i. Knowledge base tests (Stage 10c, 2026-11-21)
+
+File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and reranker; database tests use the throwaway database). Frontend: `KnowledgeBasePage.test.jsx`, `Sidebar.test.jsx`, `HelpPage.test.jsx`. Browser: `e2e/knowledge-base.spec.js`.
+
+- **Format check:** the six shipped policy files pass with no errors and nothing to fix; each error is reported (front matter, loan type, label format, label taken, label older, bad heading, clause prefix, duplicate, empty clause, a rule's clause missing, injection, personal data); warnings for a changed rule number (naming the rule and both numbers), a renamed clause, a changed source tag and a long clause; ordinary score wording is not taken for an injection.
+- **Auto-fix:** five heading forms become `## ID | source | title` (the source from the version in force when it is missing); fixes never change a clause's words or numbers; missing front matter and a taken label are fixed.
+- **Upload and old format:** a Word file becomes headings, paragraphs and table rows; a `.doc`, a PDF, a damaged zip, a DTD, a file over 1 MB and a binary file are refused; a Windows-1252 text file is read with a note; an old document maps headings to clause IDs by title, proposes new IDs, leaves out part titles, and the check still catches a missing rule clause.
+- **Flow over HTTP:** roles (officer reads the version in force only, auditor 403 everywhere); draft, one-clause edit, warning, publish refused before the retrieval check, without the tick, without the second click or with a short reason; publish switches versions, writes the audit rows, removes the draft; a run bound before the publish keeps the old text and version stamp; deleting or editing a published version is refused by the database.
+- **Lifecycle:** a draft with errors is saved but not staged and cannot be checked or published; a future date schedules, blocks another publish, and becomes active on its date while pausing only the precedent whose rule's clause changed; retire (not the version in force, not twice), restore into a draft with a new label, compare; add a clause with the next free ID, refuse another loan type's prefix.
+- **Learnings:** a paused precedent is not found by search; confirming again needs a reason of 10 characters; confirmed it is found; retired it is not, and cannot be retired twice; the audit rows come in order.
+- **Re-index:** the reason and second click are required; after a screen publish the older file is never made active again; index health and the evaluation run; a file with a new label and a future date is scheduled, then activated on its date.
+- **Existing tests changed:** `test_rag.py` counts embedded clauses by distinct text (two shipped clauses share text, so the second copies the vector) and marks a version superseded through `status`.
+- **Not covered:** the real embedding model on a draft (the retrieval check runs it in the app; tests use the fake), Neon (`python -m app.db.migrate` for 0021 is still to run there).
+
 ## 8. Demo checks (Stage 11)
 
 - Clean case per loan type completes with report.

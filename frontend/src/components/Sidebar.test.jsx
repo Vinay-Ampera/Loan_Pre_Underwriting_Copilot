@@ -19,6 +19,14 @@ describe('Sidebar', () => {
     expect(links('auditor')).toEqual(['Overview', 'Cases', 'Audit log', 'Users', 'Help'])
   })
 
+  it('gives the officer the read-only policy library, and the admin the knowledge base', () => {
+    const officer = links('officer')
+    expect(officer).toContain('Policies')
+    expect(officer).not.toContain('Knowledge base')
+    cleanup()
+    expect(links('auditor')).not.toContain('Policies')
+  })
+
   it('gives the officer upload links next to sent items', () => {
     const items = links('officer')
     expect(items.indexOf('Upload links')).toBeGreaterThan(items.indexOf('New case'))
@@ -37,6 +45,7 @@ describe('Sidebar', () => {
       'Home',
       'Inbox',
       'Precedents',
+      'Knowledge base',
       'Upload links',
       'Messages',
       'Issues',

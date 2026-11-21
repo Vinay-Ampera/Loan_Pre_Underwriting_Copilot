@@ -27,7 +27,7 @@ from app.rag.evaluate import (
     score_query,
 )
 from app.rag.grounding import check_grounding
-from app.rag.index import reindex
+from app.rag.index import clause_hash, reindex
 from app.rag.policy_loader import POLICY_DIR, load_all
 from app.rag.precedents import find_precedents, precedent_text
 from app.rag.retrieve import PolicyRetriever, merge
@@ -75,8 +75,10 @@ def chunk_count(conn: Connection, active_only: bool = True) -> int:
 @pytest.mark.db
 def test_reindex_embeds_every_clause_then_is_a_no_op(conn: Connection) -> None:
     total = sum(len(d.clauses) for d in load_all())
+    distinct = len({clause_hash(c) for d in load_all() for c in d.clauses})
     first = reindex(conn, embed=fake_embed_passages)
-    assert first.embedded == total and first.touched
+    # a clause whose text is already stored copies that vector instead of being embedded again
+    assert first.embedded == distinct < total and first.touched
     missing = conn.execute(text("SELECT count(*) FROM policy_chunks WHERE embedding IS NULL"))
     assert missing.scalar_one() == 0
 
@@ -144,7 +146,7 @@ def test_search_filters_by_loan_type_and_active_version(conn: Connection) -> Non
         assert hits
         assert all(h.clause_id.startswith(("CM-", prefix)) for h in hits), loan
         assert all(h.active for h in hits)
-    conn.execute(text("UPDATE policy_documents SET active = false WHERE loan_type = 'home'"))
+    conn.execute(text("UPDATE policy_documents SET status = 'superseded' WHERE loan_type = 'home'"))
     hits = r.search("home loan credit score", "home", top_k=30, rerank=False)
     assert hits and all(h.clause_id.startswith("CM-") for h in hits)
 

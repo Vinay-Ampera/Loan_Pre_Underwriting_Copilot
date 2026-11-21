@@ -1,0 +1,29 @@
+.policy-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ph-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ph-item {
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ph-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.ph-actions {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}

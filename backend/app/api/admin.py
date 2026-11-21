@@ -19,7 +19,7 @@ from app.rag.precedents import precedent_text
 from app.scoring.rules import RuleSet
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-STATUSES = ("pending", "held", "approved", "rejected", "expired")
+STATUSES = ("pending", "held", "approved", "rejected", "expired", "paused", "retired")
 
 
 def _latest(ruleset: RuleSet) -> date:

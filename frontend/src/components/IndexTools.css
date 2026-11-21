@@ -1,0 +1,47 @@
+.index-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.it-section {
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.it-section h4 {
+  font-size: var(--fs-16);
+}
+.it-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.it-table th,
+.it-table td {
+  padding: var(--s-2) var(--s-3);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.it-table thead th {
+  font-size: var(--fs-12);
+  color: var(--muted);
+  font-weight: 500;
+}
+.it-bad {
+  color: var(--reject);
+}
+.it-files {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.it-actions {
+  display: flex;
+  gap: var(--s-2);
+}
+.it-check {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+}

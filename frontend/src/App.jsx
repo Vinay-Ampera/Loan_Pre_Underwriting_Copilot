@@ -29,6 +29,8 @@ import AdminHomePage from './pages/AdminHomePage'
 import AdminPrecedentsPage from './pages/AdminPrecedentsPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminAiControlPage from './pages/AdminAiControlPage'
+import KnowledgeBasePage from './pages/KnowledgeBasePage'
+import PolicyLibraryPage from './pages/PolicyLibraryPage'
 import AdminOfficerPage from './pages/AdminOfficerPage'
 import AuditorOverviewPage from './pages/AuditorOverviewPage'
 import AuditLogPage from './pages/AuditLogPage'
@@ -139,6 +141,22 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminUsersPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/knowledge"
+        element={
+          <Shell role="admin">
+            <KnowledgeBasePage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/policies"
+        element={
+          <Shell role="officer">
+            <PolicyLibraryPage />
           </Shell>
         }
       />

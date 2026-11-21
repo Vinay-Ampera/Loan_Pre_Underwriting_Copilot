@@ -46,6 +46,7 @@ const paths = {
   file: 'M6 3h8l4 4v14H6zM14 3v4h4',
   pencil: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4',
   'shield-check': 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5',
+  book: 'M5 4.5A1.5 1.5 0 016.5 3H19v15H6.5A1.5 1.5 0 005 19.5zM5 19.5A1.5 1.5 0 006.5 21H19v-3M9 7h6M9 10.5h4',
 }
 
 export default function Icon({ name, size = 18, className }) {

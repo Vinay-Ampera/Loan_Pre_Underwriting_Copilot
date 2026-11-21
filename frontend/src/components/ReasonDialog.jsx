@@ -5,7 +5,8 @@ export const MIN_REASON = 10
 
 /**
  * The second click for a change that affects every new case: say why in your own words (at least
- * ten characters), then confirm. Nothing is sent until the confirm button is pressed.
+ * ten characters), then confirm. Nothing is sent until the confirm button is pressed. `blocked`
+ * keeps the confirm button off until something else in the dialog is done (a tick, say).
  */
 export default function ReasonDialog({
   title,
@@ -13,6 +14,7 @@ export default function ReasonDialog({
   children,
   busy = false,
   error = null,
+  blocked = false,
   onClose,
   onConfirm,
 }) {
@@ -48,7 +50,7 @@ export default function ReasonDialog({
         <button
           type="button"
           className="btn btn-primary"
-          disabled={!ok || busy}
+          disabled={!ok || busy || blocked}
           onClick={() => onConfirm(reason.trim())}
         >
           {busy ? 'Saving…' : confirmLabel}

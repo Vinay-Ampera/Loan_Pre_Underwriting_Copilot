@@ -58,6 +58,7 @@ const OFFICER = [
   ['contact', 'Contact the customer', 'mail'],
   ['inbox', 'Your inbox', 'bell'],
   ['problem', 'Report a problem', 'flag'],
+  ['policies', 'Read the policy', 'book'],
   ['agents', 'What each agent does', 'users'],
   ['score', 'Score weights and bands', 'home'],
 ]
@@ -71,6 +72,7 @@ const ADMIN = [
   ['adm-inbox', 'Your inbox', 'bell'],
   ['issues', 'Read issue reports', 'flag'],
   ['precedents', 'The precedent queue', 'precedent'],
+  ['knowledge', 'Knowledge base: policies and learnings', 'book'],
   ['ai-control', 'AI control: models and prompts', 'sliders'],
 ]
 
@@ -351,6 +353,23 @@ function OfficerGuide() {
         </p>
       </HelpSection>
 
+      <HelpSection id="policies" icon="book" title="Read the policy">
+        <p>
+          Policies in the menu shows the policy in force, clause by clause: the common credit policy
+          and one per loan type. Under each clause you see the rules that use it, with their numbers
+          (for example a credit score of at least 700). Search finds the clauses the Policy agent
+          would be given for a question about a loan type.
+        </p>
+        <ul>
+          <li>You can read and search; only the admin can change a policy.</li>
+          <li>
+            A case is checked against the version in force when it starts. A version published later
+            reaches only cases that start after it, and a report keeps the clause text it cited.
+          </li>
+          <li>When a new version is scheduled, the page says from which date it takes effect.</li>
+        </ul>
+      </HelpSection>
+
       <HelpSection id="agents" icon="users" title="What each agent does">
         <div className="agent-grid">
           {AGENTS.map(([name, points, does, more]) => (
@@ -533,6 +552,68 @@ function AdminGuide() {
           An admin change to one case never creates a precedent. Only an officer&apos;s override
           goes through the three gates.
         </Callout>
+      </HelpSection>
+
+      <HelpSection id="knowledge" icon="book" title="Knowledge base: policies and learnings">
+        <p>
+          Knowledge base holds the policy the Policy agent reads, what the system has learned from
+          overrides, and the search index. Every change goes through a draft; nothing reaches
+          officers or cases until you publish it.
+        </p>
+        <ol className="help-flow">
+          <li>
+            <strong>Draft</strong>
+            <span className="muted">
+              Change one clause, add or remove one, edit the whole text, or upload a .md, .txt or
+              .docx file. An older document without clause IDs can be imported: each heading becomes
+              a clause and you check every proposed ID.
+            </span>
+          </li>
+          <li>
+            <strong>Check</strong>
+            <span className="muted">
+              Errors block publishing, warnings need a tick. Auto-fix corrects formatting only
+              (headings, spaces, the version label), never a clause&apos;s words or numbers.
+            </span>
+          </li>
+          <li>
+            <strong>Retrieval check</strong>
+            <span className="muted">
+              The evaluation questions run against the version in force and the draft, so you see
+              whether search still finds the right clauses.
+            </span>
+          </li>
+          <li>
+            <strong>Publish</strong>
+            <span className="muted">
+              A written reason and a second click. A future effective date schedules the version
+              instead.
+            </span>
+          </li>
+        </ol>
+        <Callout tone="warn" title="Scoring numbers live in the rules file">
+          Changing a number in a clause (say 700 to 720) does not change the score. The check warns
+          you; the rules file has to be changed too, with a golden-set rerun.
+        </Callout>
+        <ul>
+          <li>
+            A rule needs its clause: removing a clause a rule cites is an error. Keep the clause and
+            change its text instead.
+          </li>
+          <li>
+            Old versions are never edited or deleted. History lets you read and compare them,
+            restore one into a new draft, or retire a scheduled or replaced version.
+          </li>
+          <li>
+            Learnings lists approved precedents with how often each helped a case. When a published
+            change touches a clause a precedent&apos;s rules use, the precedent is paused until you
+            confirm it again or retire it.
+          </li>
+          <li>
+            Search and index shows what is embedded, which policy files on the server are newer, a
+            re-index from the files, and the retrieval evaluation against its targets.
+          </li>
+        </ul>
       </HelpSection>
     </>
   )

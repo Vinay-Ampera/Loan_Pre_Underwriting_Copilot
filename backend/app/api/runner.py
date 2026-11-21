@@ -18,6 +18,7 @@ from app.agents.graph import Pipeline
 from app.agents.submission import Submission
 from app.api.deps import write_audit
 from app.core.config import Settings, get_settings
+from app.rag import versions
 from app.services import ai_config
 
 log = logging.getLogger("loan_copilot.runner")
@@ -47,6 +48,13 @@ class Runner:
             try:
                 # the configuration in force when this run starts is the one it uses to the end
                 ai_config.bind(await ai_config.refresh_async(self.engine, self.settings))
+                # and so are the policy versions (a scheduled version whose date has come
+                # becomes active first)
+                versions.bind(
+                    await asyncio.to_thread(
+                        versions.for_run, self.engine, self.pipeline.ctx.ruleset
+                    )
+                )
                 await job()
             except asyncio.CancelledError:
                 raise  # shutdown: the checkpoint stays, recover() continues it next start

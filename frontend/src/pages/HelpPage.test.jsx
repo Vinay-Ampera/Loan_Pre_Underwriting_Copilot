@@ -32,6 +32,7 @@ describe('HelpPage', () => {
     expect(screen.getByRole('list', { name: 'Score weights' })).toHaveTextContent('Income and FOIR')
     expect(screen.getByRole('list', { name: 'Score bands' })).toHaveTextContent('60 to 84: refer')
     expect(screen.getByRole('heading', { name: 'Confirm or override' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Read the policy' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'The precedent queue' })).toBeNull()
   })
 
@@ -42,6 +43,10 @@ describe('HelpPage', () => {
     expect(screen.getByRole('heading', { name: 'Reset a password' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Open and correct a case' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Reassign a case' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Knowledge base: policies and learnings' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Read the policy' })).toBeNull()
     expect(screen.queryByRole('list', { name: 'Score weights' })).toBeNull()
   })
 

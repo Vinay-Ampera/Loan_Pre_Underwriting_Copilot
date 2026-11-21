@@ -68,9 +68,15 @@ def citation_validity(hits: list[RetrievedClause], loan_type: str, known: dict[s
     return ok / len(hits)
 
 
-def evaluate(conn: Connection, queries: list[Query], rerank: bool) -> dict[str, float]:
-    retriever = PolicyRetriever(conn)
-    known = {c.clause_id: d.loan_type for d in load_all() for c in d.clauses}
+def evaluate(
+    conn: Connection, queries: list[Query], rerank: bool, *,
+    retriever: PolicyRetriever | None = None, known: dict[str, str] | None = None,
+) -> dict[str, float]:  # fmt: skip
+    """Average metrics over the queries. `retriever` and `known` (clause -> loan type) default to
+    the active versions and the policy files; the knowledge base passes a draft's set instead."""
+    retriever = retriever or PolicyRetriever(conn)
+    if known is None:
+        known = {c.clause_id: d.loan_type for d in load_all() for c in d.clauses}
     sums: dict[str, float] = {}
     validity: list[float] = []
     for q in queries:
@@ -78,10 +84,10 @@ def evaluate(conn: Connection, queries: list[Query], rerank: bool) -> dict[str, 
         for name, value in score_query(q.expected, [h.clause_id for h in hits]).items():
             sums[name] = sums.get(name, 0.0) + value
         validity.append(citation_validity(hits, q.loan_type, known))
-    n = len(queries)
+    n = len(queries) or 1
     metrics = {name: round(v / n, 4) for name, v in sums.items()}
     metrics["citation_validity"] = round(sum(validity) / n, 4)
-    metrics["queries"] = float(n)
+    metrics["queries"] = float(len(queries))
     return metrics
 
 

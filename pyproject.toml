@@ -33,12 +33,16 @@ select = ["E", "F", "I", "B", "UP", "SIM", "N"]
 "backend/tests/test_bundle.py" = ["F811"]
 "backend/tests/test_ai_control.py" = ["F811"]
 "backend/tests/test_upload_links.py" = ["F811"]
+"backend/tests/test_knowledge_base.py" = ["F811"]
 # intake: dense label tables and messages
 "backend/app/intake/*" = ["E501"]
 # agents: long prompt-feedback strings and SQL
 "backend/app/agents/*" = ["E501"]
 # api: SQL strings and response dicts
 "backend/app/api/*" = ["E501"]
+# rag and learning: SQL, policy-check messages for the admin (knowledge base)
+"backend/app/rag/*" = ["E501"]
+"backend/app/learning/maintenance.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

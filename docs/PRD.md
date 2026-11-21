@@ -28,9 +28,9 @@ The users are **bank staff**, not applicants. Applicants never log in and have n
 
 | Role | What they do |
 |---|---|
-| Loan officer | Creates a case, picks the loan type, fills the application form, uploads documents (all at once or one by one), clicks "Submit for assessment", reads the report, confirms or overrides (with a reason) |
+| Loan officer | Creates a case, picks the loan type, fills the application form, uploads documents (all at once or one by one), clicks "Submit for assessment", reads the report, confirms or overrides (with a reason). Reads the policy in force (read-only Policies page, Stage 10c) |
 | Auditor | Read-only (added 2026-11-03, reshaped the same day). Exactly one account, created only from the command line. Sees how many cases there are and in which state, not what a loan is: the Overview charts, a static Cases table with filters and CSV export (no applicant, document, report or message content, no case page), the audit log (masked, filters, CSV) and the users list. Changes nothing |
-| Admin | Sits above the loan officers. Manages users (any number of officers) in a Users screen (create, disable, reset password; Stage 8), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits policy and rule files, triggers re-indexing. Since 2026-11-03: opens any officer's case (documents, report, audit trail), **corrects** a decision after the officer has decided it (reason, second click, a separate record beside the officer's, never over a hard rule, never a precedent), **reassigns** a case the officer has not decided, reads the messages officers sent (no drafts) and each case's own audit tab. The system-wide audit log is the auditor's alone |
+| Admin | Sits above the loan officers. Manages users (any number of officers) in a Users screen (create, disable, reset password; Stage 8), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits the rules file, changes the policy documents and manages the learnings in the knowledge base (Stage 10c, 2026-11-21), triggers re-indexing. Since 2026-11-03: opens any officer's case (documents, report, audit trail), **corrects** a decision after the officer has decided it (reason, second click, a separate record beside the officer's, never over a hard rule, never a precedent), **reassigns** a case the officer has not decided, reads the messages officers sent (no drafts) and each case's own audit tab. The system-wide audit log is the auditor's alone |
 
 (Earlier we discussed a separate underwriter and a reviewer. For v1 the loan officer plays the underwriter, and the admin plays the reviewer. Three roles: admin, loan officer and, from 2026-11-03, one read-only auditor.)
 
@@ -65,7 +65,7 @@ The users are **bank staff**, not applicants. Applicants never log in and have n
 - Training any model or hosting any local LLM. DPO, TRL, Colab and a tuned Qwen model are **removed** (user decision, 2026-10-31). LLMs are used only through APIs. Local embeddings, reranker and OCR (from the pip venv) are not LLMs and stay.
 - Celery and Redis (not needed for v1; can be added later).
 - Hosted file storage (local disk in v1).
-- Admin UI for policy upload (v1 uses files plus a re-index command).
+- ~~Admin UI for policy upload~~: built as the knowledge base in Stage 10c (2026-11-21, decision 12 changed by the user, see 9.5). Editing the rules file from the browser stays out: scoring numbers change only in the file, with a golden-set rerun.
 
 ## 5. End-to-end workflow
 
@@ -240,9 +240,16 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-18 A precedent **never overrides a hard rule**. A strong approved precedent can lift a borderline case's label (for example "refer → recommend approve, supported by precedent P-0042") by a capped bonus set in the rules file. The officer still confirms.
 - FR-19 Main policy files are never modified by learning. Precedents are stored separately.
 
-### 9.5 Policy updates
+### 9.5 Policy updates and the knowledge base (Stage 10c, built 2026-11-21; decision 12 changed by the user)
 
-- FR-20 v1: edit policy and rule files, run a re-index command. Policy and rule versions are recorded on each report. An admin upload screen comes later.
+- FR-20 v1: edit policy and rule files, run a re-index command. Policy and rule versions are recorded on each report. **Changed 2026-11-21:** the database now holds every policy version and is the source of truth; the files in `data/policy` are the starting data that the re-index command imports when their version label is new (E-94). The rules file is still edited by hand only.
+- FR-52 (built) The admin has a **Knowledge base** page with three tabs: **Policies** (the six policies; for each, Read, Change and History), **Learnings** (approved precedents and what happened to them) and **Search and index** (a search tester, index health, the policy files on the server, a re-index and the retrieval evaluation). Officers get a read-only **Policies** page (the version in force, the rules that use each clause, search); the auditor gets neither (403).
+- FR-53 (built) A change always goes through a draft, one per loan type: change, add or remove one clause, edit the whole text, or upload a `.md`, `.txt` or `.docx` file (1 MB at most), which is converted to the Markdown policy format. A document in an old format (headings, no clause IDs) can be imported: headings become clauses, an existing clause ID is reused when the title matches, new IDs are proposed and the admin ticks that every ID was checked (E-97).
+- FR-54 (built) Every draft is checked. **Errors** block publishing (front matter, loan type, version label new and later, clause headings, clause prefix, duplicates, empty clauses, a clause a rule cites is missing, instruction-like text, personal data). **Warnings** need a tick (a number a linked rule uses is gone from its clause, E-92; a clause looks renamed; a source tag changed; a very long or short clause; more than half the clauses change; a past or far date). **Auto-fix** offers formatting fixes only (heading form, source tag spelling, spaces, quotes, missing front-matter fields, the next version label), shown before and after, applied only when the admin chooses; it never changes a clause's words or numbers.
+- FR-55 (built) Before publishing, the admin sees the clause-by-clause comparison with the version in force (word by word) and must run the **retrieval check**: the development evaluation questions for that policy run against the version in force and the draft. Citation validity below 100% blocks; a lower score is a warning. Publishing needs a written reason and a second click. A future effective date schedules the version; it becomes active on that date (E-95).
+- FR-56 (built) A published version is never edited or deleted. History reads and compares any two versions, restores an older text into a new draft (published like any change), and retires a scheduled or replaced version. The version in force cannot be retired (E-99). A case uses the versions in force when it starts (E-91); its report keeps the clause text it cited and records the versions.
+- FR-57 (built) When a published change alters a clause that an approved precedent's rules use, the precedent is paused until the admin confirms it again or retires it (E-98). Learnings shows each precedent's status, expiry, use count, last use and the cases it lifted. Retiring and confirming again need a reason and a second click.
+- FR-58 (built) Every step is in the audit log: draft saved or discarded, published, activated, retired, re-indexed, precedent paused, confirmed again or retired.
 
 ### 9.6 Customer contact messages (Stage 9, built 2026-11-02)
 
@@ -374,4 +381,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); Part 3 (hardening and close-out) is not started and waits for the user. Stage 11 (hardening, Docker, demo) follows. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) is not started and waits for the user. Stage 11 (hardening, Docker, demo) follows. Status is tracked in `PROGRESS.md`.

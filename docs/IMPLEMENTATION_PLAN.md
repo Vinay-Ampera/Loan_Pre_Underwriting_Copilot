@@ -301,6 +301,33 @@ Risks: the classifier misses unusual titles, so many files land in "unrecognised
 
 Exit criteria: met by the tests in TESTING 7f.
 
+## Stage 10c: Knowledge base (policy documents and learnings) (L), planned and built 2026-11-21
+
+**Goal:** the admin can read, change, upload, schedule, compare, restore and retire the policy documents the Policy agent reads, see what the system has learned (approved precedents) and keep both healthy, from the browser, without weakening a locked decision. Officers can read and search the policy in force. Requested 2026-11-21, before Notifications Part 3 and Stage 11; the user accepted every recommendation of the plan and chose to accept `.txt` and `.docx` uploads as well as Markdown (converted to Markdown).
+
+**Decisions (user, 2026-11-21):**
+1. The database is the source of truth for policy text (changes locked decision 12); `data/policy` files are starting data imported by `python -m app.rag.reindex` only when their label is new.
+2. Scoring numbers stay in the rules file; a number that changes in a clause gives a warning naming the rule (E-92). No rules editing in the browser.
+3. Old-format documents are imported by code only (no LLM); the admin checks every proposed clause ID.
+4. Uploads: `.md`, `.txt`, `.docx`, converted to Markdown.
+5. A published change pauses approved precedents whose rules use a changed clause, until the admin confirms them again or retires them.
+6. Officers get a read-only Policies page. No new notification kind.
+
+**Parts and exit criteria**
+
+| Part | What | Exit criteria |
+|---|---|---|
+| A | Read only: policy list, clause reader with the rules that use each clause and recent citation counts, versions, live learnings, index health, search tester; officer Policies page | Admin and officer see what their role allows; the auditor gets 403 on every route |
+| B | Format check, auto-fix, rule-number drift, old-format import, upload conversion (pure code, shared with the command line) | Each error, warning and fix has a test; the six shipped policy files pass with no errors |
+| C | Drafts (one per loan type, saved even with errors, staged and embedded when they pass), clause edits, whole text, upload, retrieval check, publish with reason and second click, schedule, history (compare, restore, retire), version bound per run, file import rules | A changed clause reaches new cases while a running case and old reports keep the old text; a published version cannot be deleted or edited (database trigger); an older file never comes back after a screen publish |
+| D | Learnings: pause on policy change, confirm again, retire, use history (`precedent_uses`) | A paused or retired precedent gives no bonus; an expired one cannot be confirmed again |
+
+**Built:** migration 0021 (`policy_documents` lifecycle and body, `policy_drafts`, precedent `paused` and `retired`, `precedent_uses`); `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`; `rag/index.py` and `rag/reindex.py` rewritten for the import rules; `api/knowledge.py`; the runner binds the policy versions; pages `KnowledgeBasePage` and `PolicyLibraryPage` with their components. Details: PRD 9.5, DATABASE 4, SECURITY 4g, EDGE_CASES E-91 to E-100, TESTING 7i, DESIGN_SYSTEM 14.
+
+**Not included:** editing the rules file or `data/rag/config.yaml` in the browser; LLM help to convert old documents; PDF uploads; an inbox notice when a policy changes; a scheduler (scheduled versions switch on the first read after their date).
+
+---
+
 ## Stage 11: Hardening, Docker and demo (M)
 
 **Goal:** a reproducible package and a smooth demo.

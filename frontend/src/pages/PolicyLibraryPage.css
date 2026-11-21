@@ -1,0 +1,31 @@
+.lib-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.lib-search {
+  padding: var(--s-5);
+}
+.lib-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: var(--s-5);
+  align-items: start;
+}
+.lib-reader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+}
+.lib-note {
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-input);
+  background: var(--unverified-bg);
+  color: var(--unverified);
+}
+@media (max-width: 860px) {
+  .lib-grid {
+    grid-template-columns: 1fr;
+  }
+}

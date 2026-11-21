@@ -62,8 +62,11 @@ One row per (case, stage); a stage that runs again (resume, correction) replaces
 An admin's correction of an officer's decision, next to `officer_actions` (never edited). The latest row per case is the decision in force. Reassigning a case changes `cases.created_by` and is recorded in `audit_log` (`case_reassigned`, before and after officer names, reason). `report_ro` may read the table.
 
 **precedents**
-`id, source_case_id (nullable; cleared if the source case is deleted), status (pending|held|approved|rejected|expired), loan_type, rule_ids text[] (rules involved), original_score, original_recommendation, final_decision, officer_reason, report_summary, embedding vector(384), proposed_by, reviewed_by, reviewed_at, valid_until, times_used, created_at`
-`held` = failed the code-side hard-rule check; it never reaches the admin or RAG. A CHECK constraint stops a row becoming `approved` without a reviewer, review time, expiry date and embedding.
+`id, source_case_id (nullable; cleared if the source case is deleted), status (pending|held|approved|rejected|expired|paused|retired), loan_type, rule_ids text[] (rules involved), original_score, original_recommendation, final_decision, officer_reason, report_summary, embedding vector(384), proposed_by, reviewed_by, reviewed_at, valid_until, times_used, created_at, paused_at, paused_reason, retired_by, retired_at, retired_reason`
+`held` = failed the code-side hard-rule check; it never reaches the admin or RAG. A CHECK constraint stops a row becoming `approved` without a reviewer, review time, expiry date and embedding. `paused` (migration 0021): a published policy change altered a clause one of its rules uses; search ignores it until the admin confirms it again. `retired`: taken out early by the admin.
+
+**precedent_uses** (migration 0021)
+`id, precedent_id → precedents (cascade), case_id → cases (set null), bonus, used_at`. One row each time a precedent's bonus reached a case; the Learnings view reads it.
 Index: HNSW on `embedding`; btree on `(loan_type, status)`.
 
 **outbox** (Stage 9, migration 0010)
@@ -85,7 +88,10 @@ Append-only; no update or delete grants.
 ## 4. Policy and rules
 
 **policy_documents**
-`id, loan_type (or 'common'), title, version, source_tag (public|RBI|sample), file_path, effective_from, active, checksum (sha256 of the file), indexed_at`. One active version per loan type; a new `version` in a file's front matter adds a row and deactivates the old one. `policy_chunks.metadata` holds `source_tag`, `title` and `text_hash` (a clause is re-embedded only when the hash changes).
+`id, loan_type (or 'common'), title, version, source_tag (public|RBI|sample), file_path (nullable), effective_from, status (draft|scheduled|active|superseded|retired), active (computed: status = 'active'), body (the version's full Markdown), origin (file|upload|edit|restore|legacy), reason, based_on, created_by, created_at, published_by, published_at, retired_by, retired_at, retired_reason, checksum (sha256 of the text), indexed_at`. Since migration 0021 (Stage 10c) the database holds every version and is the source of truth; `data/policy` files are imported when their label is new. At most one `active`, one `scheduled` and one `draft` row per loan type (partial unique indexes). A trigger refuses deleting any row that is not a draft, changing the text of a published row (except a file-imported row edited under the same label, E-20) and bringing a retired row back. A `draft` row is the staged copy of the admin's draft, embedded for the retrieval check; search never reads it. `policy_chunks.metadata` holds `source_tag`, `title` and `text_hash` (a clause is re-embedded only when the hash changes; a stored vector with the same hash is copied instead of embedding again).
+
+**policy_drafts** (migration 0021)
+`loan_type (pk), body, origin (upload|edit|restore|legacy), based_on, document_id (the staged draft row, null while the text has errors), body_hash, check_report jsonb, retrieval_report jsonb, retrieval_hash, updated_by, updated_at`. One working draft per loan type; saved even when it fails the format check. Publishing needs `retrieval_hash = body_hash`. Deleted when published or discarded.
 
 **policy_chunks**
 `id, policy_document_id, clause_id, text, embedding vector(384), metadata jsonb`
@@ -96,7 +102,7 @@ Index: HNSW on `embedding`; btree on `clause_id`.
 
 **rule_set_versions**
 `version, checksum, loaded_at, loaded_by`
-Each report stores the policy and rules version used.
+Each report stores the policy and rules version used. Since Stage 10c the policy versions are those the run bound when it started (E-91).
 
 ## 4b. AI control (migration 0018)
 

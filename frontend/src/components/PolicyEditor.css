@@ -1,0 +1,139 @@
+.policy-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.pe-bar {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--raised);
+}
+.pe-bar span {
+  margin-right: auto;
+}
+.pe-tabs {
+  display: flex;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+}
+.pe-tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: var(--s-2) var(--s-3);
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.pe-tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--brand);
+  font-weight: 500;
+}
+.pe-pane,
+.pe-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.pe-section {
+  padding: var(--s-5);
+}
+.pe-section h4 {
+  font-size: var(--fs-16);
+}
+.pe-clauses {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.pe-clause {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.pe-clause p {
+  margin-top: var(--s-1);
+}
+.pe-clause-actions {
+  display: flex;
+  gap: var(--s-1);
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+.pe-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+}
+.pe-row {
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.pe-grow {
+  flex: 1 1 240px;
+}
+.pe-actions {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pe-text {
+  font-size: var(--fs-13);
+  line-height: 1.5;
+}
+.pe-preview {
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  font-size: var(--fs-12);
+  max-height: 260px;
+  overflow: auto;
+  background: var(--raised);
+  border-radius: var(--radius-input);
+  padding: var(--s-3);
+}
+.pe-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pe-table th,
+.pe-table td {
+  padding: var(--s-2) var(--s-3);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.pe-table thead th {
+  font-size: var(--fs-12);
+  color: var(--muted);
+  font-weight: 500;
+}
+.pe-worse {
+  color: var(--reject);
+}
+.pe-check {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+}
+.pe-blockers {
+  padding-left: var(--s-5);
+}
+@media (max-width: 640px) {
+  .pe-clause {
+    flex-direction: column;
+  }
+}

@@ -20,7 +20,6 @@ from uuid import UUID
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
-from sqlalchemy import text
 
 from app.agents import evals, store
 from app.agents.assemble import extract
@@ -35,6 +34,7 @@ from app.agents.state import RESET, EvalRecord, Flag, LLMCallRecord, PipelineSta
 from app.agents.submission import DocumentRef, Submission
 from app.agents.supervisor import CasePlan, run_supervisor
 from app.learning.bonus import precedent_bonus
+from app.learning.maintenance import record_use
 from app.learning.proposal import propose_precedent
 from app.notifications import inbox
 from app.observability import metrics, tracing
@@ -280,9 +280,8 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             if bonus > 0:  # rescored in code; score_case refuses it unless the case is borderline
                 score = score_case(_input(state), rs, precedent_bonus=bonus)
                 if score.precedent_bonus > 0 and used:
-                    with ctx.engine.begin() as conn:
-                        conn.execute(text("UPDATE precedents SET times_used = times_used + 1 WHERE id = :i"),
-                                     {"i": used})  # fmt: skip
+                    with ctx.engine.begin() as conn:  # counted, and listed in the Learnings view
+                        record_use(conn, used, _case(state), score.precedent_bonus)
         kyc_r = KycResult.model_validate(state["kyc"]) if state.get("kyc") else None
         risk_r = RiskResult.model_validate(state["risk"]) if state.get("risk") else None
         plan = CasePlan.model_validate(state["plan"])
