@@ -2,14 +2,17 @@
 
     python -m app.eval.run --split dev                      print metrics, check the thresholds
     python -m app.eval.run --split dev --write-baseline     store the metrics as the baseline
-    python -m app.eval.run --split dev --pipeline --no-llm  also run the agent pipeline (needs DB)
+    python -m app.eval.run --split test --allow-test        the held-out split (final run only)
+
+The whole pipeline is run by `python -m app.agents.run --split dev [--no-llm]` (needs a database).
 
 The default (code) metrics need no database and no model: every case is rebuilt from its
 structured data and scored by the rules engine, so this is what GitHub Actions runs on a PR.
 Retrieval quality has its own runner (`python -m app.rag.evaluate`). The only model-judged check
 today is inside the pipeline: when code cannot tie a claim in the Decision summary to a finding,
 the judge model grades it (`app.agents.evals.judge_claim`, stored in `eval_scores` with method
-`judge`). No RAGAS or DeepEval suite is built yet.
+`judge`), and `python -m app.eval.judge` grades the stored reports of a models-on run offline
+(it replaced the RAGAS and DeepEval suites, user decision 2026-11-21).
 
 A run fails (exit 1) when a metric is below its floor in `docs/baselines/thresholds.json` or has
 dropped more than `max_drop` below the stored baseline. The held-out test split needs --allow-test.

@@ -11,6 +11,13 @@ STAGE_SECONDS = Histogram("lc_stage_seconds", "Pipeline stage duration", ["stage
 UNVERIFIED = Counter("lc_unverified_total", "Agent outputs passed on as unverified", ["stage"])
 OFFICER = Counter("lc_officer_actions_total", "Officer confirm and override actions", ["action"])
 PRECEDENTS = Counter("lc_precedent_events_total", "Precedent lifecycle events", ["event"])
+EMAILS = Counter("lc_emails_total", "Staff email outcomes (a retry is queued)", ["kind", "status"])
+CASES_CREATED = Counter("lc_new_cases_total", "New cases", ["loan_type", "origin"])
+TIME_TO_DECISION = Histogram(
+    "lc_time_to_decision_seconds", "From a case being created to the officer's decision",
+    ["loan_type"],
+    buckets=(300, 900, 1800, 3600, 4 * 3600, 8 * 3600, 86400, 2 * 86400, 7 * 86400, 30 * 86400),
+)  # fmt: skip
 
 
 def record_run(report: dict, calls: list) -> None:  # type: ignore[type-arg]

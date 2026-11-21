@@ -1,0 +1,110 @@
+# Pramaan, the whole stack (Stage 11):  docker compose up -d --build
+#
+#   app         the API, the graph runner and the frontend   http://localhost:8000
+#   grafana     dashboards (Prometheus, Loki, Tempo)          http://localhost:3000
+#   prometheus  metrics (scrapes app:8000/metrics)            http://localhost:9090
+#   loki, promtail, tempo   logs and traces, inside the stack only
+#
+# Optional profiles:
+#   --profile local-db   Postgres with pgvector in the stack, for offline use. Then set
+#                        DATABASE_URL=postgresql://postgres:postgres@db:5432/pramaan in .env.
+#   --profile mail       Mailpit: catches every email at http://localhost:8025. Then set
+#                        NOTIFICATION_SENDER=smtp, SMTP_HOST=mailpit, SMTP_PORT=1025,
+#                        SMTP_SECURITY=none and an empty SMTP_USERNAME in .env.
+#
+# Only .env needs filling in (see .env.example). The database stays on Neon by default and
+# Langfuse stays on its cloud (or off). Ports are bound to this machine only: /metrics has no
+# sign-in (SECURITY.md).
+name: pramaan
+
+services:
+  app:
+    build: .
+    image: pramaan-app:local
+    env_file: .env
+    environment:
+      # inside the stack: traces to Tempo, applicant links point at the app's own address
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      PUBLIC_BASE_URL: ${STACK_PUBLIC_BASE_URL:-http://localhost:8000}
+      UPLOAD_DIR: /app/data/uploads
+    ports: ["127.0.0.1:8000:8000"]
+    volumes:
+      - uploads:/app/data/uploads
+      - app-logs:/app/logs
+    depends_on:
+      tempo:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    profiles: [local-db]
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: postgres   # this database is on your machine only, with synthetic data
+      POSTGRES_DB: pramaan
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    profiles: [mail]
+    image: axllent/mailpit:v1.27.10
+    ports: ["127.0.0.1:8025:8025"]
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./ops/prometheus/prometheus.compose.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+
+  loki:
+    image: grafana/loki:3.2.1
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./ops/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.2.1
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./ops/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - app-logs:/var/log/loan-copilot:ro   # the app writes JSON lines to /app/logs/app.log
+    depends_on: [loki]
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./ops/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on: [prometheus, loki, tempo]
+
+volumes:
+  uploads:
+  app-logs:
+  db-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:

@@ -8,7 +8,7 @@
 | Parser | Field extraction accuracy on dev documents, upload checks, OCR, bank statement styles | pytest + fixtures | Every commit (small set), nightly (full) |
 | Agent | Each agent against recorded model responses; schema, citations, gates, retries | pytest, recorded fixtures | Every commit |
 | Integration | Full pipeline on a few cases per loan type, pause and resume, fallback on 429 | pytest | Every PR |
-| Golden set | 60 dev and 40 test cases against the answer key | custom runner, RAGAS, DeepEval | PR gate (dev), release (test) |
+| Golden set | 60 dev and 40 test cases against the answer key | custom runners (`app.eval.run`, `app.agents.run`, `app.eval.judge`) | PR gate (dev), release (test) |
 | UI end to end | One case per loan type through the browser | Playwright | Pre-release |
 | Security | PII leak scan, injection set, role checks | pytest | Every PR |
 | Fairness | Approval-rate parity report | script | Per evaluation run |
@@ -86,7 +86,7 @@ Pipeline tests (`backend/tests/test_pipeline.py`, `test_agent_units.py`, `test_l
 | Score error | Absolute difference between predicted and target score |
 | Field accuracy | Extracted fields equal ground truth (per document type) |
 | Citation validity | Every cited clause exists in retrieved text (target 100%) |
-| Faithfulness | RAGAS: answer supported by retrieved context |
+| Faithfulness and citation support | The judge model: the Decision summary is supported by the report's own result, findings and clauses; each Policy finding is supported by the clause it cites (`python -m app.eval.judge`, 0 to 1) |
 | Retrieval quality | hit@k, recall@k and MRR on `data/rag/retrieval_eval.yaml` (50 dev queries, 12 test queries), vector-only baseline vs with rerank; targets in `data/rag/baseline.json`; `python -m app.rag.evaluate --split dev` exits non-zero on a miss |
 | Hard-rule integrity | No hard-fail case passes, with or without precedents (target 100%) |
 | Unverified rate | Share of agent outputs marked unverified |
@@ -102,10 +102,11 @@ Cheap code checks after every agent; an LLM judge only when those are inconclusi
 
 ## 5. Offline evaluation
 
-- RAGAS (faithfulness, answer relevance, context precision and recall) on the Policy agent.
-- DeepEval for report quality and agreement with the answer key.
-- Judge model is lighter than, and from a different family than, the generator.
-- Results saved with model versions, prompt versions, policy and rules versions.
+- **Agreement with the answer key:** `python -m app.eval.run --split dev` (code-side, no database, no model; the CI gate) and `python -m app.agents.run --split dev [--no-llm]` (the whole pipeline).
+- **Retrieval:** `python -m app.rag.evaluate --split dev` (hit@k, recall@k, MRR with the real embedder).
+- **Model-judged:** `python -m app.eval.judge --split dev` grades the stored reports of a models-on run: faithfulness of the Decision summary and support of each Policy finding by its cited clause. Everything is masked first; summaries written by code are skipped; `--write-baseline` stores `docs/baselines/dev-judge.json`, and floors go in the `judge` block of `thresholds.json` (RAGAS and DeepEval were replaced by this runner, user decision 2026-11-21).
+- Judge model is lighter than, and from a different family than, the generator (the AI control page refuses the Decision model as the judge).
+- Results are tied to a release by its manifest (`python -m app.release --tag vX`: model, prompt, policy and rules versions).
 
 ## 6. CI gate
 
@@ -118,7 +119,7 @@ GitHub Actions on every PR:
 
 On release: full dev run plus one run on the held-out test split; results attached to the release tag with model versions.
 
-**What the PR gate runs today** (`.github/workflows/ci.yml`): ruff, mypy, synthetic data, `pytest -q` (throwaway Postgres with pgvector, models off), `python -m app.eval.run --split dev` against `docs/baselines/thresholds.json` (floors, a ceiling on score error, a maximum drop from `dev-code.json`, and hard-rule integrity 1.0 with the largest precedent bonus applied to every case), dependency audit, and the frontend lint, tests and build. No API keys are used. The RAG retrieval gate (`app.rag.evaluate`, real embedder) and the RAGAS/DeepEval judge suites run locally before a release.
+**What the PR gate runs today** (`.github/workflows/ci.yml`): ruff, mypy, synthetic data, `pytest -q` (throwaway Postgres with pgvector, models off), `python -m app.eval.run --split dev` against `docs/baselines/thresholds.json` (floors, a ceiling on score error, a maximum drop from `dev-code.json`, and hard-rule integrity 1.0 with the largest precedent bonus applied to every case), dependency audit, and the frontend lint, tests and build. No API keys are used. The RAG retrieval gate (`app.rag.evaluate`, real embedder) and the judge runner (`app.eval.judge`, needs the model keys) run locally before a release.
 
 ## 7. Regression practice
 
@@ -186,7 +187,7 @@ Files: `backend/tests/test_inbox.py` (throwaway database), frontend `components/
 - **No personal data:** a case for a known synthetic person goes through every event that does not need the pipeline; every row (and the API's JSON) is searched for the person's name, PAN, phone, email, digits and outcome words.
 - **Filters:** every kind is in exactly one filter group and each role is offered only its own groups; the list filters by group, by a part of the case number (any case, capitals ignored) and by both, only over the caller's own rows; an unknown group and a malformed case text are 422.
 - **Frontend:** the bell is a button named with the count (none, 3, 140 with a "99+" badge) and opens the inbox of its role; the sidebar Inbox shows the same count; the provider asks on sign-in, every minute and on focus, keeps the last count when a read fails, asks nothing for an auditor or nobody and stops when the person is gone; the inbox lists unread first, filters (type from the server's list, case number after a pause, nothing-matches state, Clear filters), marks one or all read, opens the case, shows the empty and error states and pages.
-- **Not covered:** a browser (Playwright) run of the inbox (Part 3).
+- **Browser (Part 3, 2026-11-21):** `frontend/e2e/inbox.spec.js`: an officer files a problem report; the admin's bell count includes it; the notice is fixed text (none of the report's words); Mark read lowers the count; a click opens the Issues page with the report; the admin turns notice emails off and the choice survives a reload; the auditor has no bell.
 
 ## 7h. Email tests (Notifications Part 2, 2026-11-19)
 
@@ -196,11 +197,21 @@ File: `backend/tests/test_email.py` (no network: a fake SMTP client and recordin
 - **Settings:** console needs nothing; smtp builds a guarded SMTP sender; an unknown sender, an empty host, a wrong security mode, a missing password, a bad From, a bad allow-list entry and a redirect off the list all refuse to start and name the variable, never the key.
 - **SMTP:** SSL signs in with the key as password and sends a plain, no-reply email with the right headers; STARTTLS and a server with no sign-in (Mailpit); a refused sign-in, a refused recipient, a refused message and a network error become plain errors without the key and with nothing chained.
 - **Texts:** every staff email is fixed text with the sign-in link and the footer, no digits in the subject, "never sent by email" for the password.
-- **Queue:** one notice email per person per gap; the person's choice, a disabled account and the auditor get none; a rolled-back event queues nothing; delivery sends, redirects and holds, never twice, audited with masked addresses; a failing server is tried three times and audited once; the worker loop sends and survives.
+- **Queue:** one notice email per person per gap; the person's choice, a disabled account and the auditor get none; a rolled-back event queues nothing; delivery sends, redirects and holds, never twice, audited with masked addresses; a failing server is tried three times, waiting 1 and then 5 minutes between tries (the next pass leaves a waiting row alone), and audited once; one email that fails in an unexpected way does not undo another's outcome, so that one is never sent twice; the SMTP sender refuses a bad address (line breaks, two addresses, no address) before it connects; the worker loop sends and survives.
 - **Accounts and choice:** a new account and a reset are emailed without the password; new accounts start with notice emails on; a person turns them off and on (audited once per change), the auditor gets 403.
 - **Customer messages:** sent, redirected and refused (failed, with the reason) record how they went out in the message and the audit row; the console records printed.
-- **Migration 0020** applies, rolls back to 0019 and applies again.
-- **Not covered:** a real send to Resend (needs the key in `.env`; a manual check), and a browser run (Part 3).
+- **Migrations 0020 and 0023** apply, roll back and apply again (`test_migrations.py` runs every migration down to the base).
+- **Not covered:** a real send to Resend (needs the key in `.env`): a manual check, `python -m app.notifications.email_check --to ADDR`, run by the user.
+
+## 7j. Stage 11 tests (hardening, 2026-11-21)
+
+- **Retention** (`test_retention.py`): the bureau rules are the credit score, days-past-due and enquiry rules only. After six months their stored values go from rule results and report findings, and every other rule keeps its evidence. A case still waiting for the officer keeps its checkpoint and is not stamped; once decided, its checkpoints go (another case's stay) and it is stamped once; a second run changes nothing; one audit row per run that changed something. Old sent or failed staff email goes, a queued one stays, and a dry run changes nothing. A second process is refused by the lock.
+- **Logs** (`test_observability.py`): a whole case at DEBUG with the models on writes no identifier pattern and none of the applicant's name, PAN, phone or address; a log line has patterns replaced by their kind; a DEBUG root does not open the parser, LiteLLM or HTTP loggers.
+- **Audit coverage** (`test_audit_coverage.py`): every write route audits, names the code that does, or is on the short "not audited by design" list.
+- **Release manifest** (`test_release.py`): every version is named (rules and checksum, policies from the files or the database, migration head, models per role as provider ids, prompts, local models) and no key.
+- **Judge runner** (`test_eval_judge.py`): the evidence holds the result, findings and clauses but not notes or stages that did not run; names are masked; a model summary is graded, a code summary skipped, a case with no report counted; nothing raw is sent; a floor is reported.
+- **Metrics:** a new case adds to `lc_new_cases_total`; an officer's decision adds to `lc_time_to_decision_seconds`.
+- **Docker** (by hand, 2026-11-21): `docker compose up` with the `local-db` profile on this machine. The app turned healthy after migrating, seeding and indexing by itself; the frontend, health and metrics answered; a sign-in and a new case worked; Prometheus, the Grafana dashboard, Loki (a log line with the PAN redacted) and Tempo were all checked; two cases ran through the pipeline in the container offline. Details are in `PROGRESS.md` "Stage 11 build notes".
 
 ## 7i. Knowledge base tests (Stage 10c, 2026-11-21)
 

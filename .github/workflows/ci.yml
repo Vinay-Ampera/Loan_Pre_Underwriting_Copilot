@@ -1,6 +1,6 @@
 # Pull-request gate (TESTING.md section 6). No API keys are used: models are off, the Langfuse
-# client is off, and the evaluation gate runs on code-side metrics. The model-judged suites
-# (RAGAS, DeepEval) run locally before a release: python -m app.eval.judge.
+# client is off, and the evaluation gate runs on code-side metrics. The RAG retrieval gate
+# (python -m app.rag.evaluate, real embedder) runs locally before a release.
 name: ci
 
 on:

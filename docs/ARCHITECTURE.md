@@ -31,7 +31,7 @@ Companion to `PRD.md`. Diagrams are in `diagrams/` (regenerate with `python3 dia
 | Database | Relational and vector data in one place | Neon Postgres with pgvector |
 | File store | Uploaded documents | Local disk (v1) |
 | Observability | Traces, tokens, cost; metrics, logs, dashboards | Langfuse; Prometheus, Loki, Tempo, Grafana |
-| CI | Tests, evaluation gate on PRs | GitHub Actions, RAGAS, DeepEval |
+| CI | Tests, evaluation gate on PRs | GitHub Actions; own runners for the answer key, retrieval and the judge model |
 
 ## 3. Agent graph
 
@@ -126,7 +126,7 @@ Built in Stage 7 (`app/learning/`): the `await_officer` node calls `propose_prec
 ## 7. Evaluation hooks
 
 - After each agent: code checks (schema, recompute, citation exists, score equals code result). LLM judge only if the code checks are inconclusive.
-- Offline: RAGAS and DeepEval on the 100-case golden set; GitHub Actions gate.
+- Offline: the answer-key runner on the golden set (the GitHub Actions gate), the retrieval runner, and the judge runner `app.eval.judge` (RAGAS and DeepEval were replaced by this runner, user decision 2026-11-21).
 - Scores are logged to `eval_scores` and Langfuse.
 - `python -m app.eval.run --split dev` replays the split through the rules engine (no database, no model), writes/compares `docs/baselines/`, and is the CI gate. `app.eval.fairness` is monitoring only.
 
@@ -152,7 +152,14 @@ All via `.env` and the rules file; nothing secret in git.
 ## 9. Deployment
 
 - **Development:** run API, frontend and worker directly on the laptop; Neon is hosted.
-- **Final stage (Stage 11):** Docker Compose with frontend, API (graph runner inside), optional local Langfuse, Prometheus, Loki, Tempo, Grafana. Optional local Postgres service for offline use.
+- **Final stage (Stage 11, built 2026-11-21):** `docker-compose.yml` at the repository root. One `app` image (`Dockerfile`):
+  - It holds the API, the graph runner and the built frontend, with exact Python versions from `requirements.lock` and CPU torch.
+  - The synthetic data is generated at build time.
+  - The BGE-small, cross-encoder and OCR models are loaded at build time, so a container never downloads a model.
+  - It runs as a non-root user with one worker.
+  - On start it migrates, seeds and re-indexes (each step is safe to repeat).
+
+  The stack also runs Prometheus (scraping `app:8000`), Loki with Promtail (reading the app's log volume), Tempo and Grafana with the provisioned dashboard. Optional profiles: `local-db` (Postgres with pgvector) and `mail` (Mailpit). The database stays on Neon by default. Langfuse stays on its cloud or off, never self-hosted (user decision 2026-11-21). Published ports are bound to 127.0.0.1. Only `.env` needs filling in.
 - **Later:** hosted file storage, Celery plus Redis if concurrency demands it, real API integrations behind the mock interfaces.
 
 ## 10. Failure behaviour

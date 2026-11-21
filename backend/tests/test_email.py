@@ -307,16 +307,72 @@ def test_delivery_sends_redirects_holds_and_audits_with_a_masked_address(
     assert queued(engine)[-1].status == "held" and len(inner.sent) == 2
 
 
+class Exploding:
+    """An inner sender that fails in a way no sender expects, on one address only."""
+
+    def __init__(self, bad: str) -> None:
+        self.bad = bad
+        self.sent: list[str] = []
+
+    def send(self, message: Outgoing) -> str:
+        if message.recipient == self.bad:
+            raise ValueError("boom")
+        self.sent.append(message.recipient)
+        return "sent"
+
+
+@pytest.mark.db
+def test_one_bad_email_never_undoes_the_others_so_nothing_is_sent_twice(engine: Engine) -> None:
+    asha, ben = uid(engine, "asha"), uid(engine, "ben")
+    with engine.begin() as c:
+        notify(c, asha, "run_ready")
+        notify(c, ben, "run_ready")
+    inner = Exploding("asha@example.test")
+    sender = GuardedSender(inner, {"asha@example.test", "ben@example.test"}, None)
+    assert mailer.deliver_pending(engine, sender) == 2
+    rows = {r.recipient: r for r in queued(engine)}
+    assert rows["ben@example.test"].status == "sent"
+    assert rows["asha@example.test"].status == "queued"
+    assert rows["asha@example.test"].last_error == "unexpected error (ValueError)"
+    with engine.begin() as c:
+        c.execute(text("UPDATE email_outbox SET next_attempt_at = now()"))
+    mailer.deliver_pending(engine, sender)
+    assert inner.sent == ["ben@example.test"]  # Ben's email went once, not again
+
+
+def test_the_smtp_sender_refuses_a_bad_address_before_connecting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:  # fmt: skip
+    def no_connection(*a: Any, **k: Any) -> Any:
+        raise AssertionError("no connection may be opened for a bad address")
+
+    monkeypatch.setattr(smtplib, "SMTP_SSL", no_connection)
+    sender = SmtpSender(smtp_settings())
+    for bad in ("a@b.com\r\nBcc: x@y.com", "a@b.com, x@y.com", "not-an-address"):
+        with pytest.raises(SendError, match="recipient address is not valid"):
+            sender.send(Outgoing("m1", bad, "Subject", "Body"))
+
+
 @pytest.mark.db
 def test_a_failing_server_is_tried_three_times_then_marked_failed_once(engine: Engine) -> None:
     with engine.begin() as c:
         notify(c, uid(engine, "asha"), "run_ready")
     inner = Recording(fail=5)
     sender = GuardedSender(inner, {"asha@example.test"}, None)
-    for expected in ("queued", "queued", "failed"):
-        mailer.deliver_pending(engine, sender)
+    for expected, wait in (("queued", 1), ("queued", 5), ("failed", None)):
+        assert mailer.deliver_pending(engine, sender) == 1
         (row,) = queued(engine)
         assert row.status == expected
+        if wait is None:
+            continue
+        # the next try waits: the very next pass of the loop leaves the row alone
+        assert mailer.deliver_pending(engine, sender) == 0
+        with engine.begin() as c:
+            minutes = c.execute(text(
+                "SELECT round(extract(epoch FROM next_attempt_at - now()) / 60) FROM email_outbox"
+            )).scalar_one()  # fmt: skip
+            assert minutes == wait
+            c.execute(text("UPDATE email_outbox SET next_attempt_at = now()"))
     assert row.attempts == 3 and "could not be reached" in row.last_error
     mailer.deliver_pending(engine, sender)  # a failed row is not tried again
     with engine.connect() as c:

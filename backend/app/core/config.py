@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     staff_emails_default: bool = True  # new accounts start with notice emails on
     email_worker_seconds: int = 15  # how often queued staff emails are sent; 0 = never (tests)
     notice_email_gap_minutes: int = 30  # at most one notice email per person in this time
+    retention_hours: int = 24  # how often the retention job runs in the app; 0 = never (tests)
+    bureau_retention_months: int = 6  # bureau-derived data is kept this long (SECURITY.md 7)
+    email_retention_days: int = 90  # sent, held or failed staff email rows are kept this long
     branch_contact_email: str = ""  # optional extra contact lines in customer messages
     branch_contact_phone: str = ""
 

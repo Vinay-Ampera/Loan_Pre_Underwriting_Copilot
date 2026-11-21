@@ -38,6 +38,7 @@ from app.api.schemas import CO_APPLICANT, LOAN_FIELDS, CaseIn, OfficerActionIn, 
 from app.core.config import REPO_ROOT, Settings
 from app.intake.inventory import ONE_FILE_COVERS_MANY
 from app.intake.upload import check_case_size, check_upload
+from app.observability import metrics
 from app.scoring.facts import applicable_requirements
 from app.scoring.rules import RuleSet
 
@@ -398,6 +399,7 @@ def create_case(
     _insert_applicants(conn, case_id, body)
     write_audit(conn, user.id, "case_created", "case", case_id,
                 after={"case_no": case_no, "loan_type": body.loan_type})  # fmt: skip
+    metrics.CASES_CREATED.labels(body.loan_type, "officer").inc()
     return {"id": case_id, "case_no": case_no}
 
 

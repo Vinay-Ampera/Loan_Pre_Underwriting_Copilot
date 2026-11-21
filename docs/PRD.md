@@ -118,7 +118,7 @@ FOIR, job or business stability, salary regularity, cheque and NACH returns, LTV
 
 - KYC: PAN or Form 60 required; Aadhaar voluntary and redacted when submitted.
 - Written reason for any rejection. Every report includes a plain-language rejection reason.
-- Credit bureau data kept no longer than six months without fresh consent. We add a retention job.
+- Credit bureau data kept no longer than six months without fresh consent. The retention job is built (Stage 11, `python -m app.db.retention`; SECURITY.md 7).
 - Key Fact Statement under the Digital Lending Directions (effective 8 May 2025).
 - No foreclosure charges on floating-rate loans to individuals for non-business purposes (new directions apply to loans sanctioned or renewed from 1 Jan 2026). Cited, not scored.
 - Our own rule: gender, religion, caste and similar attributes are never used.
@@ -298,12 +298,12 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-49 (built) The officer's contact request and the upload-link message really send; Sent items shows how each went out (by email, to the demo inbox, printed). The content check, the fraud footer and the second click are unchanged. No receipt email goes to the applicant.
 - FR-50 (built) Staff get fixed-text emails with no case details: "you have a new notice, sign in" (at most one per person per 30 minutes, each person can turn them off in the user menu, new accounts start as `STAFF_EMAILS_DEFAULT` says), "your account is ready" and "your password was reset". **A password is never emailed**: the admin still hands it over. The auditor gets none.
 - FR-51 (built) Staff email is queued in the transaction of its event and sent after the commit by a loop in the app (no Celery or Redis), three tries, then failed. Every outcome is in the audit log with a masked address.
-- Part 3 (hardening and close-out) waits for the user.
+- FR-59 (built, Notifications Part 3, 2026-11-21) Hardening: staff email is sent one per transaction (one bad email can never cause another to be sent twice), a failed email waits 1 and then 5 minutes before the next try, the SMTP sender refuses a malformed address before connecting, and email outcomes are counted for the dashboards. A browser test covers the inbox and the email choice. A real send to Resend stays a manual check by the user.
 
 ## 10. Evaluation
 
 - **Online (every agent):** cheap code checks first. LLM judge only if the code checks are inconclusive. Failed check means one retry, then unverified.
-- **Offline:** RAGAS and DeepEval on the golden set, run in GitHub Actions as a PR gate. Metrics: faithfulness, citation validity, agreement with the answer key, band accuracy, stop-stage accuracy.
+- **Offline:** the answer-key runner on the golden set, run in GitHub Actions as a PR gate (band accuracy, stop-stage accuracy, score error, hard-rule integrity), and the judge runner `python -m app.eval.judge` run locally with the keys (faithfulness, citation support) (RAGAS and DeepEval were replaced by this runner, user decision 2026-11-21).
 - **Fairness:** monitoring only. Approval rates by gender, age band and city tier are computed from a separate attributes table that agents and scoring cannot read. Never used in a decision.
 - Judge model is a lighter model from a different family than the generator.
 
@@ -350,7 +350,7 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 | RAG | Retrieval, rerank, grounding check (Self-RAG style) |
 | OCR | PaddleOCR local, Tesseract fallback |
 | Parsing | PyMuPDF, pdfplumber, OpenCV |
-| Evaluation | RAGAS, DeepEval |
+| Evaluation | Own runners: answer key, retrieval, judge model (RAGAS and DeepEval replaced, 2026-11-21) |
 | Observability | Langfuse (cloud if quick, else local), Prometheus, Loki, Tempo, Grafana |
 | CI and Git | GitHub Actions, trunk-based, model versions tagged with releases |
 | Deployment | Docker Compose at the last stage |
@@ -381,4 +381,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) is not started and waits for the user. Stage 11 (hardening, Docker, demo) follows. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) and Stage 11 (hardening, Docker, demo) are built (2026-11-21); the real-model test-split run is left to the user. Status is tracked in `PROGRESS.md`.

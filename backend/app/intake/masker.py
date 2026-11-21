@@ -84,6 +84,14 @@ def find_leaks(text: str) -> list[str]:
     return [kind for kind, pattern in _LEAK_PATTERNS if pattern.search(text)]
 
 
+def redact(text: str) -> str:
+    """Replace every identifier the leak check knows with its kind (`<PAN>`), for log lines. Not
+    reversible, unlike `Masker.mask`."""
+    for kind, pattern in _LEAK_PATTERNS:
+        text = pattern.sub(f"<{kind}>", text)
+    return text
+
+
 def assert_masked(*texts: str) -> None:
     """Guard for the LLM boundary. Raises without echoing the offending value."""
     for t in texts:

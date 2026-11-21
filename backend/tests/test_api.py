@@ -202,6 +202,15 @@ def test_officer_cannot_reach_the_precedent_queue(client: TestClient, engine: En
         assert c.execute(text("SELECT status FROM precedents")).scalar_one() == "pending"
 
 
+def test_a_new_case_is_counted_for_the_dashboard(client: TestClient) -> None:
+    from prometheus_client import REGISTRY  # noqa: PLC0415
+
+    labels = {"loan_type": "personal", "origin": "officer"}
+    before = REGISTRY.get_sample_value("lc_new_cases_total", labels) or 0.0
+    create(client, login(client, "asha"), minimal())
+    assert REGISTRY.get_sample_value("lc_new_cases_total", labels) == before + 1
+
+
 def test_an_officer_sees_only_their_own_cases(client: TestClient) -> None:
     asha, ben = login(client, "asha"), login(client, "ben")
     case_id = create(client, asha, minimal())

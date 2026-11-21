@@ -22,15 +22,23 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 10 Intake desk and applicant upload link | Built, committed (A to C `d2bcae7`, D `f3c4a2c`) | Migrations 0014 to 0017; `intake/archive.py`, `readcache.py`, `inventory.py`, `prefill.py`, `bundle.py`; `api/ingest.py`, `intake.py`, `links.py`, `public.py`, `filestore.py`, `ratelimit.py`; desk, split screen, form tick, links page and applicant page in the UI. See "Stage 10 build notes" and "Stage 10 Part D build notes". Run `python -m app.db.migrate` first |
 | 10b AI control for the admin | Built, committed (`f521e32`) | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 10c Knowledge base (policy documents and learnings) | Built, committed (`d484bff`) | Migration 0021; `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`, `api/knowledge.py`; admin Knowledge base page and officer Policies page. See "Knowledge base build notes". Run `python -m app.db.migrate` first |
-| 11 Hardening, Docker and demo | **Planned, not started** | Was Stage 10 (before that Stage 8); renumbered 2026-11-04 |
+| 11 Hardening, Docker and demo | **Built (2026-11-21; not committed)** | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), `docs/DEMO.md`, README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
 
-In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is built and awaits the user's commit; see "Post-demo cleanup" below.
+In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
-Next: Notifications Part 3 and Stage 11 (hardening and Docker), in the order the user chooses. Do not start either until the user says so.
+Notifications Part 3 (hardening and close-out) is built (2026-11-21, migration 0023); see "Notifications Part 3 build notes". Next: Stage 11 (hardening, Docker and demo), asked for by the user on 2026-11-21. Docker stays last.
 
 ---
 
 ## Decisions log
+
+### 2026-11-21: Notifications Part 3 and Stage 11 started; three Stage 11 choices
+
+The user asked for Notifications Part 3 and then Stage 11 (Docker last), and chose:
+
+1. **RAGAS and DeepEval are replaced by our own judge runner** (`python -m app.eval.judge`): the existing judge model grades the Decision summary and the Policy findings against the masked facts and the cited clause text on the dev split. No new packages. The docs that promised RAGAS and DeepEval are updated to say so (decision 15: the user's word).
+2. **Final test-split run:** the models-off results are run and recorded here; the real-model run is one command the user runs with their own keys, and its numbers are recorded when the user pastes them back.
+3. **Langfuse stays on the cloud** (or off): the Compose stack does not self-host it (that would need ClickHouse, Redis and MinIO).
 
 ### 2026-11-21: Knowledge base planned and built (changes locked decision 12)
 
@@ -390,6 +398,80 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
 - **Edge cases:** E-86 to E-90. **Docs:** PRD FR-47 to FR-51 (9.11), DATABASE 4d, SECURITY 4f, DESIGN_SYSTEM 13, TESTING 7h, CLAUDE.md decision 17 and status.
 - **Left for Part 3:** a real send checked by hand against Resend, the browser run, the full backend run, the docs sweep, the demo script.
 
+## Stage 11 build notes: hardening, Docker and demo (2026-11-21)
+
+- **Asked for by the user** (2026-11-21), with three choices (decisions log): our own judge runner instead of RAGAS and DeepEval, models-off results run here with the real-model run left to the user, Langfuse not self-hosted.
+- **Security pass:**
+  - **Retention job** (`app/db/retention.py`, migration 0024 `cases.bureau_removed_at`). It runs daily in the app and by hand.
+    - Bureau values leave rule results and report findings after six months.
+    - A decided case's run checkpoints go too.
+    - Old staff email goes after 90 days.
+    - Each run that changes something writes one audit row with counts (E-103, E-105).
+  - **Log guards.** A new test ran a whole case at DEBUG and found that pdfminer prints raw document text (names, PAN, Aadhaar, account numbers) and that LiteLLM prints model replies. Those libraries are now held at WARNING, and the formatter replaces identifier patterns in every text field (E-104). Normal INFO runs never showed it.
+  - **Log path.** `make backend` wrote logs to `backend/logs`, where Promtail never looked; they now go to the repository's `logs/`.
+  - **Audit coverage.** A test lists all 72 write routes. Each one audits, names the code that does, or is on the short list of routes not audited by design.
+  - **Secrets.** A git-history secret scan found nothing, and `.env` was never committed.
+- **Dashboards:** Grafana row 6:
+  - applications today and per day (`lc_new_cases_total` by origin);
+  - time to decision, median and 90th percentile (`lc_time_to_decision_seconds`, timed from case creation);
+  - override rate, as a number and over time;
+  - staff email by outcome (`lc_emails_total`).
+
+  Tokens and cost per case and latency per agent were already there.
+- **Releases:** `python -m app.release --tag vX.Y.Z` writes `docs/releases/<tag>.json` and prints the `git tag` command for the user. The manifest holds:
+  - the commit, the migration head, and the rules version and checksum;
+  - the policy versions in force, from the database or the files;
+  - the models per role (provider ids), the AI configuration version and the prompt versions;
+  - the local models.
+- **Judge runner** (`python -m app.eval.judge`): the judge model grades the stored reports of a models-on run. It checks how faithful the summary is to the report's own result, findings and clauses, and whether each Policy finding is supported by its cited clause. Everything is masked first, and code-written summaries are skipped. A `judge` block in `thresholds.json` can set floors (none yet: they wait for the first real-model baseline, OI-7).
+- **Final test split (40 held-out cases), recorded and not tuned on** (`docs/baselines/test-final.json`):
+
+  | Run | Band | Stop stage | Total score exact | Failed rules exact | Mean score error | Other |
+  |---|---|---|---|---|---|---|
+  | Code-side (`app.eval.run --split test --allow-test`) | 100% | 100% | 95% | 77.5% (below the dev floor of 95%) | 0.27 | hard-rule integrity 100% |
+  | Pipeline, models off (`app.agents.run --split test --allow-test --no-llm`), real files through intake and OCR | 97.5% (39/40) | 100% | | | 2.0 points over 21 scored cases | 40/40 completed; 0 unverified; 21.9 s per case |
+
+  The differences, for the user to judge (fixing them must be checked on the dev split, never tuned on these):
+  - Seven cases that stop for a missing identity document also list CM-KYC-10 as failed.
+  - SYN-BL-T09 and SYN-HL-T09 pass CM-INC-12 where the key expects a fail.
+  - SYN-HL-T01, in the pipeline only: an OCR reading of a payslip gave a net-pay mismatch, the tamper rule capped the case to refer, and the key says approve.
+- **Real-model run (the user's, with their keys):**
+  ```
+  python -m app.agents.run --split test --allow-test --out test-models.json
+  python -m app.eval.judge --split test --allow-test
+  ```
+  Paste the two summaries back to record them here; they also give the OI-3, OI-4 and OI-7 baseline.
+- **For people:**
+  - `docs/DEMO.md`, a 25-minute script with the case for each scene (scenes 1, 2, 5 and 6 follow the browser tests `intake-desk`, `roles`, `inbox` and `knowledge-base`);
+  - a new README (Docker, no Docker, tests, documents);
+  - `.env.example`, which now lists every setting (seven were missing) with up-to-date comments.
+- **Packaging:**
+  - `requirements.lock` holds the exact versions, frozen from the working venv.
+  - The `Dockerfile` builds one image: the frontend built with Node 22, then Python 3.12 slim with CPU torch. It generates the synthetic data, bakes in the embedding, reranker and OCR models (offline at run time) and runs as a non-root user with one worker.
+  - `docker/entrypoint.sh` waits for the database, then migrates, seeds and re-indexes; each step is safe to repeat.
+  - `docker-compose.yml` brings up app, Prometheus, Loki, Promtail, Tempo and Grafana, with the profiles `local-db` and `mail`; ports are bound to 127.0.0.1.
+  - Makefile: `make up`, `make down`, `make stack-logs`.
+- **Docker, checked on this machine (2026-11-21).** The image built from the repository; that also caught a bug in my warm-up script, now fixed. It is 4.76 GB, mostly CPU torch and the local models. The stack ran as a separate project (`pramaan-check`) with the `local-db` profile and a test-only override (local database, models off, console email, Langfuse off), so the user's Neon database was not touched. Results:
+  - The app turned healthy after it migrated, seeded (69 clauses, 100 answer keys) and indexed (67 embedded) by itself.
+  - `/` served the frontend, `/api/health` answered, a sign-in worked, and a new case moved `lc_new_cases_total`, which Prometheus scraped from `app:8000`.
+  - Grafana provisioned the "Loan Copilot" dashboard.
+  - Loki and Tempo were ready, and a log line reached Loki with its level label and the PAN replaced by `<PAN>`.
+  - `SYN-PL-D02` and `SYN-PL-D09` ran through the pipeline inside the container with the baked-in models and no network downloads, and both matched their keys.
+  - The test stack and its volumes were removed afterwards.
+  - **Not checked:** a fresh `git clone` on another machine, the `mail` profile, and the stack against Neon (the container migrates the database it is given, so the user starts it against Neon when ready).
+- **To do on Neon:** `python -m app.db.migrate` (0022 to 0024).
+
+## Notifications Part 3 build notes: hardening and close-out (2026-11-21)
+
+- **Asked for by the user** (2026-11-21) together with Stage 11.
+- **Email queue (`notifications/mailer.py`, migration 0023):** one email per transaction. Before, a whole pass (up to 20 rows) was one transaction while the emails went out, so one unexpected error rolled back the outcomes of emails already sent and they went again on the next pass (E-101). Any unexpected error now counts as a failed try (only its type is kept); a failed row waits 1 minute, then 5 minutes (`next_attempt_at`), so a short outage no longer uses all three tries in a minute (E-102). Delivery is at least once.
+- **SMTP sender:** the recipient is checked before a connection is opened (one plain address; no line breaks, commas or angle brackets) and any other error becomes a plain `SendError`, so a customer message fails cleanly instead of answering 500.
+- **Metrics:** `lc_emails_total{kind,status}` for the Stage 11 dashboards.
+- **Browser test:** `frontend/e2e/inbox.spec.js` (problem report to the admin's inbox, count, Mark read, click through, notice-email choice kept, no bell for the auditor).
+- **Docs:** PRD FR-59 and status, SECURITY 4f, DATABASE (`email_outbox.next_attempt_at`), TESTING 7g and 7h, EDGE_CASES E-101 and E-102; the CI comment no longer names `app.eval.judge`.
+- **Left to the user:** a real send to Resend, `python -m app.notifications.email_check --to ADDR` (it needs the key in `.env`).
+- **To do on Neon:** `python -m app.db.migrate` (0023).
+
 ## New case page redesign (2026-11-19)
 
 - Display only, asked for by the user: numbered steps, card radios with icons (`ChoiceCard`), and a "Documents needed" rail for the chosen loan (`RequiredDocsPreview`). Details in `DESIGN_SYSTEM.md` 8.14.
@@ -419,6 +501,6 @@ Small fixes noted while preparing the trainer demo (2026-11-20), done at the use
 - **Judge input masked (found on the way):** the judge was given the raw report JSON, which can hold names and document evidence; it now gets the same masked facts the Decision writer saw, and the claim is masked again.
 - **Leak check:** `find_leaks` / `assert_masked` now also catch phone and account numbers that stand alone (not inside a word, a hex id or a UUID). The shipped policy files pass the policy check unchanged.
 - **Docs:** `app/eval/run.py` docstring no longer names `app.eval.judge` (it does not exist; no RAGAS or DeepEval suite is built yet, see the open question below). `AGENTS.md`: Supervisor (checklist in code, model writes a short briefing only, no retries or report assembly), Extraction (model only for missing fields or unknown types; OCR is RapidOCR first, then PaddleOCR, then Tesseract), KYC (model explains, code decides every match). Status table and `CLAUDE.md` show Stages 9 to 10c as committed.
-- **Open question for the user:** `PRD.md`, `TESTING.md`, `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md` Stage 7 still list RAGAS and DeepEval suites, which were never built. Build them (Stage 11) or record them as dropped (decision 15 needs the user's word).
+- **Question answered by the user (2026-11-21):** RAGAS and DeepEval are replaced by our own judge runner, built in Stage 11 (see the decisions log).
 - **Measured:** frontend 783 tests passed (3 new), lint, Prettier and build clean; ruff, ruff format and mypy clean. Backend: the new and changed tests in `test_pipeline`, `test_learning` and `test_upload_links` passed (6), and `test_observability`, `test_migrations` (0022 up and down), `test_agent_units`, `test_intake` and `test_knowledge_base` passed (115). The rest of the backend suite was not re-run here; CI runs it.
 - **To do on Neon:** `python -m app.db.migrate` (0022).

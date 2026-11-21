@@ -43,6 +43,7 @@ from app.api import (
 from app.api.runner import Runner
 from app.api.security import DEFAULT_SECRET
 from app.core.config import REPO_ROOT, Settings, get_settings
+from app.db import retention
 from app.monitoring import auditor_view
 from app.notifications import inbox, mailer
 from app.notifications.sender import Sender, build_sender
@@ -112,6 +113,12 @@ def create_app(
                     mailer.run_worker(eng, app.state.sender, settings.email_worker_seconds)
                 )
                 stack.push_async_callback(_stop, mail_task)
+            if settings.retention_hours > 0:  # bureau data after six months, old staff email
+                keep_task = asyncio.get_running_loop().create_task(
+                    retention.run_worker(eng, ruleset, settings.retention_hours,
+                                         settings.bureau_retention_months, settings.email_retention_days)
+                )  # fmt: skip
+                stack.push_async_callback(_stop, keep_task)
             if recover:
                 n = runner.recover()
                 if n:

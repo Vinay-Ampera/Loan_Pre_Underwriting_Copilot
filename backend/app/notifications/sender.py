@@ -70,6 +70,8 @@ class SmtpSender:
         self.sender = settings.email_from
 
     def _message(self, message: Outgoing) -> EmailMessage:
+        if not _valid(message.recipient) or any(c in message.recipient for c in "\r\n,;<>"):
+            raise SendError("The recipient address is not valid.")
         m = EmailMessage()
         m["From"], m["To"], m["Subject"] = self.sender, message.recipient, message.subject
         m["Date"], m["Message-ID"] = formatdate(localtime=True), make_msgid(domain="pramaan.local")
@@ -79,6 +81,7 @@ class SmtpSender:
 
     def send(self, message: Outgoing) -> str:
         try:
+            mail = self._message(message)  # checked before any connection is opened
             context = ssl.create_default_context()
             if self.security == "ssl":
                 client: smtplib.SMTP = smtplib.SMTP_SSL(
@@ -92,7 +95,7 @@ class SmtpSender:
                 if self.username:
                     password = self._password.get_secret_value() if self._password else ""
                     client.login(self.username, password)
-                client.send_message(self._message(message))
+                client.send_message(mail)
         except smtplib.SMTPAuthenticationError:
             raise SendError(
                 "The mail server refused the sign-in. Check the SMTP settings."
@@ -103,6 +106,10 @@ class SmtpSender:
             raise SendError(f"The mail server refused the message ({exc.smtp_code}).") from None
         except (smtplib.SMTPException, OSError):
             raise SendError("The mail server could not be reached. Try again later.") from None
+        except SendError:
+            raise
+        except Exception as exc:  # a header or encoding problem: plain words, no detail
+            raise SendError(f"The message could not be sent ({type(exc).__name__}).") from None
         return "sent"
 
 

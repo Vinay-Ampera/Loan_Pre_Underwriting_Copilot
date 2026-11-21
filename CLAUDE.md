@@ -91,15 +91,17 @@ intake:    python -m app.intake.cli FILE [--llm] | python -m app.intake.evaluate
 bundles:   python -m app.intake.evaluate_bundles --split dev [--mode digital|all]   (several documents in one PDF)
 scoring:   python -m app.scoring.replay --split dev [--case ID] [--verbose]
 pipeline:  python -m app.agents.run --split dev [--case ID] [--no-llm] [--force-429] [--cache] | --resume ID | --crash-before STAGE
-eval:      python -m app.eval.run --split dev
+eval:      python -m app.eval.run --split dev   | python -m app.eval.judge --split dev   (judge model grades stored reports; needs keys)
+retention: python -m app.db.retention [--dry-run]   (also runs daily inside the app, RETENTION_HOURS)
+release:   python -m app.release --tag vX.Y.Z [--no-db]   (writes docs/releases/<tag>.json, prints the git tag command)
 email:     python -m app.notifications.email_check [--to ADDR]   (one real test email, allow-list only)
-stack:     docker compose up   (Stage 11)
+stack:     docker compose up -d --build   (or make up; profiles local-db and mail; see README.md)
 diagrams:  python3 docs/diagrams/make_diagrams.py
 ```
 
 ## Current status
 
-Stages 1 to 10c are built and committed: Stage 8 (`25e6ad6`, `ff177fa`), Stage 9 (`a91f035`), the review-window additions and the reshaped auditor role (`28c5f56`), sessions (`2a850e6`, see `docs/SECURITY.md` 4a), Stage 10 Parts A to C (`d2bcae7`) and Part D (`f3c4a2c`), the admin AI control page, Stage 10b (`f521e32`), in-app notifications Part 1 (`135b5b1`) and Part 2, real email (`7b96d95`), and the knowledge base, Stage 10c (`d484bff`). The post-demo cleanup (2026-11-21: intake wording after "ask for more", the collateral cell of the 3C strip, every LLM call logged with its stage and role in migration 0022, the judge given masked facts, phone and account numbers in the leak check, `docs/AGENTS.md` corrected) is built and awaits the user's commit; run `python -m app.db.migrate` (0022, and 0021 if it is not applied yet). **Notifications Part 3 (hardening and close-out) is not started: ask the user first.** Stage 11 (hardening, Docker, demo) follows. Do not start Notifications Part 3 or Stage 11 until the user says so. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
+Stages 1 to 10c are built and committed: Stage 8 (`25e6ad6`, `ff177fa`), Stage 9 (`a91f035`), the review-window additions and the reshaped auditor role (`28c5f56`), sessions (`2a850e6`, see `docs/SECURITY.md` 4a), Stage 10 Parts A to C (`d2bcae7`) and Part D (`f3c4a2c`), the admin AI control page, Stage 10b (`f521e32`), in-app notifications Part 1 (`135b5b1`) and Part 2, real email (`7b96d95`), and the knowledge base, Stage 10c (`d484bff`). The post-demo cleanup (2026-11-21: intake wording after "ask for more", the collateral cell of the 3C strip, every LLM call logged with its stage and role in migration 0022, the judge given masked facts, phone and account numbers in the leak check, `docs/AGENTS.md` corrected) is committed (`319af64`). Run `python -m app.db.migrate` (0022 to 0024, and 0021 if it is not applied yet). Notifications Part 3 (hardening and close-out: one email per transaction, retry waits, address check, email metrics, a browser test of the inbox; migration 0023) was built 2026-11-21 and awaits the user's commit. Stage 11 (hardening, Docker, demo) was built 2026-11-21 and awaits the user's commit: retention job (migration 0024), log guards, audit-coverage test, dashboards row 6, release manifest (`python -m app.release`), judge runner (`python -m app.eval.judge`, replacing RAGAS and DeepEval, user decision), final test-split results with the models off (`docs/baselines/test-final.json`), `docs/DEMO.md`, README, `requirements.lock`, `Dockerfile` and `docker-compose.yml`. Left to the user: the real-model test-split run (command in `docs/PROGRESS.md` "Stage 11 build notes"), a real send to Resend, and a demo run. Full status, build notes and the decisions log are in `docs/PROGRESS.md`.
 
 ## Open items
 

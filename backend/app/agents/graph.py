@@ -20,6 +20,7 @@ from uuid import UUID
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
+from sqlalchemy import text
 
 from app.agents import evals, store
 from app.agents.assemble import extract
@@ -385,7 +386,13 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
                 {"final": final},
                 actor_id=answer.get("officer_id"),
             )
+            waited = conn.execute(
+                text("SELECT extract(epoch FROM now() - created_at) FROM cases WHERE id = :c"),
+                {"c": _case(state)},
+            ).scalar()
         metrics.OFFICER.labels(action).inc()
+        if waited is not None:
+            metrics.TIME_TO_DECISION.labels(report.loan_type).observe(float(waited))
         precedent = None
         if action == "override" and answer.get("officer_id"):
             precedent = await propose_precedent(

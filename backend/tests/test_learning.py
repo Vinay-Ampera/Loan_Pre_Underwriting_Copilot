@@ -122,7 +122,13 @@ def run_override(
 
 @pytest.mark.db
 def test_override_creates_a_pending_precedent(engine: Engine) -> None:
+    from prometheus_client import REGISTRY  # noqa: PLC0415
+
+    seen = {"loan_type": "personal"}
+    before = REGISTRY.get_sample_value("lc_time_to_decision_seconds_count", seen) or 0.0
     _, officer = run_override(engine, "SYN-PL-D03", "approve")
+    # the officer's decision is timed from the case's creation, for the dashboard
+    assert REGISTRY.get_sample_value("lc_time_to_decision_seconds_count", seen) == before + 1
     assert officer["precedent"]["status"] == "pending"
     with engine.connect() as c:
         row = c.execute(

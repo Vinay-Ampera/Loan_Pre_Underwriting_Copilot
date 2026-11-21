@@ -133,3 +133,54 @@ def test_a_full_case_sends_per_agent_traces_and_scores_without_any_personal_data
     with engine.connect() as c:
         ids = {r[0] for r in c.execute(text("SELECT langfuse_trace_id FROM llm_calls"))}
         assert ids == {lf.scores[0]["trace_id"]}
+
+
+class _Collect(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__(level=logging.DEBUG)
+        self.lines: list[str] = []
+        self.setFormatter(JsonFormatter())
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.lines.append(self.format(record))
+
+
+@pytest.mark.db
+def test_the_log_lines_of_a_whole_case_hold_no_personal_data(engine: Engine) -> None:
+    """Stage 11 security pass: every log line written while a case runs through every agent,
+    with the models on, at DEBUG level, as Loki would receive it."""
+    sink = _Collect()
+    root = logging.getLogger()
+    old = root.level
+    root.addHandler(sink)
+    root.setLevel(logging.DEBUG)
+    try:
+        state = one_shot(engine, "SYN-PL-D02", ScriptedRouter("good"))
+    finally:
+        root.removeHandler(sink)
+        root.setLevel(old)
+    assert state["status"] == "awaiting_confirmation" and sink.lines
+    blob = "\n".join(sink.lines)
+    assert find_leaks(blob) == []
+    sub = load_case_dir(OUTPUT / "cases" / "SYN-PL-D02")
+    for a in sub.application["applicants"]:
+        for value in (a["full_name"], a.get("pan"), a.get("phone"), a.get("address")):
+            if value:
+                assert str(value).lower() not in blob.lower()
+
+
+def test_a_log_line_never_carries_an_identifier_and_parsers_stay_quiet() -> None:
+    record = logging.LogRecord(
+        "x", logging.INFO, "", 0, "pan %s phone %s", ("FIZPS3074G", "9944650191"), None
+    )
+    record.note = "a@b.com wrote"
+    out = json.loads(JsonFormatter().format(record))
+    assert out["event"] == "pan <PAN> phone <PHONE>" and out["note"] == "<EMAIL> wrote"
+    root = logging.getLogger()
+    old = root.level
+    root.setLevel(logging.DEBUG)
+    try:  # a DEBUG root does not open up the loggers that print document text or prompts
+        for name in ("pdfminer", "pdfminer.pdfinterp", "LiteLLM", "httpx"):
+            assert not logging.getLogger(name).isEnabledFor(logging.INFO)
+    finally:
+        root.setLevel(old)

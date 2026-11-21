@@ -112,6 +112,7 @@ The admin may change which models answer, the model settings and the editable pa
 - **The key:** with Resend the API key is `SMTP_PASSWORD` in `.env` (a `SecretStr`). It is never logged, put in an error, chained to an exception or returned; a server error becomes a plain `SendError` (tested with a key-looking string inside the server's own error).
 - **What an email may hold:** customer messages are unchanged (content check, fraud footer, second click). Staff email is fixed text with a sign-in link and nothing from a case. **No email ever carries a password**: account and reset emails tell the person to ask the admin. The auditor gets no email.
 - **After the commit:** staff email is queued in the event's transaction and sent by the app's own loop, so a rolled-back event sends nothing; rows are locked while sent so two workers never send twice; three tries, then failed.
+- **Hardening (Notifications Part 3, 2026-11-21):** the loop sends **one email per transaction**, so a problem with one row can no longer roll back the outcome recorded for another and send that email again; any unexpected error counts as a failed try with only its type recorded; a failed row waits 1 minute, then 5 minutes, before the next try (`next_attempt_at`, migration 0023); the SMTP sender checks the recipient (one plain address, no line breaks, commas or angle brackets) before it opens a connection, and turns any other error into a plain `SendError`. Delivery is at least once: if the process stops between the send and the commit, that one email goes again. Outcomes are counted in `lc_emails_total` (kind and status only).
 - **Audit:** `email_sent`, `email_held`, `email_failed` (kind, masked address, delivery) for staff email; `message_sent` now records `delivery`; `notice_emails_changed` when a person changes their choice.
 - **Noise and quota:** at most one notice email per person per 30 minutes (`NOTICE_EMAIL_GAP_MINUTES`); each person can turn them off.
 - **Headers:** plain text, `Auto-Submitted: auto-generated`, a no-reply sender; `onboarding@resend.dev` until a domain is verified (it delivers only to the Resend account's own address).
@@ -134,6 +135,12 @@ The admin changes the policy text the Policy agent reads. The aim is that a chan
 - **Audit log** records every confirm, override, precedent decision, policy or rule change, login, role change. Append-only.
 - No PII in application logs, Langfuse traces or Grafana. Masked text only.
 - LiteLLM logs tokens and cost, not raw prompts, unless masked.
+- **Two log guards (Stage 11 security pass, 2026-11-21).** A test that ran a whole case at DEBUG level found that pdfminer (under pdfplumber) prints every text operator of a PDF, so names, PAN, Aadhaar and account numbers, and that LiteLLM prints model replies. Normal runs log at INFO, so this appeared only with DEBUG on. The fixes:
+  - The libraries that can print document text, prompts or request bodies (`CONTENT_LOGGERS` in `app/observability/logs.py`: pdfminer, pdfplumber, fitz, PIL, LiteLLM, httpx, httpcore, openai, urllib3 and the OCR engines) are held at WARNING whatever the root level.
+  - The JSON formatter replaces every identifier pattern in every text field with its kind (`<PAN>`).
+  - `test_the_log_lines_of_a_whole_case_hold_no_personal_data` runs a case at DEBUG and searches every line for the applicant's name, PAN, phone and address and for the patterns.
+- **Secrets in git history (checked 2026-11-21):** a scan of the whole history for Resend, Gemini, Groq, NVIDIA, OpenRouter, Langfuse and Neon key shapes found none, and `.env` was never committed.
+- **Audit coverage:** `test_audit_coverage.py` lists every route that changes something. Each one writes an audit row, names the code that writes it, or is on a short list of routes that change only the person's own state or a preview.
 
 Observability (Stage 7): Langfuse and Tempo receive stage names, model names, token counts, cost, latency and scores only, never prompt, reply or document text (tested with a fake client and the leak patterns). Logs are JSON lines built from ids and counts. `/metrics` has no authentication and holds aggregate counters with stage and model labels only; expose it on the internal network, not publicly. `LANGFUSE_ENABLED=false` in CI and tests.
 
@@ -150,7 +157,11 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 
 ## 7. Retention and privacy
 
-- Bureau-derived data deleted after six months unless consent is renewed.
+- Bureau-derived data deleted after six months unless consent is renewed. **Built (Stage 11):** the retention job (`app/db/retention.py`) runs once a day inside the app (`RETENTION_HOURS`, under an advisory lock so two processes never run it together) and by hand with `python -m app.db.retention [--dry-run]`.
+  - **Bureau data:** six months after a case was made (v1 has no consent renewal), it removes the stored values of the bureau rules (credit score, days past due, enquiries) from `rule_results` and from the report findings. The pass or fail, the points and the written finding stay, because they are the record of the decision.
+  - **Run checkpoints:** once the officer has decided, it deletes the run's LangGraph checkpoints, which hold the whole bureau record, and stamps the case.
+  - **Staff email:** it deletes rows that are no longer queued after `EMAIL_RETENTION_DAYS` (90).
+  - **Record:** one `retention_run` audit row with counts only.
 - Rejection reasons are always produced in writing (RBI expectation).
 - Key Fact Statement and fair-practice wording cited by the Policy agent.
 
@@ -162,7 +173,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 
 ## 9. Dependencies and supply chain
 
-- Pin dependency versions; lockfiles committed.
+- Pin dependency versions; lockfiles committed. `requirements.lock` (Stage 11) holds the exact Python versions the Docker image installs; `frontend/package-lock.json` the npm ones.
 - Dependency audit in CI (pip-audit, npm audit).
 - Local models downloaded from official sources and checksummed.
 
@@ -191,10 +202,10 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 ## 11. Review checklist (before each release)
 
 - [ ] No real PII in repo, data or logs
-- [ ] Leak test passes
+- [x] Leak test passes (LLM inputs, traces and, since Stage 11, every log line of a whole case)
 - [ ] Injection test set passes
 - [ ] Roles enforced on all endpoints
-- [ ] Audit log covers all actions
-- [ ] Secrets not in git history
-- [ ] Retention job runs
+- [x] Audit log covers all actions (`test_audit_coverage.py`)
+- [x] Secrets not in git history (scanned 2026-11-21)
+- [x] Retention job runs (Stage 11: `app/db/retention.py`, daily in the app)
 - [ ] Customer message check blocks every forbidden pattern (Stage 9)

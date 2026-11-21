@@ -20,9 +20,11 @@ from sqlalchemy import Connection, Engine, text
 from app.api.deps import write_audit
 from app.notifications.check import check_notification_text
 from app.notifications.sender import NotAllowedError, Outgoing, Sender, SendError, mask_email
+from app.observability import metrics
 
 log = logging.getLogger("loan_copilot.mailer")
 MAX_ATTEMPTS = 3
+RETRY_AFTER_MINUTES = (1, 5)  # wait after the first and the second failed try
 _config = {"base_url": "http://localhost:5173", "gap_minutes": 30}
 
 _SIGN_IN = "Sign in to Pramaan: {url}/login"
@@ -89,13 +91,18 @@ def queue_account_email(conn: Connection, user_id: UUID | str, kind: str) -> boo
 
 
 def _outcome(conn: Connection, row: Any, status: str, error: str | None) -> None:
+    wait = RETRY_AFTER_MINUTES[min(row.attempts, len(RETRY_AFTER_MINUTES) - 1)]
     conn.execute(
         text("""UPDATE email_outbox SET status = :s, attempts = attempts + 1, last_error = :e,
                     sent_at = CASE WHEN :s IN ('printed', 'sent', 'redirected') THEN now()
-                                   ELSE sent_at END
+                                   ELSE sent_at END,
+                    next_attempt_at = CASE WHEN :s = 'queued'
+                                           THEN now() + make_interval(mins => :w)
+                                           ELSE next_attempt_at END
                 WHERE id = :i"""),
-        {"s": status, "e": error, "i": row.id},
+        {"s": status, "e": error, "i": row.id, "w": wait},
     )  # fmt: skip
+    metrics.EMAILS.labels(row.kind, status).inc()
     if status == "queued":
         return  # tried again later; the final outcome is audited once
     action = {"failed": "email_failed", "held": "email_held"}.get(status, "email_sent")
@@ -103,31 +110,44 @@ def _outcome(conn: Connection, row: Any, status: str, error: str | None) -> None
     write_audit(conn, None, action, "user", row.user_id, after=after)
 
 
+def _send_one(conn: Connection, sender: Sender, row: Any) -> None:
+    if check_notification_text(row.subject):  # fixed text; a slip must not go out
+        _outcome(conn, row, "failed", "the subject failed the content check")
+        return
+    last = row.attempts + 1 >= MAX_ATTEMPTS
+    try:
+        how = sender.send(Outgoing(str(row.id), row.recipient, row.subject, row.body))
+    except NotAllowedError:
+        _outcome(conn, row, "held", "not on the email allow-list")
+    except SendError as exc:
+        _outcome(conn, row, "failed" if last else "queued", str(exc)[:300])
+    except Exception as exc:  # noqa: BLE001 - an unexpected error counts as a failed try
+        log.error("sending email %s failed: %s", row.id, type(exc).__name__)
+        why = f"unexpected error ({type(exc).__name__})"
+        _outcome(conn, row, "failed" if last else "queued", why)
+    else:
+        _outcome(conn, row, how or "printed", None)
+
+
 def deliver_pending(engine: Engine, sender: Sender, limit: int = 20) -> int:
-    """Send what is queued, oldest first. Each row is locked while it is sent, so two workers
-    never send the same email. Returns how many rows were handled."""
+    """Send what is due, oldest first, **one row per transaction**. The row is locked while it
+    is sent, so two workers never send the same email, and a problem with one row can never undo
+    the outcome already recorded for another (which would send that email again). A row that
+    failed waits `RETRY_AFTER_MINUTES` before its next try. If the process stops between the
+    send and the commit, the row is still queued and goes once more (at least once, never lost).
+    Returns how many rows were handled."""
     handled = 0
-    with engine.begin() as conn:
-        rows = conn.execute(
-            text("""SELECT id, user_id, kind, recipient, subject, body, attempts FROM email_outbox
-                    WHERE status = 'queued' ORDER BY created_at LIMIT :n
-                    FOR UPDATE SKIP LOCKED"""),
-            {"n": limit},
-        ).all()  # fmt: skip
-        for row in rows:
+    for _ in range(limit):
+        with engine.begin() as conn:
+            row = conn.execute(
+                text("""SELECT id, user_id, kind, recipient, subject, body, attempts
+                        FROM email_outbox WHERE status = 'queued' AND next_attempt_at <= now()
+                        ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED"""),
+            ).first()  # fmt: skip
+            if row is None:
+                break
+            _send_one(conn, sender, row)
             handled += 1
-            if check_notification_text(row.subject):  # fixed text; a slip must not go out
-                _outcome(conn, row, "failed", "the subject failed the content check")
-                continue
-            try:
-                how = sender.send(Outgoing(str(row.id), row.recipient, row.subject, row.body))
-            except NotAllowedError:
-                _outcome(conn, row, "held", "not on the email allow-list")
-            except SendError as exc:
-                last = row.attempts + 1 >= MAX_ATTEMPTS
-                _outcome(conn, row, "failed" if last else "queued", str(exc)[:300])
-            else:
-                _outcome(conn, row, how or "printed", None)
     return handled
 
 

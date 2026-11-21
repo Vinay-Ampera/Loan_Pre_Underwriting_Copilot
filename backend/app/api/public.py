@@ -31,6 +31,7 @@ from app.api.schemas import CO_APPLICANT, LoanType, SendIn
 from app.core.config import Settings
 from app.intake import archive
 from app.notifications import inbox
+from app.observability import metrics
 
 router = APIRouter(prefix="/public", tags=["applicant upload link"])
 GENERIC = "This link is not active."
@@ -228,6 +229,7 @@ def send_request(
         inbox.notify(
             conn, link.officer_id, "applicant_request_received", inbox.CaseRef(case_id, case_no)
         )
+        metrics.CASES_CREATED.labels(loan_type, "applicant").inc()
         return JSONResponse({"received": True}, headers=NO_CACHE)
 
     form = dict(case.form_data)

@@ -6,7 +6,7 @@ VENV := .venv/bin
 
 OBS := docker compose -f ops/docker-compose.observability.yml
 
-.PHONY: help setup migrate backend frontend test test-fe lint grafana grafana-down grafana-logs
+.PHONY: help setup migrate backend frontend test test-fe lint grafana grafana-down grafana-logs up down stack-logs
 
 help:
 	@echo "make setup     - create .venv, install Python and npm packages"
@@ -19,6 +19,9 @@ help:
 	@echo "make grafana      - start Grafana, Prometheus, Loki, Tempo (Grafana: http://localhost:3000, admin/admin)"
 	@echo "make grafana-down - stop that stack"
 	@echo "make grafana-logs - follow the stack's container logs"
+	@echo "make up        - the whole stack in Docker (app http://localhost:8000, Grafana :3000)"
+	@echo "make down      - stop the Docker stack (data volumes are kept)"
+	@echo "make stack-logs - follow the Docker stack's logs"
 
 setup:
 	virtualenv .venv
@@ -58,3 +61,15 @@ grafana-down:
 
 grafana-logs:
 	$(OBS) logs -f
+
+# The whole stack in Docker (Stage 11, docker-compose.yml). Only .env needs filling in.
+up:
+	docker compose up -d --build
+	@echo "App        http://localhost:8000"
+	@echo "Grafana    http://localhost:3000"
+
+down:
+	docker compose down
+
+stack-logs:
+	docker compose logs -f

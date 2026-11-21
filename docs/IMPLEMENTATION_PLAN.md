@@ -158,7 +158,7 @@ Exit criteria
 Tasks
 1. Precedent creation on override (reason plus LLM summary), hard-rule check, admin approval, expiry date, embedding.
 2. Precedent retrieval inside the Policy agent: borderline only, same loan type, similarity threshold, capped bonus, never over a hard rule.
-3. RAGAS and DeepEval suites; full run on dev and test; GitHub Actions gate on PRs with metric thresholds.
+3. Model-judged evaluation; full run on dev and test; GitHub Actions gate on PRs with metric thresholds. (The judge runner `app.eval.judge` was built in Stage 11 (RAGAS and DeepEval were replaced by this runner, user decision 2026-11-21).)
 4. Fairness report from the separate attributes table (monitoring only).
 5. Langfuse tracing with masked data only: tokens, cost and latency per agent, evaluation scores attached.
 6. Tune thresholds on dev; record the baseline; set targets (closes OI-3 and OI-7).
@@ -328,13 +328,13 @@ Exit criteria: met by the tests in TESTING 7f.
 
 ---
 
-## Stage 11: Hardening, Docker and demo (M)
+## Stage 11: Hardening, Docker and demo (M), built 2026-11-21
 
 **Goal:** a reproducible package and a smooth demo.
 
 Tasks
 1. Security pass against `SECURITY.md`: secrets, retention job, audit coverage, PII leak scan on logs and traces.
-2. Docker Compose: frontend, API (with graph runner), local Langfuse if used, Prometheus, Loki, Tempo, Grafana. The Stage 9 sender stays the console sender; a real mail or SMS service is not part of v1. Postgres stays on Neon, with an optional local Postgres service for offline use.
+2. Docker Compose: frontend, API (with graph runner), Prometheus, Loki, Tempo, Grafana. Langfuse stays on its cloud or off (user decision 2026-11-21). Email is the console sender or SMTP (Notifications Part 2), with an optional Mailpit service; no SMS. Postgres stays on Neon, with an optional local Postgres service for offline use.
 3. Grafana dashboards: applications per day, time to decision, override-rate trend, tokens and cost per case, latency per agent.
 4. Model versions and policy versions tagged on releases.
 5. Run the 40 test cases once, record final results. Fold in the additions and corrections from the review window. Include a demo of the intake desk and the upload link (Stage 10).
@@ -345,6 +345,15 @@ Exit criteria
 - `docker compose up` brings up the full stack on a clean machine with only `.env` filled in.
 - Final test-set results recorded.
 - Demo script runs end to end without manual fixes.
+
+What was built (details and measured results in `PROGRESS.md` "Stage 11 build notes"):
+- **Security pass:** a retention job (migration 0024), two log guards, an audit-coverage test and a git-history secret scan.
+- **Dashboards:** a new row with applications per day, time to decision, override rate and staff email, plus their metrics.
+- **Releases:** the manifest command `python -m app.release`.
+- **Evaluation:** the judge runner `python -m app.eval.judge` (replacing RAGAS and DeepEval) and the models-off test-split results.
+- **For people:** `docs/DEMO.md`, a new README and a complete `.env.example`.
+- **Packaging:** `requirements.lock`, `Dockerfile`, `docker-compose.yml`, and the `make up`, `make down` and `make stack-logs` targets.
+- **Still with the user:** the real-model test-split run (one command, with the user's keys) and a demo run by the user.
 
 ---
 

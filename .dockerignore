@@ -1,0 +1,23 @@
+# Never in an image: secrets, local environments, caches, uploads, logs, test output.
+.env
+.env.*
+!.env.example
+.git
+.github
+.claude
+.venv
+**/node_modules
+**/__pycache__
+**/*.pyc
+.mypy_cache
+.ruff_cache
+.pytest_cache
+*.egg-info
+data/uploads
+data/synthetic/output
+logs
+backend/logs
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+docs

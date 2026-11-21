@@ -1,0 +1,35 @@
+{
+  "split": "test",
+  "run_on": "2026-11-21",
+  "rules_version": "2026.10.31-2",
+  "note": "Final held-out run (Stage 11). Recorded, never tuned on. Models off: report text written by code.",
+  "code_side": {
+    "command": "python -m app.eval.run --split test --allow-test",
+    "cases": 40,
+    "band_accuracy": 1.0,
+    "stop_accuracy": 1.0,
+    "total_score_exact": 0.95,
+    "stage_scores_exact": 0.95,
+    "failed_rules_exact": 0.775,
+    "mean_score_error": 0.2692,
+    "hard_rule_integrity": 1.0,
+    "bonus_lifts_label": 0.0
+  },
+  "pipeline_models_off": {
+    "command": "python -m app.agents.run --split test --allow-test --no-llm",
+    "cases": 40,
+    "completed": 40,
+    "stop_stage_and_class": 1.0,
+    "band_accuracy": 0.975,
+    "mean_score_error": 2.0,
+    "scored_cases": 21,
+    "unverified_outputs": 0,
+    "seconds_per_case": 21.9
+  },
+  "differences": [
+    "7 cases stopped at KYC for a missing identity document also list CM-KYC-10 as failed; the answer key lists only the missing-document rule (band and stop are right).",
+    "SYN-BL-T09 and SYN-HL-T09: CM-INC-12 passes where the key expects a fail (total 100 against 95 and 98; band refer either way, from the fraud cap).",
+    "SYN-HL-T01 (pipeline only): the payslip read from the files gave a net-pay mismatch tamper hint, so CM-FRD-01 capped the case to refer; the key says approve. Likely an OCR misread of a scanned payslip."
+  ],
+  "models_on": "not run yet: the user runs python -m app.agents.run --split test --allow-test, then python -m app.eval.judge --split test --allow-test"
+}

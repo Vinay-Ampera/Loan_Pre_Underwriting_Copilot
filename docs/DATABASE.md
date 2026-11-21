@@ -127,7 +127,7 @@ Migration 0019 also adds `upload_links.expiry_notified_for` (the expiry time a "
 
 | Table or column | Purpose |
 |---|---|
-| `email_outbox` | Queue of staff email: `user_id`, `kind` (`notice`, `account_created`, `password_reset`), `recipient` (the staff address), fixed `subject` and `body` (no case data, never a password), `status` (`queued`, `printed`, `sent`, `redirected`, `held`, `failed`), `attempts` (three at most), `last_error`, `created_at`, `sent_at`. Indexes on `(status, created_at)` and `(user_id, kind, created_at DESC)`. `app_rw` and `migrator`; not `report_ro`. |
+| `email_outbox` | Queue of staff email: `user_id`, `kind` (`notice`, `account_created`, `password_reset`), `recipient` (the staff address), fixed `subject` and `body` (no case data, never a password), `status` (`queued`, `printed`, `sent`, `redirected`, `held`, `failed`), `attempts` (three at most), `last_error`, `created_at`, `sent_at`, `next_attempt_at` (migration 0023: when a queued row may be tried; now for a new row, then 1 and 5 minutes after a failure). Indexes on `(status, next_attempt_at)` and `(user_id, kind, created_at DESC)`. `app_rw` and `migrator`; not `report_ro`. |
 | `users.notice_emails` | The person's choice to get "new notice" emails (default true; new accounts take `STAFF_EMAILS_DEFAULT`). |
 | `outbox.delivery` | How a sent customer message went out: `printed`, `sent` or `redirected`. |
 
@@ -158,7 +158,8 @@ Used only by the monitoring report. Agents and the scoring code have no access; 
 
 ## 8. Retention
 
-- Bureau-derived data (`mock_bureau` snapshots copied into stage results) is deleted after six months unless consent is renewed (nightly job).
+- Bureau-derived data (the values of the rules that read the bureau, copied into `rule_results.evidence` and the report findings, and the run checkpoints that hold the whole bureau record) is removed six months after the case was made (v1 has no consent renewal). The retention job does it daily (`app/db/retention.py`, Stage 11); `cases.bureau_removed_at` (migration 0024) is set once the checkpoints are gone too, which waits for the officer's decision.
+- Staff email rows (`email_outbox`) that are no longer queued: deleted after 90 days (`EMAIL_RETENTION_DAYS`).
 - Rejected uploads: file removed at once, row kept with reason.
 - Audit log: kept for the life of the project.
 

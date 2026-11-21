@@ -1,0 +1,13 @@
+# Prometheus inside the full stack (docker-compose.yml at the repository root): the app is a
+# service on the same network. ops/prometheus/prometheus.yml is for the app running on the host.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: loan-copilot-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["app:8000"]
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
