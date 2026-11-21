@@ -51,7 +51,10 @@ lint:
 
 # Observability stack (needs Docker). The API runs on the host: `make backend` in another terminal.
 # For Tempo traces, set OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 in .env first.
+# logs/ is made first: if Docker had to create the folder for Promtail's mount it would belong
+# to root, and the app (which writes logs/app.log) could not start.
 grafana:
+	mkdir -p logs
 	$(OBS) up -d
 	@echo "Grafana    http://localhost:3000  (s / s, or GRAFANA_ADMIN_PASSWORD)"
 	@echo "Prometheus http://localhost:9090"

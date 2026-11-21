@@ -59,8 +59,18 @@ def configure_logging(log_dir: Path | None = REPO_ROOT / "logs", level: int = lo
         return  # already set up (reload, repeated imports)
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
     if log_dir is not None:
-        log_dir.mkdir(parents=True, exist_ok=True)
-        handlers.append(RotatingFileHandler(log_dir / "app.log", maxBytes=5_000_000, backupCount=3))
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+            handlers.append(
+                RotatingFileHandler(log_dir / "app.log", maxBytes=5_000_000, backupCount=3)
+            )
+        except OSError as exc:  # never stop the app over its log file: the terminal still has it
+            print(
+                f"logging: cannot write {log_dir / 'app.log'} ({type(exc).__name__}); logging to "
+                "the terminal only. If Docker made the folder, give it back to yourself: "
+                f'sudo chown -R "$USER" "{log_dir}"',
+                file=sys.stderr,
+            )
     for h in handlers:
         h.setFormatter(JsonFormatter())
         root.addHandler(h)

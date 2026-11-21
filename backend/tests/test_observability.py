@@ -184,3 +184,26 @@ def test_a_log_line_never_carries_an_identifier_and_parsers_stay_quiet() -> None
             assert not logging.getLogger(name).isEnabledFor(logging.INFO)
     finally:
         root.setLevel(old)
+
+
+def test_an_unwritable_log_folder_never_stops_the_app(
+    tmp_path: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from app.observability.logs import configure_logging  # noqa: PLC0415
+
+    blocked = tmp_path / "logs"
+    blocked.write_text("a file where the folder should be")  # mkdir and open both fail
+    root = logging.getLogger()
+    saved, level = list(root.handlers), root.level
+    for h in saved:
+        root.removeHandler(h)
+    try:
+        configure_logging(blocked)
+        assert any(isinstance(h.formatter, JsonFormatter) for h in root.handlers)  # terminal
+        assert "cannot write" in capsys.readouterr().err
+    finally:
+        for h in list(root.handlers):
+            root.removeHandler(h)
+        for h in saved:
+            root.addHandler(h)
+        root.setLevel(level)

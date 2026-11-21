@@ -408,7 +408,7 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
     - Old staff email goes after 90 days.
     - Each run that changes something writes one audit row with counts (E-103, E-105).
   - **Log guards.** A new test ran a whole case at DEBUG and found that pdfminer prints raw document text (names, PAN, Aadhaar, account numbers) and that LiteLLM prints model replies. Those libraries are now held at WARNING, and the formatter replaces identifier patterns in every text field (E-104). Normal INFO runs never showed it.
-  - **Log path.** `make backend` wrote logs to `backend/logs`, where Promtail never looked; they now go to the repository's `logs/`.
+  - **Log path.** `make backend` wrote logs to `backend/logs`, where Promtail never looked; they now go to the repository's `logs/`. On the user's machine that folder had been created by Docker as root (1 November, `make grafana`), so the app could not start. The empty folder was replaced, the app now falls back to the terminal if the file cannot be opened, and `make grafana` creates the folder first (E-106).
   - **Audit coverage.** A test lists all 72 write routes. Each one audits, names the code that does, or is on the short list of routes not audited by design.
   - **Secrets.** A git-history secret scan found nothing, and `.env` was never committed.
 - **Dashboards:** Grafana row 6:
