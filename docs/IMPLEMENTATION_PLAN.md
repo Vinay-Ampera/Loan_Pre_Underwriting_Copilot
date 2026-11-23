@@ -351,7 +351,7 @@ What was built (details and measured results in `PROGRESS.md` "Stage 11 build no
 - **Dashboards:** a new row with applications per day, time to decision, override rate and staff email, plus their metrics.
 - **Releases:** the manifest command `python -m app.release`.
 - **Evaluation:** the judge runner `python -m app.eval.judge` (replacing RAGAS and DeepEval) and the models-off test-split results.
-- **For people:** `docs/DEMO.md`, a new README and a complete `.env.example`.
+- **For people:** a demo script (written as `docs/DEMO.md`; moved out of the repo to the presentation folder on 2026-11-23), a new README and a complete `.env.example`.
 - **Packaging:** `requirements.lock`, `Dockerfile`, `docker-compose.yml`, and the `make up`, `make down` and `make stack-logs` targets.
 - **Still with the user:** the real-model test-split run (one command, with the user's keys) and a demo run by the user.
 

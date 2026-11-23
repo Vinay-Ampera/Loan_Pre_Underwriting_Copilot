@@ -22,7 +22,7 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 10 Intake desk and applicant upload link | Built, committed (A to C `d2bcae7`, D `f3c4a2c`) | Migrations 0014 to 0017; `intake/archive.py`, `readcache.py`, `inventory.py`, `prefill.py`, `bundle.py`; `api/ingest.py`, `intake.py`, `links.py`, `public.py`, `filestore.py`, `ratelimit.py`; desk, split screen, form tick, links page and applicant page in the UI. See "Stage 10 build notes" and "Stage 10 Part D build notes". Run `python -m app.db.migrate` first |
 | 10b AI control for the admin | Built, committed (`f521e32`) | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 10c Knowledge base (policy documents and learnings) | Built, committed (`d484bff`) | Migration 0021; `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`, `api/knowledge.py`; admin Knowledge base page and officer Policies page. See "Knowledge base build notes". Run `python -m app.db.migrate` first |
-| 11 Hardening, Docker and demo | **Built (2026-11-21; not committed)** | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), `docs/DEMO.md`, README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
+| 11 Hardening, Docker and demo | **Built (2026-11-21; not committed)** | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), the demo script (moved out of the repo on 2026-11-23), README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
 
 In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
@@ -31,6 +31,11 @@ Notifications Part 3 (hardening and close-out) is built (2026-11-21, migration 0
 ---
 
 ## Decisions log
+
+### 2026-11-23: demo and presentation material lives outside the repo; OI-4 closed
+
+1. **Demo scripts, decks and presentation documents live in the presentation folder** `~/Documents/Loan_Pre_Underwriting_Copilot`, not in this repo (user decision). `docs/DEMO.md` moved there as `Pramaan-Demo-Walkthrough.md`, next to the deck, the workflow and architecture PDFs and a new 10-minute CEO script (`Pramaan-CEO-Script.md`), written after the project manager's review.
+2. **OI-4 resolved:** the user confirmed that traces appear in Langfuse cloud.
 
 ### 2026-11-21: Notifications Part 3 and Stage 11 started; three Stage 11 choices
 
@@ -442,7 +447,7 @@ Requested 2026-11-18 ("let the admin have an AI control page"); the user answere
   ```
   Paste the two summaries back to record them here; they also give the OI-3, OI-4 and OI-7 baseline.
 - **For people:**
-  - `docs/DEMO.md`, a 25-minute script with the case for each scene (scenes 1, 2, 5 and 6 follow the browser tests `intake-desk`, `roles`, `inbox` and `knowledge-base`);
+  - `docs/DEMO.md` (moved on 2026-11-23 to the presentation folder outside the repo, see the decisions log), a 25-minute script with the case for each scene (scenes 1, 2, 5 and 6 follow the browser tests `intake-desk`, `roles`, `inbox` and `knowledge-base`);
   - a new README (Docker, no Docker, tests, documents);
   - `.env.example`, which now lists every setting (seven were missing) with up-to-date comments.
 - **Packaging:**

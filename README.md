@@ -45,7 +45,7 @@ Python 3.12 and Node 22. The synthetic cases are made with `python -m synthetic.
 
 ## Try it
 
-`docs/DEMO.md` is a 25-minute walk-through with the cases to use and what each screen should show.
+The demo walk-through (25 minutes, with the cases to use and what each screen should show) and the presentation material are kept outside this repository, with the author's presentation files.
 
 ## Tests and evaluation
 
@@ -76,4 +76,4 @@ Start with [CLAUDE.md](CLAUDE.md), then [docs/](docs/):
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md) and [progress](docs/PROGRESS.md)
 - [Architecture](docs/ARCHITECTURE.md), [agents](docs/AGENTS.md), [database](docs/DATABASE.md)
 - [Security](docs/SECURITY.md), [testing](docs/TESTING.md), [edge cases](docs/EDGE_CASES.md)
-- [Design system](docs/DESIGN_SYSTEM.md), [code style](docs/CODE_STYLE.md), [demo](docs/DEMO.md)
+- [Design system](docs/DESIGN_SYSTEM.md), [code style](docs/CODE_STYLE.md)
