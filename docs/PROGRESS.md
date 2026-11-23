@@ -34,7 +34,7 @@ Notifications Part 3 (hardening and close-out) is built (2026-11-21, migration 0
 
 ### 2026-11-23: demo and presentation material lives outside the repo; OI-4 closed
 
-1. **Demo scripts, decks and presentation documents live in the presentation folder** `~/Documents/Loan_Pre_Underwriting_Copilot`, not in this repo (user decision). `docs/DEMO.md` moved there as `Pramaan-Demo-Walkthrough.md`, next to the deck, the workflow and architecture PDFs and a new 10-minute CEO script (`Pramaan-CEO-Script.md`), written after the project manager's review.
+1. **Demo scripts, decks and presentation documents live in the presentation folder** `~/Documents/Loan_Pre_Underwriting_Copilot`, not in this repo (user decision). `docs/DEMO.md` moved to its `CEO_Presentation/` folder as `Pramaan-Demo-Walkthrough.md`, beside a new 10-minute CEO script (`Pramaan-CEO-Script.md`) and a CEO deck (`Pramaan CEO Deck.pptx`: the POC deck reordered, plus Results and What's next slides). These were written after the project manager's review. The POC deck and the workflow and architecture PDFs stay unchanged at the top level.
 2. **OI-4 resolved:** the user confirmed that traces appear in Langfuse cloud.
 
 ### 2026-11-21: Notifications Part 3 and Stage 11 started; three Stage 11 choices

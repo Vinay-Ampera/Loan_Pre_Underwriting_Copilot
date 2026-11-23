@@ -105,7 +105,7 @@ Stages 1 to 10c are built and committed: Stage 8 (`25e6ad6`, `ff177fa`), Stage 9
 
 ## Demo and presentation files
 
-Demo scripts, slide decks and presentation documents (the CEO script, the 25-minute demo walk-through, the POC deck, the workflow and architecture PDFs) live in **`~/Documents/Loan_Pre_Underwriting_Copilot`**, outside this repo (user decision, 2026-11-23). Read them there and save every new or changed demo or presentation file there, never in `docs/`. Project documentation and code stay in this repo.
+Demo scripts, slide decks and presentation documents live in **`~/Documents/Loan_Pre_Underwriting_Copilot`**, outside this repo (user decision, 2026-11-23). The top level holds the POC deck and the workflow and architecture PDFs; `CEO_Presentation/` holds the CEO deck, the CEO script and the 25-minute demo walk-through. Never overwrite an existing deck: save a new copy. Read them there and save every new or changed demo or presentation file there, never in `docs/`. Project documentation and code stay in this repo.
 
 ## Open items
 
