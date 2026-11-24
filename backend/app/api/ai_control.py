@@ -84,19 +84,14 @@ def overview(
     _: User = Depends(admin_only), conn: Connection = Depends(get_conn),
     settings: Settings = Depends(get_settings_dep),
 ) -> dict[str, Any]:  # fmt: skip
-    version, cfg = _saved_config(conn)
+    snap = ai.load(conn)  # once: the saved configuration and the edited prompts
     keys = ai.key_status(settings)
     cat = ai.catalogue()
-    drafts = {
-        r.name: r
-        for r in conn.execute(
-            text("SELECT name, tested_ok, tested_hash, body, updated_at FROM ai_prompt_drafts")
-        )
-    }
-    snap = ai.load(conn)
+    drafts = {r.name for r in conn.execute(text("SELECT name FROM ai_prompt_drafts"))}
+    versions = snap.prompt_versions()
     return {
-        "version": version,
-        "config": cfg,
+        "version": snap.config_version,
+        "config": snap.config,
         "default": ai.default_config(),
         "roles": [{"role": r, "label": ai.ROLE_LABELS[r]} for r in ai.ROLES],
         "limits": ai.LIMITS,
@@ -106,7 +101,7 @@ def overview(
             for pid, p in cat.items()
         ],
         "prompts": [
-            {"name": n, "version": snap.prompt_versions()[n],
+            {"name": n, "version": versions[n],
              "edited": n in snap.prompts, "has_draft": n in drafts}
             for n in ai.PROMPT_NAMES
         ],

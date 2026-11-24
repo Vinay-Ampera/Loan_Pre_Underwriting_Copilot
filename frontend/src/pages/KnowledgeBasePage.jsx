@@ -94,11 +94,13 @@ export default function KnowledgeBasePage() {
   return (
     <div className="kb-page">
       <header className="page-head">
-        <h1>Knowledge base</h1>
-        <p className="muted">
-          The policy the Policy agent reads, and what the system has learned from officers&apos;
-          overrides. Scoring numbers live in the rules file and do not change here.
-        </p>
+        <div>
+          <h1>Knowledge base</h1>
+          <p className="muted">
+            The policy the Policy agent reads, and what the system has learned from officers&apos;
+            overrides. Scoring numbers live in the rules file and do not change here.
+          </p>
+        </div>
       </header>
       <Tabs items={TABS} value={tab} onChange={setTab} label="Knowledge base" />
       {tab === 'policies' && (

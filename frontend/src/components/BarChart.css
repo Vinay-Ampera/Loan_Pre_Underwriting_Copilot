@@ -67,3 +67,7 @@
 .bar-chart li.bar-note {
   grid-template-columns: minmax(80px, 36%) 1fr;
 }
+
+.bar-foot {
+  margin: 0;
+}

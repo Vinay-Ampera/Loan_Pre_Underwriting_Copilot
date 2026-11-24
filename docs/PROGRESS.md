@@ -540,6 +540,7 @@ UI only, at the user's request; no API, role, wording-rule or scoring change. De
 - The account menu's items are left-aligned and the menu is wider.
 - Status chips no longer shrink below their label; the Users table keeps its chips whole and stacks into cards below 900 px; Help agent cards and the phone score bar keep their text inside.
 - Four UX fixes after a full review (combined UI and UX score 7.8): case tabs never collapse, the stepper slims once only the sign-off is left, phones get a Menu button instead of a wrapped icon row, and long file names end in "…" with a hover title. `DESIGN_SYSTEM.md` 16.1.
+- Five finishing fixes after the second review (UI 8.5, UX 8.2): one page header shape (context under the title on Knowledge base and Policies too), the summary typing effect done in about half a second, the auditor score chart without empty ranges at either end, AI control loading its settings and history together (the server reads the settings once; no change to what the API returns), and the login form on a plain sheet instead of a floating card. `DESIGN_SYSTEM.md` 16.2.
 - The 2-step screens, Help, the reset email and the docs say "your authenticator app (for example Google Authenticator or Microsoft Authenticator)" instead of naming Microsoft only (the user tests with Google Authenticator).
 - Checked with a scratch browser audit at 1920, 1440, 1280, 1024, 820 and 390 px wide on every officer, admin and auditor screen: text staying inside its box, no side scrolling, and the page not scrolling where panes are used.
 

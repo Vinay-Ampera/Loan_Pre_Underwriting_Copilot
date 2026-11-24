@@ -46,12 +46,33 @@ const ATTRIBUTE = { gender: 'Gender', age_band: 'Age band', city_tier: 'City tie
 const fromMap = (map, names) =>
   Object.entries(map).map(([k, value]) => ({ label: names?.[k] ?? k, value }))
 
+/**
+ * The score buckets from the first one with a case to the last one with a case, and a line
+ * naming the ranges left out, so ten rows of mostly zero do not make the chart tall. Empty
+ * buckets in between stay: a gap in the middle is part of the picture.
+ */
+export function scoreRows(histogram) {
+  const first = histogram.findIndex((b) => b.count > 0)
+  if (first === -1) return { rows: [], foot: null }
+  const last = histogram.findLastIndex((b) => b.count > 0)
+  const shown = histogram.slice(first, last + 1)
+  const out = [
+    first > 0 && `below ${shown[0].from}`,
+    last < histogram.length - 1 && `above ${shown[shown.length - 1].to}`,
+  ].filter(Boolean)
+  return {
+    rows: shown.map((b) => ({ label: `${b.from} to ${b.to}`, value: b.count })),
+    foot: out.length ? `No case scored ${out.join(' or ')}.` : null,
+  }
+}
+
 /** Charts are built from counts the server reads out of Postgres; no case-level rows are here. */
 export default function AuditorOverviewPage() {
   const summary = useAsync(() => api.get('/auditor/summary'), [])
   const charts = useAsync(() => api.get('/auditor/charts'), [])
   const c = charts.data
   const groups = useAsync(() => api.get('/auditor/fairness'), [])
+  const scores = scoreRows(c?.score_histogram ?? [])
   const actions = {}
   for (const a of c?.officer_actions_by_loan_type ?? []) {
     actions[a.loan_type] ??= { confirm: 0, override: 0 }
@@ -104,7 +125,9 @@ export default function AuditorOverviewPage() {
           />
           <BarChart
             title="Score distribution"
-            rows={c.score_histogram.map((b) => ({ label: `${b.from} to ${b.to}`, value: b.count }))}
+            rows={scores.rows}
+            foot={scores.foot}
+            empty="No case has a score yet."
           />
           <BarChart
             title="Confirmed by loan type"

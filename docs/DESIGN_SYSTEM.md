@@ -337,3 +337,11 @@ Asked for by the user; layout and loading only, no change to what any screen doe
 - **Phone menu:** at 720 px and below the sidebar is a bar with the Pramaan name and a **Menu** button (with the unread badge); the button opens the pages as a labelled list, and choosing a page, Escape or a tap outside closes it. Tablets keep the icon rail.
 - **Long file names** in the document list stay on one line and end in "…", with the whole name on hover, instead of breaking mid-word.
 
+### 16.2 Five finishing fixes after the second review (2026-11-24)
+
+- **One page header shape:** every page puts its one line of context under the title. Knowledge base and Policies used to put it top-right beside the title; their title and text now sit in one block like the other pages.
+- **Faster typing effect:** the report summary still types itself once per page view (decided 2026-11-02), but the whole text now takes about half a second whatever its length (it took up to two seconds). Reduced motion still shows it at once.
+- **Compact score chart (auditor Overview):** empty score ranges at either end are left out, and a line under the bars says which ("No case scored below 40 or above 89."). Empty ranges in between stay, because a gap in the middle is part of the picture. With no scored case the chart says "No case has a score yet."
+- **AI control opens in one wait:** the settings and the change history are asked for together (the history used to wait for the settings), and the server reads the saved settings once instead of twice. The page appears about 0.15 s after the slower of the two answers.
+- **Login:** the sign-in form sits on its own plain sheet (`--chrome`) instead of a card floating in an empty grey area, and the case file lies on the page grey (`--bg`) on the left. Same content, wording, order on phones and themes.
+

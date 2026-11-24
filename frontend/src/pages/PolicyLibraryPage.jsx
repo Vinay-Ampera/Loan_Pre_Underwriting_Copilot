@@ -38,11 +38,13 @@ export default function PolicyLibraryPage() {
   return (
     <div className="lib-page">
       <header className="page-head">
-        <h1>Policies</h1>
-        <p className="muted">
-          The policy in force, clause by clause, with the rules that use each clause. A case is
-          checked against the version in force when it starts.
-        </p>
+        <div>
+          <h1>Policies</h1>
+          <p className="muted">
+            The policy in force, clause by clause, with the rules that use each clause. A case is
+            checked against the version in force when it starts.
+          </p>
+        </div>
       </header>
       <section className="card lib-search" aria-label="Search the policy">
         <PolicySearch />

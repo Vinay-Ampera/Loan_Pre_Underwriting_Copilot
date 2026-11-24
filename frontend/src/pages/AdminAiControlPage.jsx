@@ -311,8 +311,7 @@ function SettingsTab({ data, cfg, setCfg }) {
 }
 
 // --------------------------------------------------------------------------- history
-function History({ onRestore }) {
-  const { data } = useAsync(() => api.get('/admin/ai/config/history'), [])
+function History({ data, onRestore }) {
   if (!data?.length) return null
   return (
     <section className="card ai-role" aria-label="History of changes">
@@ -612,22 +611,24 @@ function PromptsTab({ data, reloadOverview }) {
 
 // --------------------------------------------------------------------------- page
 export default function AdminAiControlPage() {
-  const { data, error, reload, loading } = useAsync(() => api.get('/admin/ai'), [])
+  const { data, error, reload } = useAsync(() => api.get('/admin/ai'), [])
+  // asked for at the same time as the settings, not after them, so the page opens in one wait
+  const history = useAsync(() => api.get('/admin/ai/config/history'), [])
   const [tab, setTab] = useState('models')
-  const [cfg, setCfg] = useState(null)
+  const [edits, setCfg] = useState(null) // null = nothing changed: the form shows what is saved
+  const cfg = edits ?? data?.config ?? null
   const [dialog, setDialog] = useState(null)
   const [busy, setBusy] = useState(false)
   const [dialogError, setDialogError] = useState(null)
   const [done, setDone] = useState(null)
-  const [historyKey, setHistoryKey] = useState(0)
 
   useEffect(() => {
-    if (data) setCfg(data.config)
+    setCfg(null) // fresh settings from the server replace unsaved changes, as before
   }, [data])
   const dirty = useMemo(() => Boolean(data && cfg && !same(cfg, data.config)), [data, cfg])
 
   if (error) return <ErrorState error={error} onRetry={reload} />
-  if (loading || !data || !cfg) return <SectionLoader label="Loading the AI settings" />
+  if (!data) return <SectionLoader label="Loading the AI settings" />
 
   async function confirm(reason) {
     setBusy(true)
@@ -643,7 +644,7 @@ export default function AdminAiControlPage() {
             })
       setDialog(null)
       setDone(`Saved as version ${out.version}. New cases use it from now on.`)
-      setHistoryKey((k) => k + 1)
+      history.reload()
       reload()
     } catch (e) {
       setDialogError(e.message)
@@ -667,7 +668,7 @@ export default function AdminAiControlPage() {
       {dirty && (
         <div className="ai-dirty" role="status">
           <span>You have changes that are not saved.</span>
-          <button type="button" className="btn" onClick={() => setCfg(data.config)}>
+          <button type="button" className="btn" onClick={() => setCfg(null)}>
             Discard
           </button>
           <button
@@ -689,7 +690,7 @@ export default function AdminAiControlPage() {
           <>
             <ModelsTab data={data} cfg={cfg} setCfg={setCfg} />
             <History
-              key={historyKey}
+              data={history.data}
               onRestore={(version) => setDialog({ kind: 'rollback', version })}
             />
           </>

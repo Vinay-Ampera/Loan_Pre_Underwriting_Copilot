@@ -3,8 +3,8 @@ import './BarChart.css'
 /** Horizontal bars drawn from counts. `rows` is [{ label, value, tone?, note? }]; a row with a
  *  `note` shows that text instead of a bar (for example "too few to show"). tone is a token name
  *  (approve, refer, reject, stopped) and defaults to the brand colour. The numbers are shown as
- *  text, so the chart reads without colour. */
-export default function BarChart({ title, rows, empty = 'Nothing to show yet.' }) {
+ *  text, so the chart reads without colour. `foot` is an optional line under the bars. */
+export default function BarChart({ title, rows, empty = 'Nothing to show yet.', foot }) {
   const max = Math.max(1, ...rows.map((r) => r.value))
   const total = rows.reduce((n, r) => n + (r.note ? 0 : r.value), 0)
   return (
@@ -35,6 +35,7 @@ export default function BarChart({ title, rows, empty = 'Nothing to show yet.' }
           )}
         </ul>
       )}
+      {foot && <p className="bar-foot muted small">{foot}</p>}
     </figure>
   )
 }

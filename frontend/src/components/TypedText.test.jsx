@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import TypedText from './TypedText'
+import TypedText, { TYPING_MS } from './TypedText'
 
 const TEXT = 'Total score 72 of 100. Two findings need review before sign-off.'
 
@@ -28,6 +28,16 @@ describe('TypedText', () => {
     act(() => vi.advanceTimersByTime(5000))
     expect(container.querySelector('[data-typed]')).toHaveAttribute('data-typed', 'done')
     expect(container).toHaveTextContent(TEXT)
+  })
+
+  it('finishes a long summary in about half a second', () => {
+    mockMotion(false)
+    const long = `${TEXT} `.repeat(12) // about 780 characters
+    const { container } = render(<TypedText id="long" text={long} />)
+    act(() => vi.advanceTimersByTime(TYPING_MS / 2))
+    expect(container.querySelector('[data-typed]')).toHaveAttribute('data-typed', 'running')
+    act(() => vi.advanceTimersByTime(TYPING_MS / 2 + 40))
+    expect(container.querySelector('[data-typed]')).toHaveAttribute('data-typed', 'done')
   })
 
   it('shows the text straight away under reduced motion', () => {

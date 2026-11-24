@@ -4,15 +4,14 @@
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
 }
 
-/* left: the brand and the five stages, drawn as a case file */
+/* left: the brand and the five stages, drawn as a case file lying on the desk (the page grey) */
 .login-panel {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: var(--s-8);
   padding: var(--s-12) clamp(var(--s-6), 6vw, 96px);
-  background: var(--chrome);
-  border-right: 1px solid var(--line);
+  background: var(--bg);
 }
 .login-intro {
   display: flex;
@@ -135,12 +134,14 @@
   color: var(--faint);
 }
 
-/* right: the sign-in form */
+/* right: the sign-in form on its own plain sheet, not a card floating in an empty grey area */
 .login-side {
   position: relative;
   display: grid;
   place-items: center;
   padding: var(--s-12) var(--s-6);
+  background: var(--chrome);
+  border-left: 1px solid var(--line);
 }
 .login-theme {
   position: absolute;
@@ -151,12 +152,17 @@
 .login-card {
   position: relative;
   width: min(400px, 100%);
-  padding: var(--s-8);
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
   border-radius: var(--radius-panel);
   animation: rise var(--t-slow) var(--ease) both;
+}
+.login-card.card {
+  background: none;
+  border: 0;
+  box-shadow: none;
 }
 .login-card-head {
   display: flex;
@@ -216,12 +222,12 @@
   .login-panel {
     order: 2;
     padding: var(--s-8) var(--s-4);
-    border-right: 0;
     border-top: 1px solid var(--line);
     gap: var(--s-6);
   }
   .login-side {
     padding: 64px var(--s-4) var(--s-8);
+    border-left: 0;
   }
   .journey-detail {
     display: none;
