@@ -34,14 +34,19 @@ function spaceBelow(el) {
 /**
  * Side-by-side panes that fill the rest of the window on wide screens, so the page itself stays
  * still and each pane scrolls on its own (`.fit-scroll` inside marks what scrolls). Below
- * `minWidth` the panes stack and the page scrolls as usual. Layout only: nothing else changes.
+ * `minWidth`, or with `enabled` false, the panes stack or sit side by side and the page scrolls
+ * as usual. Layout only: nothing else changes.
  */
-export default function FitPanes({ minWidth, className = '', children, ...rest }) {
+export default function FitPanes({ minWidth, enabled = true, className = '', children, ...rest }) {
   const ref = useRef(null)
   const [height, setHeight] = useState(null)
 
   useLayoutEffect(() => {
     const el = ref.current
+    if (!enabled) {
+      setHeight(null) // the page scrolls as one, as on a narrow screen
+      return undefined
+    }
     if (!el || typeof window.matchMedia !== 'function') return undefined
     const wide = window.matchMedia(`(min-width: ${minWidth}px)`)
     let frame = 0
@@ -69,7 +74,7 @@ export default function FitPanes({ minWidth, className = '', children, ...rest }
       window.removeEventListener('resize', fit)
       wide.removeEventListener?.('change', fit)
     }
-  }, [minWidth])
+  }, [minWidth, enabled])
 
   return (
     <div

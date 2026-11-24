@@ -42,3 +42,35 @@
   max-width: 44ch;
   text-align: center;
 }
+
+/* the desk once files are in: one slim bar instead of the big drop box */
+.dropzone.dropzone-compact {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+}
+.dropzone-compact > p:first-of-type {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.dropzone-compact > p.small {
+  flex-basis: 100%;
+}
+.dropzone-compact .bulk-working {
+  flex-basis: 100%;
+}
+.ur-fold summary {
+  cursor: pointer;
+}
+.ur-fold-hint {
+  color: var(--primary);
+  font-weight: 500;
+  font-size: var(--fs-14);
+}
+.ur-fold[open] summary {
+  margin-bottom: var(--s-2);
+}

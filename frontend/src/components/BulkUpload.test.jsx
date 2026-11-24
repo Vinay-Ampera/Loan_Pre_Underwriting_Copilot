@@ -33,6 +33,24 @@ describe('BulkUpload', () => {
     expect(screen.getByText('Too blurry.')).toBeInTheDocument()
   })
 
+  it('on the desk, folds the plainly received files and keeps problems in view', async () => {
+    const upload = vi.fn().mockResolvedValue([
+      { name: 'a.pdf', status: 'accepted', message: 'Accepted.' },
+      { name: 'b.pdf', status: 'accepted', message: 'Accepted.' },
+      { name: 'c.jpg', status: 'rejected', message: 'Too blurry.' },
+    ])
+    const { container } = render(<BulkUpload upload={upload} foldReceived compact />)
+    expect(container.querySelector('.dropzone')).toHaveClass('dropzone-compact')
+    await userEvent.setup().upload(document.getElementById('bulk-files'), new File(['x'], 'a.pdf'))
+    expect(await screen.findByText('2 received · 1 not accepted')).toBeInTheDocument()
+    expect(screen.getByText('Too blurry.').closest('details')).toBeNull() // in view
+    const fold = screen.getByText('· show each file').closest('details')
+    expect(fold).toHaveTextContent('2 received · 1 not accepted')
+    expect(fold).not.toHaveAttribute('open')
+    expect(fold).toHaveTextContent('a.pdf')
+    expect(fold).toHaveTextContent('b.pdf')
+  })
+
   it('shows an uploading panel with the file count while the files are sent and read', async () => {
     let finish
     const upload = vi.fn(() => new Promise((resolve) => (finish = resolve)))

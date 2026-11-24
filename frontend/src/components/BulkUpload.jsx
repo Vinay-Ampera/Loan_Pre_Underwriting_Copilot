@@ -58,10 +58,33 @@ function Working({ sending }) {
   )
 }
 
+function ResultRows({ rows }) {
+  return (
+    <ul className="upload-results">
+      {rows.map((r, i) => (
+        <li key={`${r.name}-${i}`} className={`ur ur-${r.status}`}>
+          <span className="ur-icon" aria-hidden="true">
+            <Icon name={ICON[r.status]} size={16} />
+          </span>
+          <div>
+            <p>
+              <strong>{r.name}</strong> <span className="ur-label">{LABEL[r.status]}</span>
+            </p>
+            {r.message && <p className="small">{r.message}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 /**
  * Add a zip, a whole folder or many files in one go. `upload(form)` sends them and returns
  * [{ name, status, message }] (status: accepted | warning | rejected | ignored | bundle). The same box
  * serves the officer's desk and the applicant's page. Choosing files needs no confirmation.
+ * `compact` draws the box as one slim bar (the desk, once files are in); `foldReceived` puts the
+ * plainly received files behind one line, because the desk's inventory lists them anyway, and
+ * keeps every file with a problem or a note in view.
  */
 export default function BulkUpload({
   upload,
@@ -69,6 +92,8 @@ export default function BulkUpload({
   disabled = false,
   intro,
   camera = false,
+  compact = false,
+  foldReceived = false,
 }) {
   const [results, setResults] = useState([])
   const [busy, setBusy] = useState(false)
@@ -126,7 +151,7 @@ export default function BulkUpload({
     <div className="bulk">
       <div
         ref={zone}
-        className={`dropzone${over ? ' over' : ''}${disabled ? ' off' : ''}`}
+        className={`dropzone${compact ? ' dropzone-compact' : ''}${over ? ' over' : ''}${disabled ? ' off' : ''}`}
         onDragOver={(e) => {
           e.preventDefault()
           setOver(true)
@@ -219,24 +244,27 @@ export default function BulkUpload({
       )}
       {results.length > 0 && (
         <div aria-live="polite" data-testid="bulk-results">
-          <p className="bulk-summary">
-            <strong>{summarise(results)}</strong>
-          </p>
-          <ul className="upload-results">
-            {results.map((r, i) => (
-              <li key={`${r.name}-${i}`} className={`ur ur-${r.status}`}>
-                <span className="ur-icon" aria-hidden="true">
-                  <Icon name={ICON[r.status]} size={16} />
-                </span>
-                <div>
-                  <p>
-                    <strong>{r.name}</strong> <span className="ur-label">{LABEL[r.status]}</span>
-                  </p>
-                  {r.message && <p className="small">{r.message}</p>}
-                </div>
-              </li>
-            ))}
-          </ul>
+          {foldReceived && results.some((r) => r.status === 'accepted') ? (
+            // one line that opens the received list; files with a problem or a note stay in view
+            <details className="ur-fold">
+              <summary>
+                <strong>{summarise(results)}</strong>{' '}
+                <span className="ur-fold-hint">· show each file</span>
+              </summary>
+              <ResultRows rows={results.filter((r) => r.status === 'accepted')} />
+            </details>
+          ) : (
+            <p className="bulk-summary">
+              <strong>{summarise(results)}</strong>
+            </p>
+          )}
+          {foldReceived ? (
+            results.some((r) => r.status !== 'accepted') && (
+              <ResultRows rows={results.filter((r) => r.status !== 'accepted')} />
+            )
+          ) : (
+            <ResultRows rows={results} />
+          )}
         </div>
       )}
     </div>

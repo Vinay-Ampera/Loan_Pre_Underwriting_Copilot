@@ -8,4 +8,33 @@
   gap: var(--s-2);
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+}
+/* a quiet helper on the left, the next-step buttons on the right */
+.desk-zip {
+  margin-right: auto;
+}
+/* the next step stays at the bottom of the window while the desk scrolls past */
+.desk-next {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+.desk-next > p {
+  text-align: right;
+}
+/* on a phone a bar that follows the scroll would cover a quarter of the screen: it stays in place */
+@media (max-width: 720px) {
+  .desk-next {
+    position: static;
+    box-shadow: none;
+  }
 }

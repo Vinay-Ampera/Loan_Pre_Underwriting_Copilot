@@ -49,8 +49,20 @@ describe('CaseStepper', () => {
     expect(steps()[4]).toHaveTextContent('in progress') // for screen readers
   })
 
-  it('stays full size while the system is still working, and when a case stops', () => {
-    const { container, unmount } = render(<CaseStepper caseData={{ status: 'draft' }} />)
+  it('is one slim line while the case is being put together, with intake marked as current', () => {
+    for (const status of ['draft', 'uploaded', 'applicant_submitted']) {
+      const { container, unmount } = render(<CaseStepper caseData={{ status }} />)
+      expect(container.firstChild).toHaveClass('stepper-done')
+      expect(steps()[0]).toHaveAttribute('aria-current', 'step')
+      expect(steps()[0]).toHaveTextContent('in progress') // for screen readers
+      unmount()
+    }
+  })
+
+  it('stays full size while the system is working, and when a case stops', () => {
+    const { container, unmount } = render(
+      <CaseStepper caseData={{ status: 'running', stages: [{ stage: 'extraction' }] }} />,
+    )
     expect(container.firstChild).not.toHaveClass('stepper-done')
     unmount()
     const stopped = render(

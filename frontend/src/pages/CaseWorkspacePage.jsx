@@ -226,6 +226,64 @@ export default function CaseWorkspacePage() {
       setRemovingDoc(false)
     }
   }
+  const fileList = (
+    <ul className="doc-list card">
+      {c.documents.map((d) => (
+        <li key={d.id}>
+          <div>
+            <p>
+              <strong>{d.name}</strong>{' '}
+              <span className="muted">
+                {d.role === 'co'
+                  ? 'co-applicant'
+                  : d.role === 'primary'
+                    ? 'applicant'
+                    : 'no person yet'}{' '}
+                · {d.doc_type.replaceAll('_', ' ')}
+              </span>
+            </p>
+            {d.status === 'rejected' ? (
+              <StatusChip tone="reject">Rejected{d.message ? `: ${d.message}` : ''}</StatusChip>
+            ) : d.status === 'ignored' ? (
+              <StatusChip tone="neutral">Repeat, ignored</StatusChip>
+            ) : d.status === 'bundle' ? (
+              <StatusChip tone="refer">Several documents, to be split</StatusChip>
+            ) : d.status === 'split' ? (
+              <StatusChip tone="neutral">Split into documents</StatusChip>
+            ) : d.warnings.length ? (
+              <StatusChip tone="refer">Accepted with a warning</StatusChip>
+            ) : (
+              <StatusChip tone="approve">Accepted</StatusChip>
+            )}
+          </div>
+          <div className="doc-actions">
+            {d.status === 'accepted' && (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setSelected(d.id)
+                  setTab('fields')
+                }}
+              >
+                View
+              </button>
+            )}
+            {editable && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setDocToRemove(d)}
+                aria-label={`Remove ${d.name}`}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
   const missingKyc = c.checklist.filter((i) => i.kyc && !i.met)
   const metCount = c.checklist.filter((i) => i.met).length
   const missingAny = metCount < c.checklist.length
@@ -270,7 +328,9 @@ export default function CaseWorkspacePage() {
         stopText={report?.stop_text}
       />
 
-      <FitPanes minWidth={1001} className="ws-grid">
+      {/* the panes fill the window only to read a report; while a case is put together or
+          corrected, the page scrolls as one and the side panel stays in view */}
+      <FitPanes minWidth={1001} enabled={Boolean(report) && !editing} className="ws-grid">
         <section className="ws-main fit-column">
           {running && (
             <div className="card running-card">
@@ -293,10 +353,12 @@ export default function CaseWorkspacePage() {
                 submitLabel={fixStop ? 'Save and resume assessment' : 'Save the form'}
                 onSubmit={(body) => (fixStop ? resume({ case: body }) : saveForm(body))}
                 serverError={actionError}
+                secondary={
+                  <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}>
+                    Cancel
+                  </button>
+                }
               />
-              <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)}>
-                Cancel
-              </button>
             </div>
           ) : (
             <>
@@ -366,17 +428,28 @@ export default function CaseWorkspacePage() {
                           submitLabel="Save the form"
                           onSubmit={saveForm}
                           serverError={actionError}
+                          secondary={
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => setStep('desk')}
+                            >
+                              Back to the documents
+                            </button>
+                          }
                         />
                       ) : (
-                        <SectionLoader label="Loading the form" />
+                        <>
+                          <SectionLoader label="Loading the form" />
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setStep('desk')}
+                          >
+                            Back to the documents
+                          </button>
+                        </>
                       )}
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        onClick={() => setStep('desk')}
-                      >
-                        Back to the documents
-                      </button>
                     </div>
                   ) : inventory ? (
                     <>
@@ -389,18 +462,19 @@ export default function CaseWorkspacePage() {
                         recipient={first?.email}
                         onContinue={c.intake_stage && editable ? () => setStep('form') : undefined}
                         onChanged={reload}
-                      />
-                      {editable && (
-                        <details className="label-yourself">
-                          <summary>Add one file and label it yourself</summary>
-                          <UploadZone
-                            caseId={id}
-                            roles={roles}
-                            docTypes={c.doc_types}
-                            onUploaded={reload}
-                          />
-                        </details>
-                      )}
+                      >
+                        {editable && (
+                          <details className="label-yourself">
+                            <summary>Add one file and label it yourself</summary>
+                            <UploadZone
+                              caseId={id}
+                              roles={roles}
+                              docTypes={c.doc_types}
+                              onUploaded={reload}
+                            />
+                          </details>
+                        )}
+                      </IntakeDesk>
                     </>
                   ) : editable ? (
                     <UploadZone
@@ -410,69 +484,25 @@ export default function CaseWorkspacePage() {
                       onUploaded={reload}
                     />
                   ) : null}
-                  {c.documents.length > 0 && (
-                    <>
-                      <h3 className="files-title">All files</h3>
-                      <ul className="doc-list card">
-                        {c.documents.map((d) => (
-                          <li key={d.id}>
-                            <div>
-                              <p>
-                                <strong>{d.name}</strong>{' '}
-                                <span className="muted">
-                                  {d.role === 'co'
-                                    ? 'co-applicant'
-                                    : d.role === 'primary'
-                                      ? 'applicant'
-                                      : 'no person yet'}{' '}
-                                  · {d.doc_type.replaceAll('_', ' ')}
-                                </span>
-                              </p>
-                              {d.status === 'rejected' ? (
-                                <StatusChip tone="reject">
-                                  Rejected{d.message ? `: ${d.message}` : ''}
-                                </StatusChip>
-                              ) : d.status === 'ignored' ? (
-                                <StatusChip tone="neutral">Repeat, ignored</StatusChip>
-                              ) : d.status === 'bundle' ? (
-                                <StatusChip tone="refer">Several documents, to be split</StatusChip>
-                              ) : d.status === 'split' ? (
-                                <StatusChip tone="neutral">Split into documents</StatusChip>
-                              ) : d.warnings.length ? (
-                                <StatusChip tone="refer">Accepted with a warning</StatusChip>
-                              ) : (
-                                <StatusChip tone="approve">Accepted</StatusChip>
-                              )}
-                            </div>
-                            <div className="doc-actions">
-                              {d.status === 'accepted' && (
-                                <button
-                                  type="button"
-                                  className="btn"
-                                  onClick={() => {
-                                    setSelected(d.id)
-                                    setTab('fields')
-                                  }}
-                                >
-                                  View
-                                </button>
-                              )}
-                              {editable && (
-                                <button
-                                  type="button"
-                                  className="btn btn-ghost"
-                                  onClick={() => setDocToRemove(d)}
-                                  aria-label={`Remove ${d.name}`}
-                                >
-                                  Remove
-                                </button>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
+                  {c.documents.length > 0 &&
+                    (inventory ? (
+                      // the desk's inventory already lists the files: this full list, with View
+                      // and Remove, waits behind one line
+                      <details className="files-fold card">
+                        <summary>
+                          <span>All files</span>
+                          <span className="muted small">
+                            {c.documents.length} · view a file or remove it
+                          </span>
+                        </summary>
+                        {fileList}
+                      </details>
+                    ) : (
+                      <>
+                        <h3 className="files-title">All files</h3>
+                        {fileList}
+                      </>
+                    ))}
                 </div>
               )}
 
@@ -577,7 +607,7 @@ export default function CaseWorkspacePage() {
 
           {!isAdmin && BEFORE.includes(c.status) && (
             <div className="ws-actions">
-              {!c.intake_stage && (
+              {!c.intake_stage && !editing && (
                 <button type="button" className="btn" onClick={() => setEditing(true)}>
                   Edit the application form
                 </button>

@@ -2,6 +2,7 @@ import { journeyState } from '../lib/journey'
 import Icon from './Icons'
 import './CaseStepper.css'
 
+const INTAKE = ['draft', 'uploaded', 'applicant_submitted']
 const WORD = { done: 'done', current: 'in progress', stopped: 'stopped here', todo: 'not started' }
 const MARK = { done: 'check', current: 'dot', stopped: 'x' }
 
@@ -9,9 +10,13 @@ const MARK = { done: 'check', current: 'dot', stopped: 'x' }
 export default function CaseStepper({ caseData, stopText }) {
   const steps = journeyState(caseData)
   const stopped = steps.find((s) => s.state === 'stopped')
-  // once the system's four stages are done (only the officer's sign-off is left, or that too)
-  // the stepper slims to one line, so the report and the decision get the room
-  const slim = !stopped && steps.slice(0, -1).every((s) => s.state === 'done')
+  // one slim line while the case is being put together (nothing has run yet) and once the
+  // system's four stages are done (only the sign-off is left, or that too), so the documents,
+  // the form and the report get the room; the full stepper shows while the system works and
+  // where a case stopped
+  const slim =
+    !stopped &&
+    (INTAKE.includes(caseData.status) || steps.slice(0, -1).every((s) => s.state === 'done'))
   return (
     <div className={`stepper-wrap card${slim ? ' stepper-done' : ''}`}>
       <ol className="stepper" aria-label="Underwriting stages">

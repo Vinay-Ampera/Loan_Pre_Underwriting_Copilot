@@ -25,6 +25,7 @@ export default function IntakeDesk({
   recipient,
   onContinue,
   onChanged,
+  children, // more ways to add a file (the officer's "label it yourself"), shown under the box
 }) {
   const [ask, setAsk] = useState(false)
   const [proceed, setProceed] = useState(false)
@@ -96,9 +97,16 @@ export default function IntakeDesk({
       {editable && (
         <BulkUpload
           upload={upload}
-          intro="Drop a zip, a folder or all the files here. They are filed to a person and checked once."
+          compact={!nothingYet}
+          foldReceived
+          intro={
+            nothingYet
+              ? 'Drop a zip, a folder or all the files here. They are filed to a person and checked once.'
+              : 'Add more: drop a zip, a folder or files here.'
+          }
         />
       )}
+      {children}
       {!nothingYet && (
         <Inventory
           caseId={caseId}
@@ -123,65 +131,94 @@ export default function IntakeDesk({
           {error}
         </p>
       )}
-      <div className="desk-actions">
-        {!nothingYet && (
-          <button type="button" className="btn btn-ghost" onClick={zip}>
-            Download all files (zip)
-          </button>
-        )}
-        {editable && !nothingYet && missingNow && (
-          <>
-            <button type="button" className="btn" onClick={() => setAsk(true)}>
-              Ask the applicant
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={blocked || toSplit > 0}
-              title={
-                blocked
-                  ? 'The identity documents are needed first.'
-                  : toSplit > 0
-                    ? 'Split the PDF first.'
-                    : undefined
-              }
-              onClick={() => setProceed(true)}
-            >
-              Proceed anyway
-            </button>
-          </>
-        )}
-        {editable && !nothingYet && !missingNow && (
-          <button type="button" className="btn" onClick={() => setAsk(true)}>
-            Ask the applicant for more
-          </button>
-        )}
-        {onContinue && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!ready || nothingYet}
-            onClick={waiting ? () => setUnsent(true) : onContinue}
-          >
-            Continue to the application form
-          </button>
-        )}
-      </div>
-      {editable && waiting && !nothingYet && (
-        <p className="small muted" role="status">
-          {unsentNote}, so more files may still arrive.
-        </p>
-      )}
-      {toSplit > 0 && (
-        <p className="small muted">
-          A PDF with several documents is waiting for you to confirm how it is split.
-        </p>
-      )}
-      {blocked && !nothingYet && (
-        <p className="small muted">
-          The PAN card, the Aadhaar card and the photograph are needed for every person before the
-          case can be submitted.
-        </p>
+      {/* the next step, kept in view at the bottom of the window while the list is long: why a
+          button is not available yet, then the buttons */}
+      {(!nothingYet || onContinue) && (
+        <div className="desk-next">
+          {editable && waiting && !nothingYet && (
+            <p className="small muted" role="status">
+              {unsentNote}, so more files may still arrive.
+            </p>
+          )}
+          {toSplit > 0 && (
+            <p className="small muted">
+              A PDF with several documents is waiting for you to confirm how it is split.
+            </p>
+          )}
+          {blocked && !nothingYet && (
+            <p className="small muted">
+              The PAN card, the Aadhaar card and the photograph are needed for every person before
+              the case can be submitted.
+            </p>
+          )}
+          {onContinue && nothingYet && (
+            <p className="small muted">Add the applicant&apos;s documents above first.</p>
+          )}
+          {/* why "Continue" is off when only missing papers or the employment type hold it */}
+          {onContinue &&
+            !nothingYet &&
+            !blocked &&
+            toSplit === 0 &&
+            missingNow &&
+            !inventory.proceeded && (
+              <>
+                {inventory.depends_on_employment.length > 0 && (
+                  <p className="small muted">
+                    State the employment type above: the income papers needed depend on it.
+                  </p>
+                )}
+                {c.missing > 0 && (
+                  <p className="small muted">
+                    Some documents are still missing: ask the applicant for them, or proceed anyway.
+                  </p>
+                )}
+              </>
+            )}
+          <div className="desk-actions">
+            {!nothingYet && (
+              <button type="button" className="btn btn-ghost desk-zip" onClick={zip}>
+                Download all files (zip)
+              </button>
+            )}
+            {editable && !nothingYet && missingNow && (
+              <>
+                <button type="button" className="btn" onClick={() => setAsk(true)}>
+                  Ask the applicant
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={blocked || toSplit > 0}
+                  title={
+                    blocked
+                      ? 'The identity documents are needed first.'
+                      : toSplit > 0
+                        ? 'Split the PDF first.'
+                        : undefined
+                  }
+                  onClick={() => setProceed(true)}
+                >
+                  Proceed anyway
+                </button>
+              </>
+            )}
+            {editable && !nothingYet && !missingNow && (
+              <button type="button" className="btn" onClick={() => setAsk(true)}>
+                Ask the applicant for more
+              </button>
+            )}
+            {onContinue && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!ready || nothingYet}
+                onClick={waiting ? () => setUnsent(true) : onContinue}
+              >
+                Continue to the application form
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {ask && (

@@ -269,3 +269,64 @@ describe('CaseWorkspacePage for an officer', () => {
     expect(screen.getByText(/Needs a branch manager look\./)).toBeInTheDocument()
   })
 })
+
+describe('CaseWorkspacePage while the case is put together', () => {
+  const desk = {
+    people: [
+      {
+        role: 'primary',
+        employment: 'salaried',
+        received: [
+          {
+            id: 'd1',
+            name: 'pan.pdf',
+            doc_type: 'pan_card',
+            role: 'primary',
+            detected: 'pan_card',
+            type_changed: false,
+            warnings: [],
+            feeds: [],
+          },
+        ],
+        missing: [],
+        extra: [],
+        checklist: [],
+      },
+    ],
+    unassigned: [],
+    unrecognised: [],
+    rejected: [],
+    duplicates: [],
+    conflicts: [],
+    depends_on_employment: [],
+    counts: {
+      received: 1,
+      missing: 0,
+      extra: 0,
+      unassigned: 0,
+      unrecognised: 0,
+      rejected: 0,
+      duplicates: 0,
+    },
+    essential_missing: 0,
+    proceeded: false,
+  }
+
+  it('folds the full file list behind one line, with View and Remove still inside', async () => {
+    state.role = 'officer'
+    api.get.mockImplementation(async (path) =>
+      path.endsWith('/inventory') ? desk : caseData('uploaded', { last_failure: null }),
+    )
+    renderPage()
+    const fold = (await screen.findByText('All files')).closest('details')
+    expect(fold).toHaveClass('files-fold')
+    expect(fold).not.toHaveAttribute('open')
+    expect(within(fold).getByRole('button', { name: 'View' })).toBeInTheDocument()
+    expect(within(fold).getByRole('button', { name: 'Remove pan.pdf' })).toBeInTheDocument()
+    // the "label it yourself" upload sits with the upload box, before the inventory
+    const extra = screen.getByText('Add one file and label it yourself')
+    expect(extra.compareDocumentPosition(screen.getByTestId('inventory'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+})

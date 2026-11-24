@@ -29,10 +29,12 @@
   gap: var(--s-6);
   align-items: start;
 }
-.checklist-card {
+.checklist-card,
+.files-fold {
   padding: 0;
 }
-.checklist-card summary {
+.checklist-card summary,
+.files-fold summary {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -41,8 +43,16 @@
   cursor: pointer;
   font-weight: 500;
 }
-.checklist-card[open] summary {
+.checklist-card[open] summary,
+.files-fold[open] summary {
   border-bottom: 1px solid var(--line);
+}
+/* the full file list inside its fold: one card, not a card in a card */
+.files-fold .doc-list {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
 }
 .checklist-card .checklist {
   padding: var(--s-4);

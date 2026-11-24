@@ -372,6 +372,7 @@ export default function ApplicationForm({
   serverError,
   offer,
   claimNote,
+  secondary, // a way out (Back, Cancel) shown beside the save button
 }) {
   const rule = meta.co_applicant[loanType]
   const [s, setS] = useState(
@@ -603,6 +604,7 @@ export default function ApplicationForm({
         </p>
       )}
       <div className="form-actions">
+        {secondary}
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? 'Saving…' : submitLabel}
         </button>

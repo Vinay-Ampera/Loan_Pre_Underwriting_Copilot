@@ -325,6 +325,49 @@ describe('IntakeDesk: the inventory', () => {
     expect(screen.getByText(/if salaried: Payslips/)).toBeInTheDocument()
   })
 
+  it('once files are in, the upload box is a slim bar with the extra way to add a file under it', () => {
+    setup(inventory(), { children: <p>Add one file and label it yourself</p> })
+    const box = document.querySelector('.dropzone')
+    expect(box).toHaveClass('dropzone-compact')
+    expect(box).toHaveTextContent('Add more')
+    const extra = screen.getByText('Add one file and label it yourself')
+    expect(box.compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(extra.compareDocumentPosition(screen.getByTestId('inventory'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('an empty desk keeps the big drop box', () => {
+    const empty = inventory({
+      people: [{ ...inventory().people[0], received: [] }],
+      counts: { ...inventory().counts, received: 0 },
+    })
+    setup(empty)
+    expect(document.querySelector('.dropzone')).not.toHaveClass('dropzone-compact')
+  })
+
+  it('the reason a button is off sits above the buttons, in the next-step bar', () => {
+    setup(inventory({ essential_missing: 1 }))
+    const bar = document.querySelector('.desk-next')
+    const note = within(bar).getByText(/needed for every person/)
+    const buttons = bar.querySelector('.desk-actions')
+    expect(note.compareDocumentPosition(buttons)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
+  it('says why Continue is off when papers are missing or the employment type is not stated', () => {
+    setup(
+      inventory({
+        depends_on_employment: [
+          { role: 'primary', if_employment: 'salaried', type: 'payslip', needed: 3 },
+        ],
+      }),
+    )
+    expect(screen.getByRole('button', { name: 'Continue to the application form' })).toBeDisabled()
+    const bar = document.querySelector('.desk-next')
+    expect(bar).toHaveTextContent('State the employment type above')
+    expect(bar).toHaveTextContent('Some documents are still missing')
+  })
+
   it('the admin view has no upload box and no actions, only the zip', () => {
     setup(inventory(), { editable: false, onContinue: undefined })
     expect(screen.queryByText(/Choose files or a zip/)).not.toBeInTheDocument()

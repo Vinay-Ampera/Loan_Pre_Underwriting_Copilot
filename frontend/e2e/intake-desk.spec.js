@@ -21,6 +21,9 @@ test('documents first: folder, inventory, identity from the cards, claims by han
   await expect(page.getByRole('tab', { name: 'Documents' })).toBeVisible()
   // nothing is asked yet, and the form cannot be submitted before it exists
   await expect(page.getByRole('button', { name: 'Submit for assessment' })).toBeDisabled()
+  // while the case is put together the page scrolls as one (no fitted panes, a slim stepper)
+  await expect(page.locator('.ws-grid')).not.toHaveClass(/fit-on/)
+  await expect(page.locator('.stepper-wrap')).toHaveClass(/stepper-done/)
 
   await page.locator('#bulk-folder').setInputFiles(path.join(OUTPUT, 'cases', caseId, 'documents'))
   await expect(page.getByTestId('bulk-results')).toContainText('received', { timeout: 180_000 })
@@ -62,6 +65,7 @@ test('documents first: folder, inventory, identity from the cards, claims by han
   await expect(page.getByText('Awaiting confirmation').first()).toBeVisible({ timeout: 240_000 })
   await page.getByRole('tab', { name: 'Report' }).click()
   await expect(page.getByText('Identity details read from the cards')).toBeVisible()
+  await expect(page.locator('.ws-grid')).toHaveClass(/fit-on/) // the report reads in fitted panes
   await expect(page.getByText('not an independent check').first()).toBeVisible()
   await expect(page.locator('body')).not.toContainText(/\b(is|was|been)\s+approved\b/i)
 })
