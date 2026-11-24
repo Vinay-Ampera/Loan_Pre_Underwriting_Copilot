@@ -59,7 +59,7 @@ describe('LoginPage', () => {
     expect(verifyTwoStep).not.toHaveBeenCalled()
   })
 
-  it('asks an admin for the code from Microsoft Authenticator, then signs in', async () => {
+  it('asks an admin for the code from their authenticator app, then signs in', async () => {
     const user = userEvent.setup()
     login.mockResolvedValue({ mfa: 'code', mfa_token: 'm1' })
     verifyTwoStep.mockResolvedValue(SESSION)
@@ -67,7 +67,7 @@ describe('LoginPage', () => {
     await passwordStep(user)
     expect(signIn).not.toHaveBeenCalled()
     expect(screen.getByRole('heading', { name: 'Enter your code' })).toBeInTheDocument()
-    expect(screen.getByText(/Microsoft Authenticator/)).toBeInTheDocument()
+    expect(screen.getByText(/Google Authenticator, Microsoft Authenticator/)).toBeInTheDocument()
     await user.type(screen.getByLabelText('6-digit code'), '123456')
     await user.click(screen.getByRole('button', { name: 'Verify and sign in' }))
     expect(verifyTwoStep).toHaveBeenCalledWith('m1', '123456')

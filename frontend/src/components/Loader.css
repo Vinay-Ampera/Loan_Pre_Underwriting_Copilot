@@ -61,8 +61,11 @@
   }
 }
 .loader-label {
+  max-width: 40ch;
   font-size: var(--fs-13);
   color: var(--muted);
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 /* in the content area: waits a beat before showing, so a fast load never flashes it */
@@ -72,6 +75,14 @@
   place-items: center;
   min-height: 55vh;
   animation: loader-in var(--t-med) var(--ease) 180ms both;
+}
+/* inside one section: a quieter size, shown after a pause so quick answers do not flash it */
+.section-loader {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: var(--s-6) var(--s-4);
+  animation: loader-in var(--t-med) var(--ease) 250ms both;
 }
 .page-loader-full {
   min-height: 100vh;

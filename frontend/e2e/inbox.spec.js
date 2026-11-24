@@ -23,7 +23,11 @@ test('a problem report reaches the admin inbox, reading it lowers the count, and
   const bell = admin.getByRole('button', { name: /^Notifications, \d+ unread$/ })
   await expect(bell).toBeVisible()
   const before = Number((await bell.getAttribute('aria-label')).match(/\d+/)[0])
+  // the bell opens a dropdown with the latest notices; the full inbox is one click further
   await bell.click()
+  const panel = admin.getByRole('dialog', { name: 'Latest notifications' })
+  await expect(panel.getByText('A new problem report').first()).toBeVisible()
+  await panel.getByRole('button', { name: 'Open the inbox' }).click()
   await expect(admin.getByRole('heading', { name: 'Inbox' })).toBeVisible()
 
   // the notice is fixed text: no name, no case detail, nothing from the report itself

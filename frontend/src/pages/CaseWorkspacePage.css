@@ -60,6 +60,15 @@
   position: sticky;
   top: calc(var(--topbar-h) + var(--s-4));
 }
+/* wide screens (FitPanes): the case header and the tabs stay put; the open tab and the side panel
+   scroll on their own, and a document stays in view beside its extracted fields */
+.ws-grid.fit-on > .ws-right {
+  position: static;
+}
+.ws-grid.fit-on .viewer-file {
+  position: sticky;
+  top: 0;
+}
 .recommended {
   font-weight: 500;
 }

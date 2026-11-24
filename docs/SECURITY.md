@@ -131,7 +131,7 @@ The admin changes the policy text the Policy agent reads. The aim is that a chan
 
 ## 4h. 2-step verification (admin and auditor, 2026-11-24, decided by the user)
 
-The two most powerful accounts (the admin, who manages users and policy, and the auditor, who reads the system-wide audit log) sign in with a password **and** a 6-digit code from an authenticator app on their own phone. **Microsoft Authenticator** is the app named on screen; any app that follows RFC 6238 works (Google Authenticator and others). Officers are not asked for now.
+The two most powerful accounts (the admin, who manages users and policy, and the auditor, who reads the system-wide audit log) sign in with a password **and** a 6-digit code from an authenticator app on their own phone. Any app that follows RFC 6238 works; the screens say "your authenticator app" and give Google Authenticator and Microsoft Authenticator as examples (others such as Authy or 1Password work too). Officers are not asked for now.
 
 - **Who is asked:** the roles in `MFA_ROLES` (default `admin,auditor`), and any account that has 2-step set up, whatever the list says. Adding officers later is a settings change only.
 - **How the code works:** time-based (RFC 6238): SHA-1, 6 digits, 30-second steps; nothing is sent to the phone and no SMS or email code exists. The server accepts the step before and after (a phone clock a little off) and only a step newer than the last one accepted, so **each code works once**. The code maths is in `app/api/mfa.py` (standard library), tested against the RFC test vectors.

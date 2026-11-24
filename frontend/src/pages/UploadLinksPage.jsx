@@ -7,11 +7,12 @@ import Breadcrumbs from '../components/Breadcrumbs'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Dialog from '../components/Dialog'
 import { loanLabel, LOAN_TYPES } from '../components/LoanTypePicker'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import StatusChip from '../components/StatusChip'
 import { useAsync } from '../hooks/useAsync'
 import './UploadLinksPage.css'
 import { formatDay } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const STATE = {
   active: ['approve', 'Open'],
@@ -306,7 +307,7 @@ export default function UploadLinksPage() {
           {error}
         </p>
       )}
-      {links.loading && !links.data && <Skeleton lines={4} />}
+      {links.loading && !links.data && <SectionLoader label="Loading upload links" />}
       {links.error && <ErrorState error={links.error} onRetry={links.reload} />}
       {links.data && caseFilter && (
         <p className="small" role="status">

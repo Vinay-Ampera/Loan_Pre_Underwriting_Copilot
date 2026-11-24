@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import Callout from './Callout'
 import Dialog from './Dialog'
-import { Skeleton } from './States'
 import './MessageDialog.css'
+import { SectionLoader } from './Loading'
 
 const EMAIL = /^[^@\s*]+@[^@\s]+\.[^@\s]+$/
 
@@ -132,7 +132,7 @@ export default function MessageDialog({ caseId, recipient, existing, onClose, on
             {error}
           </p>
         ) : (
-          <Skeleton lines={4} />
+          <SectionLoader label="Loading the message" />
         )
       ) : step === 'edit' ? (
         <div className="msg-form">

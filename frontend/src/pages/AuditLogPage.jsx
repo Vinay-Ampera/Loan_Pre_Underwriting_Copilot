@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import { downloadFile, queryOf } from '../lib/download'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import './AuditorTable.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const PAGE = 100
 const NONE = { action: '', actor: '', case_no: '', date_from: '', date_to: '' }
@@ -128,7 +129,7 @@ export default function AuditLogPage() {
           {exportError}
         </p>
       )}
-      {loading && !data && <Skeleton lines={5} height={32} />}
+      {loading && !data && <SectionLoader label="Loading the audit log" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.rows.length === 0 && (
         <EmptyState title="Nothing logged">No entries match.</EmptyState>

@@ -3,8 +3,9 @@ import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import ReasonDialog from '../components/ReasonDialog'
 import StatusChip from '../components/StatusChip'
-import { ErrorState, Skeleton } from '../components/States'
+import { ErrorState } from '../components/States'
 import './AdminAiControlPage.css'
+import { SectionLoader } from '../components/Loading'
 
 const TABS = [
   ['models', 'Models'],
@@ -359,7 +360,7 @@ function PromptEditor({ name, summary, onChanged }) {
   }, [name])
 
   if (error) return <ErrorState error={error} onRetry={reload} />
-  if (loading) return <Skeleton lines={6} />
+  if (loading) return <SectionLoader label="Loading the prompt" />
   if (!data || text === null) return null
 
   const inUse = data.editable
@@ -626,7 +627,7 @@ export default function AdminAiControlPage() {
   const dirty = useMemo(() => Boolean(data && cfg && !same(cfg, data.config)), [data, cfg])
 
   if (error) return <ErrorState error={error} onRetry={reload} />
-  if (loading || !data || !cfg) return <Skeleton lines={8} />
+  if (loading || !data || !cfg) return <SectionLoader label="Loading the AI settings" />
 
   async function confirm(reason) {
     setBusy(true)

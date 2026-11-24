@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import PrecedentReviewCard from '../components/PrecedentReviewCard'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import './AdminPrecedentsPage.css'
+import { SectionLoader } from '../components/Loading'
 
 const TABS = [
   ['pending', 'Pending'],
@@ -49,7 +50,7 @@ export default function AdminPrecedentsPage() {
           </button>
         ))}
       </div>
-      {loading && <Skeleton lines={4} height={40} delayed />}
+      {loading && <SectionLoader label="Loading precedents" />}
       {error && !loading && <ErrorState error={error} onRetry={reload} />}
       {!loading && data && data.length === 0 && (
         <EmptyState title="Nothing here">No {tab === 'all' ? '' : tab} precedents.</EmptyState>

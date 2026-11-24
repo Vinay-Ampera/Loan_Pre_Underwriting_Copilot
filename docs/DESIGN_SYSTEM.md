@@ -306,10 +306,23 @@ Admin only, route `/admin/ai`, sidebar entry "AI control" (icon `sliders`). One 
 
 All inside the existing sign-in card (`components/TwoStep.jsx`, `TwoStep.css`); the brand panel on the left is unchanged.
 
-- **Enter your code:** one sentence naming Microsoft Authenticator, a large mono "6-digit code" box (numeric keyboard on phones, `one-time-code` autofill), "Verify and sign in", then quiet buttons "Lost your phone? Use a recovery code" (switches the box to "Recovery code") and "Use a different account".
-- **Set up 2-step verification:** three numbered steps (install the app; tap +, choose "Other (Google, Facebook, etc.)" and scan; type the code), the QR code always black on white in both themes so any camera reads it, and a fold "Cannot scan it? Type the key instead" with the key in groups of four. Button "Turn on and sign in".
+- **Enter your code:** one sentence naming the authenticator app (Google Authenticator, Microsoft Authenticator or another), a large mono "6-digit code" box (numeric keyboard on phones, `one-time-code` autofill), "Verify and sign in", then quiet buttons "Lost your phone? Use a recovery code" (switches the box to "Recovery code") and "Use a different account".
+- **Set up 2-step verification:** three numbered steps (install an authenticator app such as Google or Microsoft Authenticator; tap + and scan; type the code), the QR code always black on white in both themes so any camera reads it, and a fold "Cannot scan it? Type the key instead" with the key in groups of four. Button "Turn on and sign in".
 - **Save your recovery codes:** eight codes in a two-column mono grid, Copy and Download, a tick "I have saved these codes"; "Continue to Pramaan" stays off until it is ticked.
 - **Signed in with a recovery code:** how many are left (amber note when two or fewer) and what to do about a lost phone.
 - **Users screen:** a 2-step column (On, Set up at next sign-in, Not needed) and a "Reset 2-step" button on rows that have it on (greyed out on your own row; not shown for the auditor), opening the shared reason dialog.
 - Wording: "2-step verification" everywhere (never "MFA" on screen); errors say what to do ("Use the newest code in the app, or a recovery code").
+
+## 16. Panes that scroll on their own, one loader, the bell dropdown (2026-11-24)
+
+Asked for by the user; layout and loading only, no change to what any screen does.
+
+- **Side-by-side screens keep the page still** (`components/FitPanes.jsx`). On wide windows the two-pane area is sized to the rest of the window (measured, so the header, the footer and the page padding all fit), and each pane scrolls by itself; the page does not move. Narrower windows stack the panes and the page scrolls as before. Used on:
+  - **Knowledge base, Policies tab** (from 861 px): the policy list scrolls on the left; on the right the Read, Change and History tabs stay put and only the text under them scrolls.
+  - **Policies** (officer, from 861 px): the list and the policy text scroll separately.
+  - **Case page** (from 1001 px): the case header, stepper and tabs stay put; the open tab (Documents, Extracted fields, Report, Audit, or the correction form) scrolls, and so does the side panel. On Extracted fields the document stays in view while the fields scroll.
+  - Left as page scroll on purpose: Help (a long document with its own sticky contents list), New case (a form with a sticky summary), and single-column lists and tables.
+- **One loader everywhere.** Every loading state uses the Pramaan shield loader: the full-page one on first load, and `SectionLoader` (the same mark, smaller, shown after a short pause so quick answers do not flash it) inside a section. Each one says what is loading ("Loading the policy", "Loading cases"). The grey skeleton bars are no longer used.
+- **The bell opens a dropdown** instead of going to the inbox: the eight latest notices (unread ones bold with a dot), "Mark all read", and "Open the inbox". Opening a notice marks it read and goes where it points, as in the inbox. Escape or a click outside closes it.
+- **Account menu:** wider, with left-aligned items, so "Email me about new notices" reads as one line.
 

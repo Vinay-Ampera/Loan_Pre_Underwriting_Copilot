@@ -32,3 +32,122 @@
   text-align: center;
   box-shadow: 0 0 0 2px var(--bg);
 }
+
+/* the dropdown under the bell: the latest notices and a way to the full inbox */
+.bell-wrap {
+  position: relative;
+}
+.bell[aria-expanded='true'] {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
+.bell-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--s-2));
+  z-index: 20;
+  width: min(380px, calc(100vw - 2 * var(--s-4)));
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-float);
+  animation: bell-in var(--t-med) var(--ease) both;
+  overflow: hidden;
+}
+@keyframes bell-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.bell-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-4);
+  border-bottom: 1px solid var(--line);
+}
+.bell-mark {
+  min-height: 32px;
+  font-size: var(--fs-13);
+}
+.bell-note,
+.bell-empty {
+  margin: 0;
+  padding: var(--s-4);
+  font-size: var(--fs-14);
+}
+.bell-list {
+  max-height: min(420px, calc(100vh - 200px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.bell-list li + li {
+  border-top: 1px solid var(--line);
+}
+.bell-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bell-item:hover {
+  background: var(--raised);
+}
+.bell-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.bell-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: transparent;
+}
+.unread .bell-dot {
+  background: var(--primary);
+}
+.bell-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bell-title {
+  color: var(--muted);
+}
+.unread .bell-title {
+  font-weight: 600;
+  color: var(--ink);
+}
+.bell-all {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 40px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.bell-all:hover {
+  background: var(--surface);
+}
+.bell-panel .section-loader {
+  min-height: 120px;
+}

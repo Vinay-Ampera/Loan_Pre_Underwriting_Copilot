@@ -6,10 +6,11 @@ import Dialog from '../components/Dialog'
 import ConfirmDialog from '../components/ConfirmDialog'
 import MessageDialog from '../components/MessageDialog'
 import StatusChip from '../components/StatusChip'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import { filterMessages, isFiltered, NO_FILTER, STATUS_FILTERS } from '../lib/messageFilter'
 import './SentItemsPage.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 export const MESSAGE_STATUS = {
   sent: ['done', 'Sent'],
@@ -53,7 +54,7 @@ function ViewDialog({ id, onClose, onChanged }) {
 
   return (
     <Dialog title="Message" onClose={onClose} labelledBy="view-msg-title">
-      {loading && <Skeleton lines={5} />}
+      {loading && <SectionLoader label="Loading the message" />}
       {error && (
         <p className="field-error" role="alert">
           {error.message}
@@ -134,7 +135,7 @@ export default function SentItemsPage() {
           instead of being emailed. You see only your own messages.
         </p>
       </header>
-      {loading && <Skeleton lines={4} height={40} />}
+      {loading && <SectionLoader label="Loading your messages" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.length === 0 && (
         <EmptyState title="No messages yet">

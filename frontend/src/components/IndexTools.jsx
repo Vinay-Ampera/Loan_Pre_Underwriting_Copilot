@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import ReasonDialog from './ReasonDialog'
-import { ErrorState, Skeleton } from './States'
+import { ErrorState } from './States'
 import { METRICS, day, pct, policyLabel, versionTone, when } from '../lib/policy'
 import './IndexTools.css'
+import { SectionLoader } from './Loading'
 
 /**
  * The search index behind the Policy agent: what is embedded, which policy files are newer than
@@ -46,7 +47,7 @@ export default function IndexTools() {
   }
 
   if (error) return <ErrorState error={error} onRetry={reload} />
-  if (loading && !data) return <Skeleton lines={4} />
+  if (loading && !data) return <SectionLoader label="Loading the index" />
   if (!data) return null
   return (
     <div className="index-tools">

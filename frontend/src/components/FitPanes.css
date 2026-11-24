@@ -1,0 +1,30 @@
+/* FitPanes: on wide screens the panes share one row as tall as the rest of the window, and the
+   parts marked below scroll on their own while the page stays still. */
+.fit-on {
+  grid-template-rows: minmax(0, 1fr);
+}
+/* on each pane, so a page's own "align-items: start" cannot let a pane grow past the row */
+.fit-on > * {
+  align-self: stretch;
+  min-height: 0;
+}
+/* a pane, or the body of a pane, that scrolls by itself */
+.fit-on .fit-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+}
+/* 3px of room inside the scroll box, so focus rings and card edges at its sides are not cut off */
+.fit-on .fit-scroll:not(.card) {
+  padding: 3px;
+  margin: -3px;
+}
+/* a pane with a fixed top (tabs, a note) and a scrolling body under it */
+.fit-on .fit-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.fit-on .fit-column > .fit-scroll {
+  flex: 1 1 auto;
+}

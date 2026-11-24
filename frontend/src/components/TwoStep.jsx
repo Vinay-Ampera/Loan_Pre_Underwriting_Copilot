@@ -59,7 +59,7 @@ export function CodeStep({ busy, error, onVerify, onBack }) {
         <p className="muted">
           {recovery
             ? 'Type one of the recovery codes you saved when you set up 2-step verification. Each one works once.'
-            : 'Open Microsoft Authenticator on your phone and type the 6-digit code shown for Pramaan.'}
+            : 'Open the authenticator app on your phone (Google Authenticator, Microsoft Authenticator or another) and type the 6-digit code shown for Pramaan.'}
         </p>
       </div>
       <CodeField recovery={recovery} value={code} onChange={setCode} />
@@ -102,16 +102,16 @@ export function SetupStep({ setup, busy, error, onVerify, onBack }) {
       </div>
       <ol className="two-step-list">
         <li>
-          Install <strong>Microsoft Authenticator</strong> on your phone from the App Store or
-          Google Play.
+          Install an authenticator app on your phone if you do not have one, for example{' '}
+          <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> from the
+          App Store or Google Play.
         </li>
         <li>
-          In the app, tap <strong>+</strong>, choose <strong>Other (Google, Facebook, etc.)</strong>{' '}
-          and scan this QR code.
+          In the app, tap <strong>+</strong> to add an account and scan this QR code.
           <img
             className="two-step-qr"
             src={setup.qr}
-            alt="QR code to add Pramaan to Microsoft Authenticator"
+            alt="QR code to add Pramaan to your authenticator app"
             width="200"
             height="200"
           />

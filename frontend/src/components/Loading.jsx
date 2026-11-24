@@ -61,6 +61,18 @@ export function PageLoader({ label = 'Loading', full = false }) {
 }
 
 /**
+ * The same loader inside one section of a page (a table being refreshed, a tab opening), sized
+ * for the section and shown after a short pause so a quick answer does not flash it.
+ */
+export function SectionLoader({ label = 'Loading' }) {
+  return (
+    <div className="section-loader">
+      <Loader label={label} size={40} />
+    </div>
+  )
+}
+
+/**
  * Mounts its children hidden, then shows them all at once when nothing inside is loading any more.
  * Children report loading through `useAsync` or `useBusy`. Key it by route so each screen gets
  * its own first load.

@@ -7,8 +7,9 @@ import ChoiceCard from '../components/ChoiceCard'
 import Icon from '../components/Icons'
 import LoanTypePicker, { loanLabel } from '../components/LoanTypePicker'
 import RequiredDocsPreview from '../components/RequiredDocsPreview'
-import { ErrorState, Skeleton } from '../components/States'
+import { ErrorState } from '../components/States'
 import './NewCasePage.css'
+import { SectionLoader } from '../components/Loading'
 
 function Step({ n, done, title, hint, children }) {
   return (
@@ -131,7 +132,7 @@ export default function NewCasePage() {
 
           {loanType && way === 'form' && (
             <Step n={3} title={`${loanLabel(loanType)} application`}>
-              {meta.loading && <Skeleton lines={4} />}
+              {meta.loading && <SectionLoader label="Loading the form" />}
               {meta.error && <ErrorState error={meta.error} onRetry={meta.reload} />}
               {meta.data && (
                 <ApplicationForm

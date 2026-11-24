@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import Dialog from '../components/Dialog'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import { filterMessages, isFiltered, NO_FILTER } from '../lib/messageFilter'
 import '../components/MessageDialog.css'
 import './SentItemsPage.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const unique = (rows, key, label) => {
   const seen = new Map()
@@ -33,7 +34,7 @@ export default function AdminMessagesPage() {
           nothing can be sent or changed here.
         </p>
       </header>
-      {loading && <Skeleton lines={4} height={40} />}
+      {loading && <SectionLoader label="Loading messages" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.length === 0 && (
         <EmptyState title="No messages sent yet">Sent messages appear here.</EmptyState>

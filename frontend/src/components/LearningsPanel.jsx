@@ -4,10 +4,11 @@ import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import ReasonDialog from './ReasonDialog'
 import StatusChip from './StatusChip'
-import { EmptyState, ErrorState, Skeleton } from './States'
+import { EmptyState, ErrorState } from './States'
 import { loanLabel } from './LoanTypePicker'
 import { day, when } from '../lib/policy'
 import './LearningsPanel.css'
+import { SectionLoader } from './Loading'
 
 const FILTERS = [
   ['all', 'All'],
@@ -92,7 +93,7 @@ export default function LearningsPanel() {
           </button>
         ))}
       </div>
-      {loading && !data && <Skeleton lines={3} height={40} delayed />}
+      {loading && !data && <SectionLoader label="Loading the learnings" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.items.length === 0 && (
         <EmptyState title="Nothing here">No precedents with this status.</EmptyState>

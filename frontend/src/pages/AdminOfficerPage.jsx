@@ -4,9 +4,10 @@ import { useAsync } from '../hooks/useAsync'
 import Breadcrumbs from '../components/Breadcrumbs'
 import StatusChip, { CaseStatusChip } from '../components/StatusChip'
 import { loanLabel } from '../components/LoanTypePicker'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import './AdminOfficerPage.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const STATUS = [
   ['draft', 'Draft'],
@@ -70,7 +71,7 @@ export default function AdminOfficerPage() {
       <Breadcrumbs
         items={[{ label: 'Users', to: '/admin/users' }, { label: data?.user.name || 'Officer' }]}
       />
-      {loading && <Skeleton lines={4} height={48} />}
+      {loading && <SectionLoader label="Loading the officer's cases" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && (
         <>

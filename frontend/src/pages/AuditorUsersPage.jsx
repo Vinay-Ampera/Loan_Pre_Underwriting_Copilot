@@ -1,9 +1,10 @@
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import StatusChip from '../components/StatusChip'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import './AuditorTable.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const ROLE = { officer: 'Loan officer', admin: 'Admin', auditor: 'Auditor' }
 
@@ -16,7 +17,7 @@ export default function AuditorUsersPage() {
         <h1>Users</h1>
         <p className="muted">Staff accounts, read-only.</p>
       </header>
-      {loading && <Skeleton lines={4} height={36} />}
+      {loading && <SectionLoader label="Loading users" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.length === 0 && <EmptyState title="No users">None.</EmptyState>}
       {data && data.length > 0 && (

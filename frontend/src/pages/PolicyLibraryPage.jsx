@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
+import FitPanes from '../components/FitPanes'
+import { SectionLoader } from '../components/Loading'
 import PolicyList from '../components/PolicyList'
 import PolicyReader from '../components/PolicyReader'
 import PolicySearch from '../components/PolicySearch'
-import { ErrorState, Skeleton } from '../components/States'
+import { ErrorState } from '../components/States'
 import { day } from '../lib/policy'
 import './PolicyLibraryPage.css'
 
@@ -14,10 +16,10 @@ function Reader({ loanType }) {
     [loanType],
   )
   if (error) return <ErrorState error={error} onRetry={reload} />
-  if (loading && !data) return <Skeleton lines={6} delayed />
+  if (loading && !data) return <SectionLoader label="Loading the policy" />
   if (!data) return null
   return (
-    <div className="lib-reader">
+    <div className="lib-reader fit-scroll">
       {data.scheduled && (
         <p className="lib-note small">
           A new version, <span className="mono">{data.scheduled.version}</span>, takes effect on{' '}
@@ -45,13 +47,15 @@ export default function PolicyLibraryPage() {
       <section className="card lib-search" aria-label="Search the policy">
         <PolicySearch />
       </section>
-      <div className="lib-grid">
+      <FitPanes minWidth={861} className="lib-grid">
         {list.error && <ErrorState error={list.error} onRetry={list.reload} />}
         {list.data && (
-          <PolicyList policies={list.data} selected={loanType} onSelect={setLoanType} />
+          <div className="fit-scroll">
+            <PolicyList policies={list.data} selected={loanType} onSelect={setLoanType} />
+          </div>
         )}
         <Reader key={loanType} loanType={loanType} />
-      </div>
+      </FitPanes>
     </div>
   )
 }

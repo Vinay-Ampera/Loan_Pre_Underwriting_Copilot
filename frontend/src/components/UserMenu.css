@@ -56,7 +56,8 @@
   right: 0;
   top: calc(100% + var(--s-2));
   z-index: 20;
-  min-width: 240px;
+  min-width: 260px;
+  max-width: calc(100vw - 2 * var(--s-4));
   padding: var(--s-1);
   display: flex;
   flex-direction: column;
@@ -91,10 +92,12 @@
   color: var(--ink);
   font: inherit;
   font-weight: 500;
+  text-align: left;
   text-decoration: none;
   cursor: pointer;
 }
 .user-menu-list button svg {
+  flex: none;
   color: var(--faint);
 }
 .user-menu-list button:hover {

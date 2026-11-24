@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import Dialog from '../components/Dialog'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import { CATEGORIES, IssueChip } from './IssuesPage'
 import './AdminIssuesPage.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const FILTERS = [
   ['open', 'Open'],
@@ -70,7 +71,7 @@ export default function AdminIssuesPage() {
           </button>
         ))}
       </div>
-      {loading && <Skeleton lines={3} height={48} delayed />}
+      {loading && <SectionLoader label="Loading issue reports" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {!loading && data && data.length === 0 && (
         <EmptyState title="Nothing here">No issues in this list.</EmptyState>

@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import CaseQueueTable from '../components/CaseQueueTable'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import { VIEWS, tileCounts } from '../lib/views'
 import './HomePage.css'
+import { SectionLoader } from '../components/Loading'
 
 const TILES = ['awaiting', 'referred', 'stopped', 'progress']
 const HINT = {
@@ -30,7 +31,7 @@ export default function HomePage() {
           New case
         </Link>
       </header>
-      {loading && <Skeleton lines={4} height={56} />}
+      {loading && <SectionLoader label="Loading your cases" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && (
         <>

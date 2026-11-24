@@ -10,7 +10,7 @@ test('an admin sets up 2-step at the first sign-in, a recovery code works once, 
   // first sign-in: the password, then the setup screen with a QR code
   await signInAs(page, 'second@example.test', PASSWORD)
   await expect(page.getByRole('heading', { name: 'Set up 2-step verification' })).toBeVisible()
-  await expect(page.getByText('Microsoft Authenticator', { exact: true })).toBeVisible()
+  await expect(page.getByText('Google Authenticator', { exact: true })).toBeVisible()
   await expect(page.getByRole('img', { name: /QR code/ })).toBeVisible()
   await page.getByText('Cannot scan it? Type the key instead').click()
   const key = (await page.getByTestId('two-step-key').textContent()).replace(/\s/g, '')

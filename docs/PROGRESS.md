@@ -38,7 +38,7 @@ Notifications Part 3 (hardening and close-out) is built (2026-11-21, migration 0
 
 Asked for by the user after a review of industry-readiness ideas, and agreed in conversation:
 
-1. **Authenticator app codes (TOTP), not SMS or email codes.** The screens name **Microsoft Authenticator**; any RFC 6238 app works. The code is made on the person's own phone; nothing is sent.
+1. **Authenticator app codes (TOTP), not SMS or email codes.** The screens first named **Microsoft Authenticator** only; changed the same day at the user's request to "your authenticator app (for example Google Authenticator or Microsoft Authenticator)", since any RFC 6238 app works (the user tests with Google Authenticator). The code is made on the person's own phone; nothing is sent.
 2. **Admin and auditor only for now**, officers later (`MFA_ROLES=admin,auditor`; adding `officer` is a settings change).
 3. **Set up at the first sign-in**, with eight one-time recovery codes shown once.
 4. **Lost phone:** an admin resets another person's 2-step (reason and second click); that person scans a new QR code at the next sign-in. An admin who lost their own phone uses a recovery code, or the command line reset. The auditor's reset is command line only, like the rest of that account.
@@ -529,4 +529,14 @@ Small fixes noted while preparing the trainer demo (2026-11-20), done at the use
 - **Frontend:** the sign-in card gains the code step (with "Lost your phone? Use a recovery code"), the setup step (three numbered steps, the QR code, the key for typing in), the recovery codes screen (Copy, Download, "I have saved these codes") and the "signed in with a recovery code" screen (`components/TwoStep.jsx`). The Users screen gets a 2-step column (On, Set up at next sign-in, Not needed) and "Reset 2-step" with a reason dialog.
 - **Tests:** `tests/test_two_step.py` (RFC test vectors, one use per code, setup, recovery codes, shared lockout, expired, forged and out-of-date tokens, the auditor, the Users list, the admin reset and its refusals, the CLI reset). The shared API fixtures set `mfa_roles=""` so the other tests keep signing in with the password alone. Frontend unit tests for every step and the reset dialog. Browser test `e2e/two-step.spec.js` (setup with a real code, recovery code once, admin reset, new QR code); the seeded e2e admin and auditor have fixed keys and `e2e/helpers.js` types their codes.
 - **Not done:** no 2-step for officers yet (by decision), no self-service "move to a new phone" or "new recovery codes" (reset covers both), no 2-step state on the auditor's Users table.
+
+## Layout pass, one loader and the bell dropdown (2026-11-24)
+
+UI only, at the user's request; no API, role, wording-rule or scoring change. Details in `DESIGN_SYSTEM.md` section 16.
+
+- `FitPanes` (new component) makes the Knowledge base Policies tab, the officer Policies page and the case page fill the window on wide screens, with each pane scrolling on its own.
+- Every skeleton placeholder is replaced by `SectionLoader` (the shared shield loader with a label).
+- The notification bell opens a dropdown of the latest eight notices; the inbox page is unchanged. `e2e/inbox.spec.js` opens the inbox from the dropdown.
+- The account menu's items are left-aligned and the menu is wider.
+- Checked with a scratch browser audit at 1920, 1440, 1280, 1024, 820 and 390 px wide on every officer, admin and auditor screen: text staying inside its box, no side scrolling, and the page not scrolling where panes are used.
 

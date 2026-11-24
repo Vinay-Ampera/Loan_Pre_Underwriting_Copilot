@@ -3,9 +3,10 @@ import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import BarChart from '../components/BarChart'
 import { loanLabel } from '../components/LoanTypePicker'
-import { ErrorState, Skeleton } from '../components/States'
+import { ErrorState } from '../components/States'
 import './HomePage.css'
 import './AuditorOverviewPage.css'
+import { SectionLoader } from '../components/Loading'
 
 const TILES = [
   ['cases', 'Cases', 'All officers', '/auditor/cases'],
@@ -67,7 +68,7 @@ export default function AuditorOverviewPage() {
           </p>
         </div>
       </header>
-      {summary.loading && <Skeleton lines={3} height={56} />}
+      {summary.loading && <SectionLoader label="Loading the counts" />}
       {summary.error && <ErrorState error={summary.error} onRetry={summary.reload} />}
       {summary.data && (
         <ul className="tiles tiles-4" aria-label="Summary">
@@ -82,7 +83,7 @@ export default function AuditorOverviewPage() {
           ))}
         </ul>
       )}
-      {charts.loading && <Skeleton lines={4} height={80} />}
+      {charts.loading && <SectionLoader label="Loading the charts" />}
       {charts.error && <ErrorState error={charts.error} onRetry={charts.reload} />}
       {c && (
         <div className="charts">

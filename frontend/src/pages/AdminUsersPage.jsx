@@ -6,8 +6,9 @@ import { useAsync } from '../hooks/useAsync'
 import Dialog from '../components/Dialog'
 import ReasonDialog from '../components/ReasonDialog'
 import StatusChip from '../components/StatusChip'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import './AdminUsersPage.css'
+import { SectionLoader } from '../components/Loading'
 
 const ROLE = { officer: 'Loan officer', admin: 'Admin', auditor: 'Auditor' }
 
@@ -204,7 +205,7 @@ export default function AdminUsersPage() {
         </button>
       </header>
 
-      {loading && <Skeleton lines={4} height={40} />}
+      {loading && <SectionLoader label="Loading users" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.length === 0 && <EmptyState title="No users">Add the first user.</EmptyState>}
       {data && data.length > 0 && (
@@ -374,7 +375,7 @@ export default function AdminUsersPage() {
           <p>
             Use this when <strong>{dialog.user.name}</strong> has lost their phone. Their
             authenticator codes and recovery codes stop working at once. At their next sign-in,
-            after the password, they scan a new QR code with Microsoft Authenticator.
+            after the password, they scan a new QR code with their authenticator app.
           </p>
           <p className="small muted">They get an email saying this happened. No code is sent.</p>
         </ReasonDialog>

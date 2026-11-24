@@ -19,14 +19,15 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import CustomerContact from '../components/CustomerContact'
 import DocumentChecklist from '../components/DocumentChecklist'
 import DocumentViewer from '../components/DocumentViewer'
+import FitPanes from '../components/FitPanes'
 import { loanLabel } from '../components/LoanTypePicker'
 import ReportPanel from '../components/ReportPanel'
 import ScoreBadge from '../components/ScoreBadge'
 import StageProgress from '../components/StageProgress'
 import StatusChip, { CaseStatusChip } from '../components/StatusChip'
 import UploadZone from '../components/UploadZone'
-import { useBusy } from '../components/Loading'
-import { ErrorState, Skeleton } from '../components/States'
+import { SectionLoader, useBusy } from '../components/Loading'
+import { ErrorState } from '../components/States'
 import './CaseWorkspacePage.css'
 import { formatWhen } from '../lib/format'
 
@@ -157,7 +158,7 @@ export default function CaseWorkspacePage() {
       )
   }, [c?.status, c?.report, running])
 
-  if (loading) return <Skeleton lines={8} height={28} />
+  if (loading) return <SectionLoader label="Loading the case" />
   if (error && !c) return <ErrorState error={error} onRetry={reload} />
   if (!c) return null
 
@@ -269,8 +270,8 @@ export default function CaseWorkspacePage() {
         stopText={report?.stop_text}
       />
 
-      <div className="ws-grid">
-        <section className="ws-main">
+      <FitPanes minWidth={1001} className="ws-grid">
+        <section className="ws-main fit-column">
           {running && (
             <div className="card running-card">
               <h3>Assessing this case</h3>
@@ -278,7 +279,7 @@ export default function CaseWorkspacePage() {
             </div>
           )}
           {editing ? (
-            <div className="card edit-card">
+            <div className="card edit-card fit-scroll">
               <h2>Correct the details</h2>
               <ApplicationForm
                 loanType={c.loan_type}
@@ -315,7 +316,7 @@ export default function CaseWorkspacePage() {
               </div>
 
               {tab === 'documents' && (
-                <div className="tab-body">
+                <div className="tab-body fit-scroll">
                   {c.checklist.length > 0 && (
                     <details className="checklist-card card" open={missingAny}>
                       <summary>
@@ -367,7 +368,7 @@ export default function CaseWorkspacePage() {
                           serverError={actionError}
                         />
                       ) : (
-                        <Skeleton lines={4} />
+                        <SectionLoader label="Loading the form" />
                       )}
                       <button
                         type="button"
@@ -476,7 +477,7 @@ export default function CaseWorkspacePage() {
               )}
 
               {tab === 'fields' && (
-                <div className="tab-body">
+                <div className="tab-body fit-scroll">
                   {c.documents.filter((d) => d.status === 'accepted').length === 0 ? (
                     <p className="muted">Upload documents first.</p>
                   ) : (
@@ -509,7 +510,7 @@ export default function CaseWorkspacePage() {
               )}
 
               {tab === 'report' && (
-                <div className="tab-body">
+                <div className="tab-body fit-scroll">
                   {report ? (
                     <ReportPanel
                       caseId={id}
@@ -526,7 +527,7 @@ export default function CaseWorkspacePage() {
               )}
 
               {tab === 'audit' && (
-                <div className="tab-body card audit-card">
+                <div className="tab-body fit-scroll card audit-card">
                   {audit.data ? (
                     <div
                       className={audit.loading ? 'is-pending' : undefined}
@@ -535,7 +536,7 @@ export default function CaseWorkspacePage() {
                       <AuditTimeline events={audit.data} />
                     </div>
                   ) : audit.loading ? (
-                    <Skeleton lines={4} />
+                    <SectionLoader label="Loading the history" />
                   ) : null}
                 </div>
               )}
@@ -543,7 +544,7 @@ export default function CaseWorkspacePage() {
           )}
         </section>
 
-        <aside className="ws-right">
+        <aside className="ws-right fit-scroll">
           {report ? (
             <ScoreBadge
               compact
@@ -644,7 +645,7 @@ export default function CaseWorkspacePage() {
             <CustomerContact caseId={id} recipient={first?.email} />
           )}
         </aside>
-      </div>
+      </FitPanes>
       {docToRemove && (
         <ConfirmDialog
           title="Remove this document?"

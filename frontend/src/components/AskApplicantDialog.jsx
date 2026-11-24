@@ -7,7 +7,7 @@ import ConfirmDialog from './ConfirmDialog'
 import Dialog from './Dialog'
 import SendLinkDialog from './SendLinkDialog'
 import RequestedItems, { isComplete, toBody } from './RequestedItems'
-import { Skeleton } from './States'
+import { SectionLoader } from './Loading'
 
 /** The address the applicant opens: this site's own origin plus the link path (`/u#token`). */
 export const linkUrl = (path) => `${window.location.origin}${path}`
@@ -138,7 +138,7 @@ export default function AskApplicantDialog({ caseId, recipient, docTypes = [], o
   if (!made && info.loading)
     return (
       <Dialog title="Ask the applicant" onClose={onClose} labelledBy="ask-link-title">
-        <Skeleton lines={3} />
+        <SectionLoader label="Loading the upload link" />
       </Dialog>
     )
   if (!made && mode === 'expired')

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { useUnread } from '../components/UnreadProvider'
 import { useAsync } from '../hooks/useAsync'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import { formatWhen } from '../lib/format'
 import './InboxPage.css'
+import { SectionLoader } from '../components/Loading'
 
 const PAGE = 30
 const FILTERS = [
@@ -187,7 +188,7 @@ function InboxList({ unreadOnly, group, caseQ, filtered, onGroups }) {
     }
   }
 
-  if (loading) return <Skeleton lines={4} height={56} delayed />
+  if (loading) return <SectionLoader label="Loading your inbox" />
   if (error) return <ErrorState error={error} onRetry={reload} />
   return (
     <>

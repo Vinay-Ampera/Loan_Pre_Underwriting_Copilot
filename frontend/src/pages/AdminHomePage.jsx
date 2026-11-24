@@ -3,10 +3,11 @@ import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import StatusChip from '../components/StatusChip'
 import { loanLabel } from '../components/LoanTypePicker'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import '../components/CaseQueueTable.css'
 import './HomePage.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const TILES = [
   ['pending_precedents', 'Pending precedents', 'Waiting for your review', '/admin/precedents'],
@@ -25,7 +26,7 @@ function RecentDecisions() {
       <div className="recent-head">
         <h2>Recently decided by officers</h2>
       </div>
-      {loading && <Skeleton lines={3} height={36} />}
+      {loading && <SectionLoader label="Loading recent decisions" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.length === 0 && (
         <EmptyState title="Nothing decided yet">
@@ -82,7 +83,7 @@ export default function AdminHomePage() {
           </p>
         </div>
       </header>
-      {loading && <Skeleton lines={3} height={56} />}
+      {loading && <SectionLoader label="Loading the summary" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && (
         <ul className="tiles tiles-4" aria-label="Admin summary">

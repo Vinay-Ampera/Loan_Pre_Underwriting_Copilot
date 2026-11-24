@@ -3,10 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import CaseQueueTable from '../components/CaseQueueTable'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import { LOAN_TYPES } from '../components/LoanTypePicker'
 import { VIEWS, matchesView } from '../lib/views'
 import './CaseQueuePage.css'
+import { SectionLoader } from '../components/Loading'
 
 const STATUSES = [
   ['', 'All statuses'],
@@ -89,7 +90,7 @@ export default function CaseQueuePage() {
           </button>
         </p>
       )}
-      {loading && !data && <Skeleton lines={5} height={36} />}
+      {loading && !data && <SectionLoader label="Loading cases" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       <div className={loading && data ? 'is-pending' : undefined} aria-busy={loading}>
         {shown && shown.length === 0 && (

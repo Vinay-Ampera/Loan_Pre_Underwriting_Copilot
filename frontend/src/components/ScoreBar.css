@@ -77,10 +77,14 @@
   }
 }
 @media (max-width: 560px) {
+  /* the 10-point segment is narrow on a phone: less padding so its number stays inside */
+  .weights li {
+    padding: var(--s-2) var(--s-1);
+  }
   .w-name {
     font-size: var(--fs-12);
   }
   .w-pts {
-    font-size: var(--fs-16);
+    font-size: var(--fs-14);
   }
 }

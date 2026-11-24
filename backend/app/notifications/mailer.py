@@ -51,7 +51,7 @@ MAILS: dict[str, tuple[str, str]] = {
     "two_step_reset": (
         "Pramaan: your 2-step verification was reset",
         "Your admin reset your 2-step verification for Pramaan. At your next sign-in, after your "
-        "password, you will scan a new QR code with Microsoft Authenticator on your phone. If "
+        "password, you will scan a new QR code with the authenticator app on your phone. If "
         "you did not expect this, tell your admin.\n\n" + _SIGN_IN,
     ),
 }

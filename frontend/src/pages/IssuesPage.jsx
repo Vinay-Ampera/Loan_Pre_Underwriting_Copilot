@@ -4,9 +4,9 @@ import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import Callout from '../components/Callout'
 import StatusChip from '../components/StatusChip'
-import { Skeleton } from '../components/States'
 import './IssuesPage.css'
 import { formatWhen } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 export const CATEGORIES = [
   ['bug', 'Something is broken'],
@@ -145,7 +145,7 @@ export default function IssuesPage() {
 
       <section aria-label="Your reports">
         <h2>Your reports</h2>
-        {loading && <Skeleton lines={2} height={40} />}
+        {loading && <SectionLoader label="Loading your reports" />}
         {data && data.length === 0 && <p className="muted">You have not reported anything.</p>}
         {data && data.length > 0 && (
           <ul className="issue-list card">

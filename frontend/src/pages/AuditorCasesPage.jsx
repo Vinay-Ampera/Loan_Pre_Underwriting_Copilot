@@ -5,9 +5,10 @@ import { useAsync } from '../hooks/useAsync'
 import { downloadFile, queryOf } from '../lib/download'
 import { LOAN_TYPES, loanLabel } from '../components/LoanTypePicker'
 import { CaseStatusChip } from '../components/StatusChip'
-import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { EmptyState, ErrorState } from '../components/States'
 import './AuditorTable.css'
 import { formatDay } from '../lib/format'
+import { SectionLoader } from '../components/Loading'
 
 const PAGE = 100
 const STATUSES = [
@@ -185,7 +186,7 @@ export default function AuditorCasesPage() {
           {exportError}
         </p>
       )}
-      {loading && !data && <Skeleton lines={5} height={32} />}
+      {loading && !data && <SectionLoader label="Loading cases" />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.rows.length === 0 && <EmptyState title="No cases">No cases match.</EmptyState>}
       {data && data.rows.length > 0 && (

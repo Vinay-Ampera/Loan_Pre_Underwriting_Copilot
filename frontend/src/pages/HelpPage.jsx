@@ -85,19 +85,20 @@ const AUDITOR = [
   ['aud-two-step', '2-step verification', 'shield-check'],
 ]
 
-/** Signing in with a code from Microsoft Authenticator (admin and auditor). */
+/** Signing in with a code from an authenticator app (admin and auditor). */
 function TwoStepHelp({ id, admin }) {
   return (
     <HelpSection id={id} icon="shield-check" title="2-step verification">
       <p>
-        Your account signs in with your password and then a 6-digit code from{' '}
-        <strong>Microsoft Authenticator</strong> on your phone. The code changes every 30 seconds
-        and each one works once. Nothing is sent to your phone: the app makes the code.
+        Your account signs in with your password and then a 6-digit code from an authenticator app
+        on your phone, such as <strong>Google Authenticator</strong> or{' '}
+        <strong>Microsoft Authenticator</strong>. The code changes every 30 seconds and each one
+        works once. Nothing is sent to your phone: the app makes the code.
       </p>
       <ol className="help-flow">
         <li>
           <strong>1. First sign-in</strong>
-          <span className="muted">Scan the QR code in the app (+, Other).</span>
+          <span className="muted">Scan the QR code in the app (tap +).</span>
         </li>
         <li>
           <strong>2. Type the code</strong>
