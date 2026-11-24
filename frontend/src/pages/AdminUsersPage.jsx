@@ -230,12 +230,15 @@ export default function AdminUsersPage() {
                 return (
                   <tr key={u.id}>
                     <td data-label="Name">
-                      {u.role === 'officer' ? (
-                        <Link to={`/admin/users/${u.id}`}>{u.name}</Link>
-                      ) : (
-                        u.name
-                      )}{' '}
-                      {me && <span className="muted">(you)</span>}
+                      {/* one piece, so the stacked layout keeps "(you)" beside the name */}
+                      <span>
+                        {u.role === 'officer' ? (
+                          <Link to={`/admin/users/${u.id}`}>{u.name}</Link>
+                        ) : (
+                          u.name
+                        )}{' '}
+                        {me && <span className="muted">(you)</span>}
+                      </span>
                     </td>
                     <td data-label="Email">{u.email}</td>
                     <td data-label="Role">{ROLE[u.role] ?? u.role}</td>

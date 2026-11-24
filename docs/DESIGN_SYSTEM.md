@@ -325,4 +325,8 @@ Asked for by the user; layout and loading only, no change to what any screen doe
 - **One loader everywhere.** Every loading state uses the Pramaan shield loader: the full-page one on first load, and `SectionLoader` (the same mark, smaller, shown after a short pause so quick answers do not flash it) inside a section. Each one says what is loading ("Loading the policy", "Loading cases"). The grey skeleton bars are no longer used.
 - **The bell opens a dropdown** instead of going to the inbox: the eight latest notices (unread ones bold with a dot), "Mark all read", and "Open the inbox". Opening a notice marks it read and goes where it points, as in the inbox. Escape or a click outside closes it.
 - **Account menu:** wider, with left-aligned items, so "Email me about new notices" reads as one line.
+- **Status chips never shrink below their label** (`min-width: max-content`): a table squeezing its columns used to cut the end off "Active" and similar chips.
+- **Users screen:** the Status and 2-step chips stay whole, and below 900 px wide the table becomes one card per person (it was 720 px; six columns no longer fit beside the sidebar on a tablet). The name and "(you)" stay together.
+- **Text inside its box:** the Help page's agent cards wrap their points line, and on a phone the score-weight bar keeps each number inside its segment. Checked on every screen at 1920, 1440, 1280, 1024, 820 and 390 px wide.
+- **The 2-step screens name no single app:** "your authenticator app (for example Google Authenticator or Microsoft Authenticator)".
 

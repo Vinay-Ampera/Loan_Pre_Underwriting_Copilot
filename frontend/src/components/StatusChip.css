@@ -8,6 +8,8 @@
   font-weight: 500;
   line-height: 22px;
   white-space: nowrap;
+  /* never narrower than its own label: a table squeezing its columns must not cut the text */
+  min-width: max-content;
 }
 .chip-icon {
   display: inline-grid;

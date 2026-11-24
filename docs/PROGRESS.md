@@ -538,5 +538,7 @@ UI only, at the user's request; no API, role, wording-rule or scoring change. De
 - Every skeleton placeholder is replaced by `SectionLoader` (the shared shield loader with a label).
 - The notification bell opens a dropdown of the latest eight notices; the inbox page is unchanged. `e2e/inbox.spec.js` opens the inbox from the dropdown.
 - The account menu's items are left-aligned and the menu is wider.
+- Status chips no longer shrink below their label; the Users table keeps its chips whole and stacks into cards below 900 px; Help agent cards and the phone score bar keep their text inside.
+- The 2-step screens, Help, the reset email and the docs say "your authenticator app (for example Google Authenticator or Microsoft Authenticator)" instead of naming Microsoft only (the user tests with Google Authenticator).
 - Checked with a scratch browser audit at 1920, 1440, 1280, 1024, 820 and 390 px wide on every officer, admin and auditor screen: text staying inside its box, no side scrolling, and the page not scrolling where panes are used.
 

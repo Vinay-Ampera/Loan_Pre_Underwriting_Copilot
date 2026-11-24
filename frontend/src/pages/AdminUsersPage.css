@@ -28,6 +28,11 @@
 .users tbody tr:last-child td {
   border-bottom: 0;
 }
+/* a status chip keeps its full width: the table takes the room from the name and email instead */
+.users td[data-label='Status'],
+.users td[data-label='2-step'] {
+  white-space: nowrap;
+}
 .row-actions {
   display: flex;
   gap: var(--s-2);
@@ -49,7 +54,8 @@
   letter-spacing: 0.04em;
   user-select: all;
 }
-@media (max-width: 720px) {
+/* six columns no longer fit beside the sidebar on a tablet: one card per person instead */
+@media (max-width: 900px) {
   .users thead {
     display: none;
   }
@@ -61,12 +67,21 @@
   .users td {
     display: flex;
     justify-content: space-between;
+    gap: var(--s-3);
     border-bottom: 0;
     padding: var(--s-1) var(--s-4);
+    text-align: right;
+    overflow-wrap: anywhere;
   }
   .users td[data-label]::before {
     content: attr(data-label);
+    flex: none;
     color: var(--muted);
+    text-align: left;
+  }
+  .users td.row-actions {
+    justify-content: flex-end;
+    padding-top: var(--s-2);
   }
 }
 
