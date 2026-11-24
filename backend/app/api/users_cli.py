@@ -2,6 +2,11 @@
 
 python -m app.api.users_cli create --email a@b.c --name "Asha" --role officer|admin|auditor
 python -m app.api.users_cli password --email a@b.c
+python -m app.api.users_cli reset-2-step --email a@b.c --reason "Lost phone, new one issued"
+
+reset-2-step is for an admin who lost their own phone and has no recovery code left, and for the
+auditor (the admin screen cannot touch the auditor account). The person scans a new QR code at
+their next sign-in.
 """
 
 import argparse
@@ -10,7 +15,9 @@ import sys
 
 from sqlalchemy import create_engine, text
 
+from app.api.deps import write_audit
 from app.api.security import hash_password
+from app.api.users import MIN_REASON, clear_two_step
 from app.core.config import get_settings
 
 MIN_LENGTH = 10
@@ -34,7 +41,12 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--role", choices=["officer", "admin", "auditor"], required=True)
     p = sub.add_parser("password")
     p.add_argument("--email", required=True)
+    m = sub.add_parser("reset-2-step")
+    m.add_argument("--email", required=True)
+    m.add_argument("--reason", required=True)
     args = ap.parse_args(argv)
+    if args.cmd == "reset-2-step" and len(args.reason.strip()) < MIN_REASON:
+        raise SystemExit(f"Write the reason (at least {MIN_REASON} characters).")
     engine = create_engine(get_settings().sqlalchemy_url())
     with engine.begin() as conn:
         if args.cmd == "create":
@@ -57,6 +69,19 @@ def main(argv: list[str] | None = None) -> int:
                 },
             )
             print(f"created {args.role} {args.email}")
+        elif args.cmd == "reset-2-step":
+            row = conn.execute(
+                text("SELECT id, mfa_enabled_at FROM users WHERE lower(email) = lower(:e)"),
+                {"e": args.email},
+            ).first()
+            if row is None:
+                print("no such user")
+                return 1
+            clear_two_step(conn, row.id)
+            write_audit(conn, None, "two_step_reset", "user", row.id,
+                        before={"two_step_since": row.mfa_enabled_at},
+                        after={"reason": args.reason.strip(), "by": "command line"})  # fmt: skip
+            print("2-step verification reset: a new QR code is shown at the next sign-in")
         else:
             n = conn.execute(
                 text("UPDATE users SET password_hash = :h, failed_logins = 0, locked_until = NULL "

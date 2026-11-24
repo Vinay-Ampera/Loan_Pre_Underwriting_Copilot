@@ -1,10 +1,11 @@
 """Email to staff (Notifications Part 2): what is sent, when, and how it is delivered.
 
-Three kinds, each with fixed text in this file and nothing from a case: a new notice in the inbox
+Four kinds, each with fixed text in this file and nothing from a case: a new notice in the inbox
 ("sign in to read it"), an account created and a password reset (both say to ask the admin for the
-temporary password: **a password is never emailed**). A row is queued in `email_outbox` inside the
-transaction of its event; `deliver_pending` sends queued rows after the commit, through the
-guarded sender (allow-list, demo redirect), and audits every outcome with a masked address.
+temporary password: **a password is never emailed**), and a 2-step verification reset (set it up
+again at the next sign-in; no code or key is ever emailed). A row is queued in `email_outbox`
+inside the transaction of its event; `deliver_pending` sends queued rows after the commit, through
+the guarded sender (allow-list, demo redirect), and audits every outcome with a masked address.
 
 Notice emails respect the person's choice (`users.notice_emails`) and go at most once per
 `NOTICE_EMAIL_GAP_MINUTES` per person, so a busy day sends one email, not twenty.
@@ -47,7 +48,14 @@ MAILS: dict[str, tuple[str, str]] = {
         "Your admin reset your Pramaan password. Ask the admin for the temporary one; it is "
         "never sent by email. If you did not expect this, tell your admin.\n\n" + _SIGN_IN,
     ),
+    "two_step_reset": (
+        "Pramaan: your 2-step verification was reset",
+        "Your admin reset your 2-step verification for Pramaan. At your next sign-in, after your "
+        "password, you will scan a new QR code with Microsoft Authenticator on your phone. If "
+        "you did not expect this, tell your admin.\n\n" + _SIGN_IN,
+    ),
 }
+ACCOUNT_KINDS = ("account_created", "password_reset", "two_step_reset")
 
 
 def configure(*, base_url: str, gap_minutes: int) -> None:
@@ -84,8 +92,8 @@ def queue_notice_email(conn: Connection, user_id: UUID | str) -> bool:
 
 
 def queue_account_email(conn: Connection, user_id: UUID | str, kind: str) -> bool:
-    """`account_created` or `password_reset`: always sent (not a preference), no password."""
-    if kind not in ("account_created", "password_reset"):
+    """An `ACCOUNT_KINDS` email: always sent (not a preference), never a password or a code."""
+    if kind not in ACCOUNT_KINDS:
         raise ValueError(kind)
     return _queue(conn, user_id, kind)
 

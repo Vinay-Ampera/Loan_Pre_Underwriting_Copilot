@@ -302,3 +302,14 @@ Admin only, route `/admin/ai`, sidebar entry "AI control" (icon `sliders`). One 
 - **Officer page** `PolicyLibraryPage` (`/policies`, sidebar "Policies", icon `book`, before Report a problem): search card on top, then the list and the reader. No drafts, history, citation counts or buttons that change anything.
 - Tokens and components are the existing ones; no new colour. The new icon `book` follows the 1.5 stroke line set.
 
+## 15. 2-step verification screens (2026-11-24)
+
+All inside the existing sign-in card (`components/TwoStep.jsx`, `TwoStep.css`); the brand panel on the left is unchanged.
+
+- **Enter your code:** one sentence naming Microsoft Authenticator, a large mono "6-digit code" box (numeric keyboard on phones, `one-time-code` autofill), "Verify and sign in", then quiet buttons "Lost your phone? Use a recovery code" (switches the box to "Recovery code") and "Use a different account".
+- **Set up 2-step verification:** three numbered steps (install the app; tap +, choose "Other (Google, Facebook, etc.)" and scan; type the code), the QR code always black on white in both themes so any camera reads it, and a fold "Cannot scan it? Type the key instead" with the key in groups of four. Button "Turn on and sign in".
+- **Save your recovery codes:** eight codes in a two-column mono grid, Copy and Download, a tick "I have saved these codes"; "Continue to Pramaan" stays off until it is ticked.
+- **Signed in with a recovery code:** how many are left (amber note when two or fewer) and what to do about a lost phone.
+- **Users screen:** a 2-step column (On, Set up at next sign-in, Not needed) and a "Reset 2-step" button on rows that have it on (greyed out on your own row; not shown for the auditor), opening the shared reason dialog.
+- Wording: "2-step verification" everywhere (never "MFA" on screen); errors say what to do ("Use the newest code in the app, or a recovery code").
+

@@ -67,6 +67,7 @@ def client(engine: Engine, tmp_path: Path) -> Iterator[TestClient]:
         jwt_secret=SecretStr("test-secret-" + "x" * 32),
         upload_dir=tmp_path / "uploads",
         login_max_failures=3,
+        mfa_roles="",  # 2-step verification has its own tests (test_two_step.py)
     )
     app = create_app(
         settings,

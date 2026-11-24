@@ -4,17 +4,25 @@ audit log.
 
 A sign-in is a `user_sessions` row. The 15-minute access token names it; the refresh token sits in
 an HttpOnly cookie and is rotated on every use. The server ends a session after the idle timeout
-or the hard maximum, whatever the browser does (SECURITY.md section 4a)."""
+or the hard maximum, whatever the browser does (SECURITY.md section 4a).
+
+2-step verification (SECURITY.md 4h): for the roles in MFA_ROLES (admin and auditor), and for any
+account that has it set up, a correct password gives no session, only a 5-minute token for the code
+step. The first time, the answer also carries a QR code to scan; the first good code turns 2-step on
+and returns eight recovery codes, shown once. Wrong codes count toward the same lockout as wrong
+passwords."""
 
 import hmac
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
+import jwt
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import Connection, text
 
+from app.api import mfa
 from app.api.deps import (
     User,
     current_user,
@@ -23,12 +31,23 @@ from app.api.deps import (
     session_over,
     write_audit,
 )  # fmt: skip
-from app.api.schemas import CO_APPLICANT, LOAN_FIELDS, LoginIn
-from app.api.security import create_token, hash_refresh, new_refresh_secret, verify_password
+from app.api.schemas import CO_APPLICANT, LOAN_FIELDS, LoginIn, MfaIn
+from app.api.security import (
+    create_mfa_token,
+    create_token,
+    decode_mfa_token,
+    hash_refresh,
+    new_refresh_secret,
+    password_mark,
+    verify_password,
+)  # fmt: skip
 from app.core.config import Settings
 
 router = APIRouter(tags=["auth"])
 BAD_LOGIN = "Email or password is incorrect."
+LOCKED = "Too many failed attempts. Try again in a few minutes."
+BAD_CODE = "That code is not right. Use the newest code in the app, or a recovery code."
+RESTART = "This sign-in took too long or was reset. Enter your email and password again."
 COOKIE = "lc_refresh"
 COOKIE_PATH = "/api/v1/auth"
 ENDED = {  # what the browser is told when the server ends a session
@@ -66,39 +85,27 @@ def _user_json(u: User) -> dict[str, Any]:
     return {"id": u.id, "name": u.name, "email": u.email, "role": u.role}
 
 
-@router.post("/auth/login")
-def login(
-    body: LoginIn, response: Response, conn: Connection = Depends(get_conn), settings: Settings = Depends(get_settings_dep)
-) -> Any:  # fmt: skip
-    # failures are returned, not raised, so the failure count and audit row are committed
-    row = conn.execute(
-        text("""SELECT id, name, email, role, active, password_hash, failed_logins, locked_until
-                FROM users WHERE lower(email) = lower(:e) FOR UPDATE"""),
-        {"e": body.email.strip()},
-    ).first()
-    now = datetime.now(UTC)
-    if row is not None and row.locked_until and row.locked_until > now:
-        write_audit(conn, row.id, "login_blocked", "user", row.id, after={"reason": "locked"})
-        return JSONResponse(
-            {"detail": "Too many failed attempts. Try again in a few minutes."}, 423
-        )
-    ok = verify_password(body.password, row.password_hash if row else None)
-    if row is None or not ok or not row.active:
-        if row is not None:
-            failures = row.failed_logins + 1
-            lock = now + timedelta(minutes=settings.login_lock_minutes) \
-                if failures >= settings.login_max_failures else None  # fmt: skip
-            conn.execute(
-                text("UPDATE users SET failed_logins = :f, locked_until = :l WHERE id = :i"),
-                {"f": 0 if lock else failures, "l": lock, "i": row.id},
-            )
-            write_audit(conn, row.id, "login_locked" if lock else "login_failed", "user", row.id)
-        else:
-            write_audit(conn, None, "login_failed", "user", None, after={"unknown_email": True})
-        return JSONResponse({"detail": BAD_LOGIN}, 401)
+def _failed(conn: Connection, settings: Settings, row: Any, action: str) -> bool:
+    """One more failure for a wrong password or a wrong code; True when it locks the account."""
+    failures = row.failed_logins + 1
+    lock = datetime.now(UTC) + timedelta(minutes=settings.login_lock_minutes) \
+        if failures >= settings.login_max_failures else None  # fmt: skip
+    conn.execute(
+        text("UPDATE users SET failed_logins = :f, locked_until = :l WHERE id = :i"),
+        {"f": 0 if lock else failures, "l": lock, "i": row.id},
+    )
+    write_audit(conn, row.id, "login_locked" if lock else action, "user", row.id)
+    return lock is not None
+
+
+def _start_session(
+    conn: Connection, response: Response, settings: Settings, row: Any, mfa_used: str | None
+) -> dict[str, Any]:  # fmt: skip
+    """The sign-in itself: a session row, the refresh cookie and a 15-minute access token."""
     conn.execute(text("UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = :i"),
                  {"i": row.id})  # fmt: skip
-    write_audit(conn, row.id, "login", "user", row.id)
+    write_audit(conn, row.id, "login", "user", row.id,
+                after=None if mfa_used is None else {"two_step": mfa_used})  # fmt: skip
     user = User(id=row.id, name=row.name, email=row.email, role=row.role)
     sid, secret = uuid4(), new_refresh_secret()
     conn.execute(text("DELETE FROM user_sessions WHERE started_at < now() - interval '2 days'"))
@@ -111,6 +118,120 @@ def login(
     return {"access_token": create_token(settings, str(row.id), row.role, str(sid)),
             "token_type": "bearer", "user": _user_json(user),
             "session": _session_json(settings, started_at)}  # fmt: skip
+
+
+def needs_two_step(settings: Settings, row: Any) -> bool:
+    return row.role in settings.mfa_role_set() or row.mfa_enabled_at is not None
+
+
+_LOGIN_ROW = """SELECT id, name, email, role, active, password_hash, failed_logins, locked_until,
+                       mfa_secret, mfa_pending_secret, mfa_enabled_at, mfa_last_step
+                FROM users WHERE {where} FOR UPDATE"""
+
+
+@router.post("/auth/login")
+def login(
+    body: LoginIn, response: Response, conn: Connection = Depends(get_conn), settings: Settings = Depends(get_settings_dep)
+) -> Any:  # fmt: skip
+    # failures are returned, not raised, so the failure count and audit row are committed
+    row = conn.execute(
+        text(_LOGIN_ROW.format(where="lower(email) = lower(:e)")), {"e": body.email.strip()}
+    ).first()
+    now = datetime.now(UTC)
+    if row is not None and row.locked_until and row.locked_until > now:
+        write_audit(conn, row.id, "login_blocked", "user", row.id, after={"reason": "locked"})
+        return JSONResponse({"detail": LOCKED}, 423)
+    ok = verify_password(body.password, row.password_hash if row else None)
+    if row is None or not ok or not row.active:
+        if row is not None:
+            _failed(conn, settings, row, "login_failed")
+        else:
+            write_audit(conn, None, "login_failed", "user", None, after={"unknown_email": True})
+        return JSONResponse({"detail": BAD_LOGIN}, 401)
+    if not needs_two_step(settings, row):
+        return _start_session(conn, response, settings, row, None)
+    # the password was right: the code comes next. The failure count is kept until then.
+    write_audit(conn, row.id, "two_step_asked", "user", row.id)
+    token = create_mfa_token(settings, str(row.id), row.password_hash)
+    if row.mfa_enabled_at is not None:
+        return {"mfa": "code", "mfa_token": token}
+    secret = mfa.new_secret()  # first sign-in, or after a reset: set it up now
+    conn.execute(text("UPDATE users SET mfa_pending_secret = :p WHERE id = :i"),
+                 {"p": mfa.seal(settings, secret), "i": row.id})  # fmt: skip
+    return {"mfa": "setup", "mfa_token": token, "setup": mfa.setup_payload(secret, row.email)}
+
+
+@router.post("/auth/mfa/verify")
+def verify_two_step(
+    body: MfaIn, response: Response, conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
+) -> Any:  # fmt: skip
+    """The code step. Setting up: the first code from the app confirms the new key, turns 2-step on
+    and returns the recovery codes. Signing in: a code from the app, or one unused recovery code."""
+    restart = JSONResponse({"detail": RESTART, "reason": "restart"}, 401)
+    try:
+        claims = decode_mfa_token(settings, body.mfa_token)
+        user_id = UUID(claims["sub"])
+    except (jwt.PyJWTError, KeyError, ValueError):
+        return restart
+    row = conn.execute(text(_LOGIN_ROW.format(where="id = :i")), {"i": user_id}).first()
+    if row is None or not row.active or claims.get("pwd") != password_mark(row.password_hash):
+        return restart
+    if row.locked_until and row.locked_until > datetime.now(UTC):
+        write_audit(conn, row.id, "login_blocked", "user", row.id, after={"reason": "locked"})
+        return JSONResponse({"detail": LOCKED}, 423)
+    code = mfa.clean_code(body.code)
+
+    def wrong() -> JSONResponse:
+        locked = _failed(conn, settings, row, "two_step_failed")
+        return (
+            JSONResponse({"detail": LOCKED}, 423)
+            if locked
+            else JSONResponse({"detail": BAD_CODE}, 401)
+        )
+
+    if row.mfa_enabled_at is None:  # setting up
+        pending = mfa.unseal(settings, row.mfa_pending_secret)
+        if pending is None:
+            return restart
+        step = mfa.matching_step(pending, code, None)
+        if step is None:
+            return wrong()
+        codes = mfa.new_recovery_codes()
+        conn.execute(
+            text("""UPDATE users SET mfa_secret = mfa_pending_secret, mfa_pending_secret = NULL,
+                        mfa_enabled_at = now(), mfa_last_step = :s, updated_at = now()
+                    WHERE id = :i"""),
+            {"s": step, "i": row.id},
+        )
+        conn.execute(text("DELETE FROM user_recovery_codes WHERE user_id = :i"), {"i": row.id})
+        for c in codes:
+            conn.execute(text("INSERT INTO user_recovery_codes (user_id, code_hash) VALUES (:u, :h)"),
+                         {"u": row.id, "h": mfa.hash_recovery(c)})  # fmt: skip
+        write_audit(conn, row.id, "two_step_enabled", "user", row.id)
+        return {**_start_session(conn, response, settings, row, "setup"), "recovery_codes": codes}
+    secret = mfa.unseal(settings, row.mfa_secret)
+    step = None if secret is None else mfa.matching_step(secret, code, row.mfa_last_step)
+    if step is not None:
+        conn.execute(text("UPDATE users SET mfa_last_step = :s WHERE id = :i"),
+                     {"s": step, "i": row.id})  # fmt: skip
+        return _start_session(conn, response, settings, row, "app")
+    spent = mfa.looks_like_recovery(code) and conn.execute(
+        text("""UPDATE user_recovery_codes SET used_at = now()
+                WHERE user_id = :u AND code_hash = :h AND used_at IS NULL RETURNING id"""),
+        {"u": row.id, "h": mfa.hash_recovery(code)},
+    ).first()  # fmt: skip
+    if not spent:
+        return wrong()
+    left = conn.execute(
+        text("SELECT count(*) FROM user_recovery_codes WHERE user_id = :u AND used_at IS NULL"),
+        {"u": row.id},
+    ).scalar_one()
+    write_audit(conn, row.id, "two_step_recovery_used", "user", row.id, after={"left": left})
+    return {
+        **_start_session(conn, response, settings, row, "recovery"),
+        "recovery_codes_left": left,
+    }
 
 
 def _end(conn: Connection, session_id: UUID, user_id: UUID, reason: str) -> None:

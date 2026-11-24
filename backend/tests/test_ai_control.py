@@ -44,6 +44,7 @@ def settings_with_keys(tmp_path: Path, **over: Any) -> Settings:
     return Settings(
         _env_file=None,  # type: ignore[call-arg]
         jwt_secret=SecretStr("test-secret-" + "x" * 32), upload_dir=tmp_path / "up",
+        mfa_roles="",  # 2-step verification has its own tests (test_two_step.py)
         **{**keys, **over},
     )  # fmt: skip
 

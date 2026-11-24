@@ -66,6 +66,7 @@ const ADMIN = [
   ['users', 'Add and disable users', 'users'],
   ['adm-links', 'Upload links for officers', 'link'],
   ['reset', 'Reset a password', 'shield'],
+  ['two-step', '2-step verification', 'shield-check'],
   ['adm-case', 'Open and correct a case', 'cases'],
   ['adm-reassign', 'Reassign a case', 'users'],
   ['adm-records', "Messages and a case's history", 'mail'],
@@ -81,7 +82,50 @@ const AUDITOR = [
   ['aud-cases', 'The Cases table', 'cases'],
   ['aud-data', 'Overview and audit log', 'chart'],
   ['aud-limits', 'What you cannot do', 'shield'],
+  ['aud-two-step', '2-step verification', 'shield-check'],
 ]
+
+/** Signing in with a code from Microsoft Authenticator (admin and auditor). */
+function TwoStepHelp({ id, admin }) {
+  return (
+    <HelpSection id={id} icon="shield-check" title="2-step verification">
+      <p>
+        Your account signs in with your password and then a 6-digit code from{' '}
+        <strong>Microsoft Authenticator</strong> on your phone. The code changes every 30 seconds
+        and each one works once. Nothing is sent to your phone: the app makes the code.
+      </p>
+      <ol className="help-flow">
+        <li>
+          <strong>1. First sign-in</strong>
+          <span className="muted">Scan the QR code in the app (+, Other).</span>
+        </li>
+        <li>
+          <strong>2. Type the code</strong>
+          <span className="muted">The six digits the app shows for Pramaan.</span>
+        </li>
+        <li>
+          <strong>3. Save the recovery codes</strong>
+          <span className="muted">Eight codes, shown once. Keep them away from the phone.</span>
+        </li>
+      </ol>
+      <Callout tone="warn" title="Lost your phone?">
+        Sign in with a recovery code (each works once), then{' '}
+        {admin
+          ? 'ask another admin to reset your 2-step verification, or reset it from the command line.'
+          : 'ask the admin to reset your 2-step verification from the command line.'}{' '}
+        At your next sign-in you scan a new QR code.
+      </Callout>
+      {admin && (
+        <p>
+          To reset someone else&apos;s (they lost their phone): Users, <strong>Reset 2-step</strong>
+          , write the reason and confirm. They get an email saying so and set it up again at their
+          next sign-in. You cannot reset your own, and the auditor&apos;s is reset from the command
+          line only.
+        </p>
+      )}
+    </HelpSection>
+  )
+}
 
 function AuditorGuide() {
   return (
@@ -130,6 +174,8 @@ function AuditorGuide() {
           cannot create, disable or reset it.
         </p>
       </HelpSection>
+
+      <TwoStepHelp id="aud-two-step" admin={false} />
     </>
   )
 }
@@ -462,6 +508,8 @@ function AdminGuide() {
           A locked account unlocks by itself after a while.
         </Callout>
       </HelpSection>
+
+      <TwoStepHelp id="two-step" admin />
 
       <HelpSection id="adm-case" icon="cases" title="Open and correct a case">
         <ol className="help-steps">

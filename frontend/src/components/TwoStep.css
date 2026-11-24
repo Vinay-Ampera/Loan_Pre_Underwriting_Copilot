@@ -1,0 +1,86 @@
+/* The 2-step screens inside the sign-in card (LoginPage). */
+.two-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.two-step-input {
+  font-size: var(--fs-20);
+  letter-spacing: 0.2em;
+}
+.two-step-back {
+  align-self: center;
+  color: var(--muted);
+}
+.two-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding-left: var(--s-5);
+  list-style: decimal;
+  font-size: var(--fs-14);
+}
+.two-step-list li::marker {
+  color: var(--muted);
+  font-family: var(--mono);
+}
+/* the QR code stays black on white in both themes, so every phone camera can read it */
+.two-step-qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: var(--s-3) 0 var(--s-2);
+  padding: var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-input);
+  background: #fff;
+  image-rendering: pixelated;
+}
+.two-step-key summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-size: var(--fs-13);
+}
+.two-step-key[open] summary {
+  margin-bottom: var(--s-2);
+}
+.two-step-secret {
+  margin-top: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-input);
+  background: var(--brand-soft);
+  color: var(--ink);
+  font-size: var(--fs-14);
+  letter-spacing: 0.06em;
+  user-select: all;
+  word-break: break-all;
+}
+.two-step-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--raised);
+  font-size: var(--fs-16);
+  letter-spacing: 0.04em;
+  user-select: all;
+}
+.two-step-row {
+  display: flex;
+  gap: var(--s-2);
+}
+.two-step-check {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-14);
+}
+.two-step-warn {
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--refer);
+  border-radius: var(--radius-input);
+  background: var(--refer-bg);
+  font-size: var(--fs-14);
+}

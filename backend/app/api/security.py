@@ -46,5 +46,31 @@ def create_token(settings: Settings, user_id: str, role: str, sid: str) -> str:
 
 
 def decode_token(settings: Settings, token: str) -> dict[str, Any]:
-    """The token's claims, or `jwt.PyJWTError` when it is invalid or expired."""
+    """The token's claims, or `jwt.PyJWTError` when it is invalid or expired. A 2-step token has
+    an audience, so it fails here: it never works as an access token."""
     return jwt.decode(token, settings.jwt_secret.get_secret_value(), algorithms=[_ALGORITHM])
+
+
+MFA_AUDIENCE = "pramaan-2-step"
+
+
+def password_mark(password_hash: str) -> str:
+    """A short fingerprint of the stored password hash: a password change ends a 2-step wait."""
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+
+
+def create_mfa_token(settings: Settings, user_id: str, password_hash: str) -> str:
+    """Proof that the password was right a few minutes ago. It opens the code step only."""
+    now = datetime.now(UTC)
+    claims = {"sub": user_id, "aud": MFA_AUDIENCE, "pwd": password_mark(password_hash), "iat": now,
+              "exp": now + timedelta(minutes=settings.mfa_token_minutes)}  # fmt: skip
+    return jwt.encode(claims, settings.jwt_secret.get_secret_value(), algorithm=_ALGORITHM)
+
+
+def decode_mfa_token(settings: Settings, token: str) -> dict[str, Any]:
+    return jwt.decode(
+        token,
+        settings.jwt_secret.get_secret_value(),
+        algorithms=[_ALGORITHM],
+        audience=MFA_AUDIENCE,
+    )

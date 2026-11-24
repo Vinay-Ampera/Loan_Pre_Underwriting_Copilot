@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     refresh_grace_seconds: int = 10  # a second tab may present the token a moment after rotation
     login_max_failures: int = 5
     login_lock_minutes: int = 15
+    # 2-step verification (SECURITY.md 4h): roles that must give an authenticator code after the
+    # password, comma separated. An account that has 2-step set up is always asked for it.
+    mfa_roles: str = "admin,auditor"
+    mfa_token_minutes: int = 5  # from a correct password to the code
     cors_origins: str = ""  # comma separated; empty = same origin (dev server proxies /api)
 
     # Several documents in one PDF (Stage 10, Part D). Off = a multi-page PDF is one document, as
@@ -79,6 +83,9 @@ class Settings(BaseSettings):
     email_retention_days: int = 90  # sent, held or failed staff email rows are kept this long
     branch_contact_email: str = ""  # optional extra contact lines in customer messages
     branch_contact_phone: str = ""
+
+    def mfa_role_set(self) -> set[str]:
+        return {r.strip() for r in self.mfa_roles.split(",") if r.strip()}
 
     def report_sqlalchemy_url(self) -> str | None:
         """REPORT_DATABASE_URL for the auditor's group charts, or None to use DATABASE_URL."""

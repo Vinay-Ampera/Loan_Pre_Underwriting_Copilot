@@ -7,8 +7,13 @@ Conventions: `id` is UUID primary key; `created_at` and `updated_at` are `timest
 ## 1. Core case data
 
 **users**
-`id, name, email (unique), phone (nullable; added in migration 0010), password_hash (argon2), role (officer|admin|auditor; auditor added in migration 0011, one active at most via a unique partial index), active, failed_logins, locked_until, created_at, updated_at`
+`id, name, email (unique), phone (nullable; added in migration 0010), password_hash (argon2), role (officer|admin|auditor; auditor added in migration 0011, one active at most via a unique partial index), active, failed_logins, locked_until, mfa_secret, mfa_pending_secret, mfa_enabled_at, mfa_last_step, created_at, updated_at`
 Migration 0008 added `failed_logins` and `locked_until` (lockout after repeated failures, SECURITY section 4). Users are created with `python -m app.api.users_cli` or, from Stage 8, by the admin in the Users screen (`POST /admin/users`); the CLI password is typed at a prompt and the screen's temporary password is shown once. Neither is stored in a file or the audit log. Stage 8 added no migration.
+Migration 0025 (2-step verification, SECURITY.md 4h) added the `mfa_*` columns: `mfa_secret` is the authenticator key, sealed with a key derived from `JWT_SECRET` (never stored in the clear); `mfa_pending_secret` holds a new key between the QR code and the first code; `mfa_enabled_at` is set when 2-step is on (NULL = not set up, or reset); `mfa_last_step` is the 30-second step of the last code accepted, so a code works once.
+
+**user_recovery_codes** (migration 0025)
+`id, user_id → users (cascade), code_hash (SHA-256 of the code), created_at, used_at`
+Eight per person with 2-step on, made at setup and shown once; a used code keeps its row with `used_at`. A reset of the person's 2-step deletes them. `app_rw` and `migrator`; `report_ro` has none.
 
 **cases**
 `id, case_no (CASE-YYYY-NNNN, unique), loan_type (personal|home|education|business|vehicle), status (draft|uploaded|running|stopped|awaiting_confirmation|confirmed|overridden), created_by → users, loan_amount, tenure_months, purpose, form_data jsonb (type-specific fields), stopped_stage, stop_class (fix|eligibility|null), total_score (null if stopped), band (approve|refer|reject|null), recommendation, policy_version, rules_version, created_at, updated_at`
@@ -127,7 +132,7 @@ Migration 0019 also adds `upload_links.expiry_notified_for` (the expiry time a "
 
 | Table or column | Purpose |
 |---|---|
-| `email_outbox` | Queue of staff email: `user_id`, `kind` (`notice`, `account_created`, `password_reset`), `recipient` (the staff address), fixed `subject` and `body` (no case data, never a password), `status` (`queued`, `printed`, `sent`, `redirected`, `held`, `failed`), `attempts` (three at most), `last_error`, `created_at`, `sent_at`, `next_attempt_at` (migration 0023: when a queued row may be tried; now for a new row, then 1 and 5 minutes after a failure). Indexes on `(status, next_attempt_at)` and `(user_id, kind, created_at DESC)`. `app_rw` and `migrator`; not `report_ro`. |
+| `email_outbox` | Queue of staff email: `user_id`, `kind` (`notice`, `account_created`, `password_reset`, and from migration 0025 `two_step_reset`), `recipient` (the staff address), fixed `subject` and `body` (no case data, never a password), `status` (`queued`, `printed`, `sent`, `redirected`, `held`, `failed`), `attempts` (three at most), `last_error`, `created_at`, `sent_at`, `next_attempt_at` (migration 0023: when a queued row may be tried; now for a new row, then 1 and 5 minutes after a failure). Indexes on `(status, next_attempt_at)` and `(user_id, kind, created_at DESC)`. `app_rw` and `migrator`; not `report_ro`. |
 | `users.notice_emails` | The person's choice to get "new notice" emails (default true; new accounts take `STAFF_EMAILS_DEFAULT`). |
 | `outbox.delivery` | How a sent customer message went out: `printed`, `sent` or `redirected`. |
 

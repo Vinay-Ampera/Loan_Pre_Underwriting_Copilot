@@ -25,6 +25,8 @@ docker compose exec app python -m app.api.users_cli create --email officer@prama
 docker compose exec app python -m app.api.users_cli create --email auditor@pramaan.test --name "Auditor" --role auditor
 ```
 
+The admin and the auditor use 2-step verification: at their first sign-in, after the password, they scan a QR code with Microsoft Authenticator and save eight recovery codes (`docs/SECURITY.md` 4h). If one of them loses their phone and has no recovery code left: `docker compose exec app python -m app.api.users_cli reset-2-step --email E --reason "Lost phone"`. Officers sign in with the password alone (`MFA_ROLES` in `.env`).
+
 Options:
 - **Offline database:** `docker compose --profile local-db up -d`, with `DATABASE_URL=postgresql://postgres:postgres@db:5432/pramaan` in `.env`.
 - **Catch every email in a page:** `docker compose --profile mail up -d` starts Mailpit on http://localhost:8025. Set `NOTIFICATION_SENDER=smtp`, `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `SMTP_SECURITY=none` and an empty `SMTP_USERNAME`.

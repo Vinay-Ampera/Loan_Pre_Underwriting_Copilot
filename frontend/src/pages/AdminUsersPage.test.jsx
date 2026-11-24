@@ -10,7 +10,26 @@ import { api } from '../api/client'
 import AdminUsersPage from './AdminUsersPage'
 
 const users = [
-  { id: 'me', name: 'Ada Admin', email: 'ada@x.test', role: 'admin', active: true, locked: false },
+  {
+    id: 'me',
+    name: 'Ada Admin',
+    email: 'ada@x.test',
+    role: 'admin',
+    active: true,
+    locked: false,
+    two_step_since: '2026-11-24T10:00:00Z',
+    two_step_required: true,
+  },
+  {
+    id: 'u4',
+    name: 'Ari Admin',
+    email: 'ari@x.test',
+    role: 'admin',
+    active: true,
+    locked: false,
+    two_step_since: '2026-11-24T10:00:00Z',
+    two_step_required: true,
+  },
   {
     id: 'u2',
     name: 'Ben Officer',
@@ -169,5 +188,29 @@ describe('AdminUsersPage', () => {
     await user.click(screen.getByRole('button', { name: 'Add user' }))
     const options = within(screen.getByLabelText('Role')).getAllByRole('option')
     expect(options.map((o) => o.value)).toEqual(['officer', 'admin'])
+  })
+
+  it("resets another admin's 2-step with a reason, never your own", async () => {
+    const user = userEvent.setup()
+    api.post.mockResolvedValue({})
+    renderPage()
+    await screen.findByText('Ari Admin')
+    expect(
+      screen.getByRole('button', { name: 'Reset 2-step verification for Ada Admin' }),
+    ).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Reset 2-step verification for Ben/ })).toBeNull()
+    expect(screen.getAllByText('Not needed').length).toBe(2) // the officers
+    await user.click(
+      screen.getByRole('button', { name: 'Reset 2-step verification for Ari Admin' }),
+    )
+    const dialog = screen.getByRole('dialog')
+    const confirm = within(dialog).getByRole('button', { name: 'Yes, reset 2-step' })
+    expect(confirm).toBeDisabled()
+    await user.type(within(dialog).getByLabelText(/Why are you/), 'Lost the phone on the train')
+    await user.click(confirm)
+    expect(api.post).toHaveBeenCalledWith('/admin/users/u4/reset-two-step', {
+      second_click: true,
+      reason: 'Lost the phone on the train',
+    })
   })
 })

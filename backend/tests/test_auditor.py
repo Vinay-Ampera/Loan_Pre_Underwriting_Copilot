@@ -55,6 +55,7 @@ def client(engine: Engine, tmp_path: Path) -> Iterator[TestClient]:
         _env_file=None,  # type: ignore[call-arg]
         jwt_secret=SecretStr("test-secret-" + "x" * 32),
         upload_dir=tmp_path / "uploads",
+        mfa_roles="",  # 2-step verification has its own tests (test_two_step.py)
     )
     app = create_app(
         settings, engine=engine, saver=InMemorySaver(), use_llm=False, embed=fake_embed_passages,
@@ -101,7 +102,7 @@ def test_auditor_gets_403_on_every_route_outside_the_auditor_ones(
         path = full.removeprefix(V1)
         if (
             not full.startswith(V1)
-            or path == "/auth/login"
+            or path in ("/auth/login", "/auth/mfa/verify")  # sign-in steps: no role yet
             or path in reads_ok
             or path.startswith("/auditor/")
             or path.startswith("/public/")  # token-gated applicant link, no role

@@ -3,9 +3,10 @@ import { clearSession, loadSession, saveSession, sessionFrom } from './session'
 const BASE = '/api/v1'
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, reason = null) {
     super(message)
     this.status = status
+    this.reason = reason // a machine-readable cause when the server gives one ("restart")
   }
 }
 
@@ -88,8 +89,11 @@ async function request(method, path, { json, form, raw } = {}, retried = false) 
   }
   if (!res.ok) {
     let detail
+    let reason = null
     try {
-      detail = (await res.json()).detail
+      const body = await res.json()
+      detail = body.detail
+      reason = typeof body.reason === 'string' ? body.reason : null
     } catch {
       detail = undefined
     }
@@ -105,7 +109,7 @@ async function request(method, path, { json, form, raw } = {}, retried = false) 
       }
       endedByServer()
     }
-    throw new ApiError(res.status, messageFrom(detail, res.status))
+    throw new ApiError(res.status, messageFrom(detail, res.status), reason)
   }
   if (raw) return res
   if (res.status === 204) return null
@@ -130,4 +134,9 @@ export const ping = () => api.post('/auth/ping').catch(() => {})
 export const logout = () =>
   fetch(`${BASE}/auth/logout`, { method: 'POST', keepalive: true }).catch(() => {})
 
+/** Resolves a session, or { mfa: 'code' | 'setup', mfa_token, setup? } when a code comes next. */
 export const login = (email, password) => api.post('/auth/login', { email, password })
+
+/** The 2-step code (or a recovery code) after the password. Resolves a session. */
+export const verifyTwoStep = (mfaToken, code) =>
+  api.post('/auth/mfa/verify', { mfa_token: mfaToken, code })

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { login } from '../api/client'
+import { login, verifyTwoStep } from '../api/client'
 import { takeNotice } from '../api/session'
 import { useSession } from '../App'
 import BrandMark from '../components/BrandMark'
 import Icon from '../components/Icons'
 import ThemeToggle from '../components/ThemeToggle'
+import { CodeStep, RecoveryCodes, RecoveryUsed, SetupStep } from '../components/TwoStep'
 import { JOURNEY } from '../lib/journey'
 import './LoginPage.css'
 
@@ -55,19 +56,66 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [notice] = useState(takeNotice)
+  const [notice, setNotice] = useState(takeNotice)
+  // password, then for admins and the auditor: code | setup, then codes (after setup) or
+  // recovered (after a recovery code) before the session starts
+  const [step, setStep] = useState({ kind: 'password' })
+
+  function backToPassword(message = null) {
+    setStep({ kind: 'password' })
+    setPassword('')
+    setError(null)
+    setNotice(message)
+  }
 
   async function submit(e) {
     e.preventDefault()
     setBusy(true)
     setError(null)
     try {
-      signIn(await login(email.trim(), password))
+      const res = await login(email.trim(), password)
+      if (res.mfa) {
+        setPassword('') // not needed again: the server gave a short 2-step token instead
+        setStep({ kind: res.mfa, token: res.mfa_token, setup: res.setup })
+        setBusy(false)
+      } else signIn(res)
     } catch (err) {
       setError(err.message)
       setBusy(false)
     }
   }
+
+  async function verify(code) {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await verifyTwoStep(step.token, code)
+      setBusy(false)
+      if (res.recovery_codes) setStep({ kind: 'codes', codes: res.recovery_codes, res })
+      else if (res.recovery_codes_left != null)
+        setStep({ kind: 'recovered', left: res.recovery_codes_left, res })
+      else signIn(res)
+    } catch (err) {
+      setBusy(false)
+      if (err.reason === 'restart') backToPassword(err.message)
+      else setError(err.message)
+    }
+  }
+
+  const twoStep = {
+    code: <CodeStep busy={busy} error={error} onVerify={verify} onBack={() => backToPassword()} />,
+    setup: step.setup && (
+      <SetupStep
+        setup={step.setup}
+        busy={busy}
+        error={error}
+        onVerify={verify}
+        onBack={() => backToPassword()}
+      />
+    ),
+    codes: step.codes && <RecoveryCodes codes={step.codes} onDone={() => signIn(step.res)} />,
+    recovered: <RecoveryUsed left={step.left} onDone={() => signIn(step.res)} />,
+  }[step.kind]
 
   return (
     <div className="login">
@@ -76,66 +124,70 @@ export default function LoginPage() {
         <div className="login-theme">
           <ThemeToggle />
         </div>
-        <form className="login-card card" onSubmit={submit}>
-          <div className="login-card-head">
-            <h2>Sign in</h2>
-            <p className="muted">Staff accounts only. Your admin creates your account.</p>
-          </div>
-          {notice && (
-            <p className="login-notice" role="status">
-              {notice}
-            </p>
-          )}
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              className="input"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <div className="password-wrap">
+        {twoStep ? (
+          <div className="login-card card">{twoStep}</div>
+        ) : (
+          <form className="login-card card" onSubmit={submit}>
+            <div className="login-card-head">
+              <h2>Sign in</h2>
+              <p className="muted">Staff accounts only. Your admin creates your account.</p>
+            </div>
+            {notice && (
+              <p className="login-notice" role="status">
+                {notice}
+              </p>
+            )}
+            <div className="field">
+              <label htmlFor="email">Email</label>
               <input
-                id="password"
+                id="email"
                 className="input"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                aria-pressed={showPassword}
-              >
-                <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
-              </button>
             </div>
-          </div>
-          {error && (
-            <p className="field-error" role="alert">
-              {error}
-            </p>
-          )}
-          <button type="submit" className="btn btn-primary login-submit" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-          <div className="login-fine">
-            <p className="small muted">
-              Synthetic data only. Do not enter real customer information.
-            </p>
-            <p className="small muted login-help">Can&apos;t sign in? Contact your admin.</p>
-          </div>
-        </form>
+            <div className="field">
+              <label htmlFor="password">Password</label>
+              <div className="password-wrap">
+                <input
+                  id="password"
+                  className="input"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                >
+                  <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} />
+                </button>
+              </div>
+            </div>
+            {error && (
+              <p className="field-error" role="alert">
+                {error}
+              </p>
+            )}
+            <button type="submit" className="btn btn-primary login-submit" disabled={busy}>
+              {busy ? 'Signing in…' : 'Sign in'}
+            </button>
+            <div className="login-fine">
+              <p className="small muted">
+                Synthetic data only. Do not enter real customer information.
+              </p>
+              <p className="small muted login-help">Can&apos;t sign in? Contact your admin.</p>
+            </div>
+          </form>
+        )}
       </main>
     </div>
   )

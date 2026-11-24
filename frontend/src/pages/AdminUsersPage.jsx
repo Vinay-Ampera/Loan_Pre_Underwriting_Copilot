@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import { useSession } from '../App'
 import { useAsync } from '../hooks/useAsync'
 import Dialog from '../components/Dialog'
+import ReasonDialog from '../components/ReasonDialog'
 import StatusChip from '../components/StatusChip'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import './AdminUsersPage.css'
@@ -125,6 +126,13 @@ function PasswordDialog({ title, email, password, onClose }) {
   )
 }
 
+/** On, waiting for the first sign-in to set it up, or not asked for this role. */
+function TwoStepCell({ user }) {
+  if (user.two_step_since) return <StatusChip tone="approve">On</StatusChip>
+  if (user.two_step_required) return <StatusChip tone="refer">Set up at next sign-in</StatusChip>
+  return <span className="muted">Not needed</span>
+}
+
 function ConfirmDialog({ title, children, confirmLabel, danger, busy, error, onClose, onConfirm }) {
   return (
     <Dialog title={title} onClose={onClose} labelledBy="confirm-user-title">
@@ -163,11 +171,11 @@ export default function AdminUsersPage() {
     setActionError(null)
   }
 
-  async function run(path, then) {
+  async function run(path, then, body) {
     setBusy(true)
     setActionError(null)
     try {
-      const res = await api.post(path)
+      const res = body === undefined ? await api.post(path) : await api.post(path, body)
       then?.(res)
       reload()
     } catch (e) {
@@ -208,6 +216,7 @@ export default function AdminUsersPage() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Status</th>
+                <th>2-step</th>
                 <th>
                   <span className="sr-only">Actions</span>
                 </th>
@@ -240,7 +249,26 @@ export default function AdminUsersPage() {
                         <StatusChip tone="stopped">Disabled</StatusChip>
                       )}
                     </td>
+                    <td data-label="2-step">
+                      <TwoStepCell user={u} />
+                    </td>
                     <td className="row-actions">
+                      {u.two_step_since && !auditor && (
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={me}
+                          title={
+                            me
+                              ? 'Ask another admin, or use the command line, to reset your own'
+                              : undefined
+                          }
+                          onClick={() => setDialog({ kind: 'two-step', user: u })}
+                          aria-label={`Reset 2-step verification for ${u.name}`}
+                        >
+                          Reset 2-step
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn"
@@ -328,6 +356,28 @@ export default function AdminUsersPage() {
             </p>
           )}
         </ConfirmDialog>
+      )}
+      {dialog?.kind === 'two-step' && (
+        <ReasonDialog
+          title="Reset 2-step verification?"
+          confirmLabel="Yes, reset 2-step"
+          busy={busy}
+          error={actionError}
+          onClose={close}
+          onConfirm={(reason) =>
+            run(`/admin/users/${dialog.user.id}/reset-two-step`, close, {
+              second_click: true,
+              reason,
+            })
+          }
+        >
+          <p>
+            Use this when <strong>{dialog.user.name}</strong> has lost their phone. Their
+            authenticator codes and recovery codes stop working at once. At their next sign-in,
+            after the password, they scan a new QR code with Microsoft Authenticator.
+          </p>
+          <p className="small muted">They get an email saying this happened. No code is sent.</p>
+        </ReasonDialog>
       )}
       {dialog?.kind === 'reset' && (
         <ConfirmDialog

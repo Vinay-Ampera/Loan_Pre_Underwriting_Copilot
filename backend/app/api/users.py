@@ -1,10 +1,14 @@
-"""Admin user management: list, create, disable or enable, reset a password.
+"""Admin user management: list, create, disable or enable, reset a password or 2-step verification.
 
 The server generates the temporary password and returns it once in the response; it is never
 stored in the clear, logged, or written to the audit log (only the fact that it happened).
 The officer profile lists that officer's cases (the admin may open any case). The read-only auditor account is
 created and reset only from the command line: disable, enable and reset refuse it here. An admin cannot disable their own
 account, and the last active admin cannot be disabled, so the system cannot lock itself out.
+
+Resetting someone's 2-step verification (they lost their phone) needs a written reason and a second
+click. It removes the key and the recovery codes; the person scans a new QR code at their next
+sign-in. An admin cannot reset their own: another admin does, or the command line.
 """
 
 import secrets
@@ -17,14 +21,15 @@ from sqlalchemy import Connection, text
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import User, admin_only, get_conn, get_settings_dep, write_audit
-from app.api.schemas import UserCreateIn
+from app.api.schemas import MfaResetIn, UserCreateIn
 from app.api.security import hash_password
 from app.core.config import Settings
 from app.notifications import mailer
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 _ALPHABET = string.ascii_letters + string.digits
-_COLUMNS = "id, name, email, role, active, created_at, locked_until"
+_COLUMNS = "id, name, email, role, active, created_at, locked_until, mfa_enabled_at"
+MIN_REASON = 10
 
 
 def temporary_password() -> str:
@@ -35,7 +40,8 @@ def temporary_password() -> str:
 
 def _row(r: Any) -> dict[str, Any]:
     return {"id": r.id, "name": r.name, "email": r.email, "role": r.role, "active": r.active,
-            "created_at": r.created_at, "locked": r.locked_until is not None}  # fmt: skip
+            "created_at": r.created_at, "locked": r.locked_until is not None,
+            "two_step_since": r.mfa_enabled_at}  # fmt: skip
 
 
 def _target(conn: Connection, user_id: UUID) -> Any:
@@ -54,7 +60,8 @@ def _not_auditor(target: Any) -> None:
 
 @router.get("/users")
 def list_users(
-    _: User = Depends(admin_only), conn: Connection = Depends(get_conn)
+    _: User = Depends(admin_only), conn: Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings_dep),
 ) -> list[dict[str, Any]]:  # fmt: skip
     rows = conn.execute(
         text(f"""SELECT {_COLUMNS},
@@ -63,7 +70,10 @@ def list_users(
                         ) AS open_cases
                  FROM users ORDER BY role, lower(name)""")  # noqa: S608
     )
-    return [{**_row(r), "open_cases": r.open_cases} for r in rows]
+    required = settings.mfa_role_set()
+    return [{**_row(r), "open_cases": r.open_cases,
+             "two_step_required": r.role in required or r.mfa_enabled_at is not None}
+            for r in rows]  # fmt: skip
 
 
 @router.get("/summary")
@@ -207,3 +217,39 @@ def reset_password(
     write_audit(conn, admin.id, "user_password_reset", "user", user_id)
     mailer.queue_account_email(conn, user_id, "password_reset")  # the fact, never the password
     return {"id": target.id, "email": target.email, "temporary_password": password}
+
+
+def clear_two_step(conn: Connection, user_id: UUID) -> None:
+    """No key, no recovery codes: the next sign-in sets 2-step up again (also the CLI's reset)."""
+    conn.execute(
+        text("""UPDATE users SET mfa_secret = NULL, mfa_pending_secret = NULL, mfa_enabled_at = NULL,
+                    mfa_last_step = NULL, updated_at = now() WHERE id = :i"""),
+        {"i": user_id},
+    )
+    conn.execute(text("DELETE FROM user_recovery_codes WHERE user_id = :i"), {"i": user_id})
+
+
+@router.post("/users/{user_id}/reset-two-step")
+def reset_two_step(
+    user_id: UUID, body: MfaResetIn, admin: User = Depends(admin_only),
+    conn: Connection = Depends(get_conn),
+) -> dict[str, Any]:  # fmt: skip
+    if body.second_click is not True:
+        raise HTTPException(422, "This needs a second confirmation click.")
+    reason = body.reason.strip()
+    if len(reason) < MIN_REASON:
+        raise HTTPException(422, f"Write the reason (at least {MIN_REASON} characters).")
+    target = _target(conn, user_id)
+    _not_auditor(target)
+    if target.id == admin.id:
+        raise HTTPException(
+            409, "You cannot reset your own 2-step verification. Ask another admin, or use the "
+            "command line.",
+        )  # fmt: skip
+    if target.mfa_enabled_at is None:
+        raise HTTPException(409, "2-step verification is not set up on this account.")
+    clear_two_step(conn, user_id)
+    write_audit(conn, admin.id, "two_step_reset", "user", user_id,
+                before={"two_step_since": target.mfa_enabled_at}, after={"reason": reason})  # fmt: skip
+    mailer.queue_account_email(conn, user_id, "two_step_reset")  # the fact, never a code
+    return {**_row(target), "two_step_since": None}

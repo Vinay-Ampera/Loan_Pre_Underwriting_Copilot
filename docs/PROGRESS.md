@@ -26,11 +26,23 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 
 In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
+2-step verification for the admin and the auditor is built (2026-11-24, migration 0025, not committed); see "2-step verification build notes" and `SECURITY.md` 4h. Run `python -m app.db.migrate` first.
+
 Notifications Part 3 (hardening and close-out) is built (2026-11-21, migration 0023); see "Notifications Part 3 build notes". Next: Stage 11 (hardening, Docker and demo), asked for by the user on 2026-11-21. Docker stays last.
 
 ---
 
 ## Decisions log
+
+### 2026-11-24: 2-step verification for the admin and the auditor (adds to locked decision 9)
+
+Asked for by the user after a review of industry-readiness ideas, and agreed in conversation:
+
+1. **Authenticator app codes (TOTP), not SMS or email codes.** The screens name **Microsoft Authenticator**; any RFC 6238 app works. The code is made on the person's own phone; nothing is sent.
+2. **Admin and auditor only for now**, officers later (`MFA_ROLES=admin,auditor`; adding `officer` is a settings change).
+3. **Set up at the first sign-in**, with eight one-time recovery codes shown once.
+4. **Lost phone:** an admin resets another person's 2-step (reason and second click); that person scans a new QR code at the next sign-in. An admin who lost their own phone uses a recovery code, or the command line reset. The auditor's reset is command line only, like the rest of that account.
+5. Added in the build (small, flagged to the user): a fixed "your 2-step verification was reset" email to the person (a fourth staff email kind; same no-secret rules as decision 17), and the Users screen shows each person's 2-step state.
 
 ### 2026-11-23: demo and presentation material lives outside the repo; OI-4 closed
 
@@ -509,3 +521,12 @@ Small fixes noted while preparing the trainer demo (2026-11-20), done at the use
 - **Question answered by the user (2026-11-21):** RAGAS and DeepEval are replaced by our own judge runner, built in Stage 11 (see the decisions log).
 - **Measured:** frontend 783 tests passed (3 new), lint, Prettier and build clean; ruff, ruff format and mypy clean. Backend: the new and changed tests in `test_pipeline`, `test_learning` and `test_upload_links` passed (6), and `test_observability`, `test_migrations` (0022 up and down), `test_agent_units`, `test_intake` and `test_knowledge_base` passed (115). The rest of the backend suite was not re-run here; CI runs it.
 - **To do on Neon:** `python -m app.db.migrate` (0022).
+
+## 2-step verification build notes (2026-11-24)
+
+- **Migration 0025:** `users.mfa_secret`, `mfa_pending_secret`, `mfa_enabled_at`, `mfa_last_step`; table `user_recovery_codes` (hashes); `email_outbox.kind` gains `two_step_reset`.
+- **Backend:** `app/api/mfa.py` (RFC 6238 codes with the standard library, the sealed key, the QR code drawn by `segno`, recovery codes); `POST /auth/login` now answers `{mfa: "setup" | "code", mfa_token}` for the admin and the auditor instead of a session; new `POST /auth/mfa/verify`; `POST /admin/users/{id}/reset-two-step`; `users_cli reset-2-step`; settings `MFA_ROLES`, `MFA_TOKEN_MINUTES`. New dependency `segno` (pure Python, in `requirements.txt` and `requirements.lock`).
+- **Frontend:** the sign-in card gains the code step (with "Lost your phone? Use a recovery code"), the setup step (three numbered steps, the QR code, the key for typing in), the recovery codes screen (Copy, Download, "I have saved these codes") and the "signed in with a recovery code" screen (`components/TwoStep.jsx`). The Users screen gets a 2-step column (On, Set up at next sign-in, Not needed) and "Reset 2-step" with a reason dialog.
+- **Tests:** `tests/test_two_step.py` (RFC test vectors, one use per code, setup, recovery codes, shared lockout, expired, forged and out-of-date tokens, the auditor, the Users list, the admin reset and its refusals, the CLI reset). The shared API fixtures set `mfa_roles=""` so the other tests keep signing in with the password alone. Frontend unit tests for every step and the reset dialog. Browser test `e2e/two-step.spec.js` (setup with a real code, recovery code once, admin reset, new QR code); the seeded e2e admin and auditor have fixed keys and `e2e/helpers.js` types their codes.
+- **Not done:** no 2-step for officers yet (by decision), no self-service "move to a new phone" or "new recovery codes" (reset covers both), no 2-step state on the auditor's Users table.
+

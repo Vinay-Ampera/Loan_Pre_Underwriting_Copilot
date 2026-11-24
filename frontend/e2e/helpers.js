@@ -1,5 +1,7 @@
 import { expect } from '@playwright/test'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -32,7 +34,74 @@ export async function signInAs(page, email, password) {
   await page.getByRole('button', { name: 'Sign in' }).click()
 }
 
-export const signIn = (page, who) => signInAs(page, `${who}@example.test`, PASSWORD)
+// 2-step keys of the seeded admin and auditor (backend/tests/e2e_server.py, TWO_STEP_KEYS)
+export const TWO_STEP_KEYS = {
+  'admin@example.test': 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+  'auditor@example.test': 'KRSXG5CTMVZGK5DTKRSXG5CTMVZGK5DT',
+}
+
+function base32(text) {
+  const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+  let bits = ''
+  for (const ch of text.replace(/[\s=]/g, '').toUpperCase())
+    bits += abc.indexOf(ch).toString(2).padStart(5, '0')
+  const bytes = []
+  for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2))
+  return Buffer.from(bytes)
+}
+
+/** The 6-digit code an authenticator app shows for `key` in 30-second step `step` (RFC 6238). */
+export function totp(key, step = Math.floor(Date.now() / 30000)) {
+  const counter = Buffer.alloc(8)
+  counter.writeBigUInt64BE(BigInt(step))
+  const mac = crypto.createHmac('sha1', base32(key)).update(counter).digest()
+  const offset = mac[mac.length - 1] & 0x0f
+  return String((mac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0')
+}
+
+// The server takes each code once, so a step is never typed twice. The steps used are kept in a
+// file, not in memory: Playwright starts a new worker after a failed test.
+const USED = path.join(os.tmpdir(), 'pramaan-e2e-two-step.json')
+const stepNow = () => Math.floor(Date.now() / 30000)
+
+function nextStep(key) {
+  let used = {}
+  try {
+    used = JSON.parse(fs.readFileSync(USED, 'utf8'))
+  } catch {
+    /* first use */
+  }
+  const step = Math.max(stepNow(), (used[key] ?? -1) + 1)
+  fs.writeFileSync(USED, JSON.stringify({ ...used, [key]: step }))
+  return step
+}
+
+/** Type a fresh code for `key` on the code screen. Waits for the next 30 seconds if needed. */
+export async function enterCode(page, key, button = 'Verify and sign in') {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const step = nextStep(key)
+    // the server also takes the next step's code, so wait only when both are used
+    if (step > stepNow() + 1) await page.waitForTimeout((step - 1) * 30000 - Date.now() + 200)
+    await page.getByLabel('6-digit code').fill(totp(key, step))
+    await page.getByRole('button', { name: button }).click()
+    // done when the code box goes away; one retry with the next step if it was refused
+    const refused = page.getByText('That code is not right')
+    await expect(async () => {
+      const gone = (await page.getByLabel('6-digit code').count()) === 0
+      expect(gone || (await refused.isVisible())).toBe(true)
+    }).toPass({ timeout: 15_000 })
+    if (!(await refused.isVisible())) return
+  }
+}
+
+export async function signIn(page, who) {
+  const email = `${who}@example.test`
+  await signInAs(page, email, PASSWORD)
+  if (TWO_STEP_KEYS[email]) {
+    await expect(page.getByRole('heading', { name: 'Enter your code' })).toBeVisible()
+    await enterCode(page, TWO_STEP_KEYS[email])
+  }
+}
 
 async function fillPerson(page, prefix, a) {
   const set = (name, value) =>

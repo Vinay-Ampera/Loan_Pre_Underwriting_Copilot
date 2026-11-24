@@ -86,6 +86,23 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
 
+class MfaIn(BaseModel):
+    """The second sign-in step: the token from a correct password, and the 6-digit code from the
+    authenticator app or one recovery code."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mfa_token: str = Field(min_length=1, max_length=2000)
+    code: str = Field(min_length=1, max_length=40)
+
+
+class MfaResetIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    second_click: bool = False
+    reason: str = Field(default="", max_length=2000)
+
+
 class ApplicantIn(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
