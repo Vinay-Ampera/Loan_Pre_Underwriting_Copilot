@@ -28,3 +28,8 @@
 .fit-on .fit-column > .fit-scroll {
   flex: 1 1 auto;
 }
+/* the fixed parts of a column (tabs, a note, a progress card) keep their full height: a tab
+   strip that scrolls sideways would otherwise be squeezed to nothing by a long tab below it */
+.fit-on .fit-column > :not(.fit-scroll) {
+  flex: none;
+}

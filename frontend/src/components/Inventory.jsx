@@ -38,7 +38,9 @@ function FileRow({ f, people, docTypes, onPatch, disabled, showUsed = true }) {
   return (
     <tr>
       <td data-label="File" className="inv-file">
-        <span className="mono">{f.name}</span>
+        <span className="mono inv-name" title={f.name}>
+          {f.name}
+        </span>
         {f.warnings?.length > 0 && <span className="small muted"> · slightly blurry</span>}
       </td>
       <td data-label="Type">

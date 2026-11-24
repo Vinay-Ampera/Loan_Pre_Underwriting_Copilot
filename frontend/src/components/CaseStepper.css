@@ -110,7 +110,8 @@
   }
 }
 
-/* a finished case: one slim line, the detail is still in the page for screen readers */
+/* the system's stages are done (awaiting the officer, or decided): one slim line; the detail is
+   still in the page for screen readers */
 .stepper-done {
   padding: var(--s-3) var(--s-5);
 }

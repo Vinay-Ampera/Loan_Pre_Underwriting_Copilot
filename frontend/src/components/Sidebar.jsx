@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import BrandMark from './BrandMark'
 import Icon from './Icons'
 import { useUnread } from './UnreadProvider'
@@ -37,15 +38,53 @@ const NAV = {
   ],
 }
 
-/** Left navigation. Icons only on tablet widths; the text stays for screen readers. */
+/**
+ * Left navigation. Icons only on tablet widths (the text stays for screen readers). On a phone it
+ * is a bar with the brand and a Menu button that opens the pages, with their names, as a list.
+ */
 export default function Sidebar({ user }) {
   const { count } = useUnread()
+  const { pathname } = useLocation()
+  const [open, setOpen] = useState(false)
+  const root = useRef(null)
+
+  useEffect(() => setOpen(false), [pathname]) // a page was chosen
+  useEffect(() => {
+    if (!open) return undefined
+    const away = (e) => !root.current?.contains(e.target) && setOpen(false)
+    const esc = (e) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', away)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
+
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" ref={root}>
       <NavLink to="/" className="sidebar-brand" aria-label="Pramaan home">
         <BrandMark />
       </NavLink>
-      <nav className="sidebar-nav" aria-label="Main">
+      <button
+        type="button"
+        className="sidebar-menu-btn"
+        aria-expanded={open}
+        aria-controls="main-nav"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Icon name={open ? 'x' : 'menu'} />
+        Menu
+        {count > 0 && (
+          <>
+            <span className="nav-badge" aria-hidden="true">
+              {count > 99 ? '99+' : count}
+            </span>
+            <span className="sr-only">, {count} unread</span>
+          </>
+        )}
+      </button>
+      <nav id="main-nav" className={`sidebar-nav${open ? ' open' : ''}`} aria-label="Main">
         {NAV[user.role].map(([to, label, icon, end]) => (
           <NavLink key={to} to={to} end={end} title={label}>
             <Icon name={icon} />

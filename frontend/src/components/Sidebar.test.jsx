@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import Sidebar from './Sidebar'
@@ -54,5 +55,27 @@ describe('Sidebar', () => {
       'Help',
     ])
     expect(items).not.toContain('New case')
+  })
+
+  it('has a Menu button for phones that opens and closes the page list', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <Sidebar user={{ role: 'officer' }} />
+      </MemoryRouter>,
+    )
+    const menu = screen.getByRole('button', { name: 'Menu' })
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(menu).toHaveAttribute('aria-expanded', 'false')
+    expect(menu).toHaveAttribute('aria-controls', nav.id)
+    expect(nav).not.toHaveClass('open')
+    await user.click(menu)
+    expect(menu).toHaveAttribute('aria-expanded', 'true')
+    expect(nav).toHaveClass('open')
+    await user.keyboard('{Escape}')
+    expect(nav).not.toHaveClass('open')
+    await user.click(menu)
+    await user.click(within(nav).getByRole('link', { name: 'Cases' })) // choosing a page closes it
+    expect(nav).not.toHaveClass('open')
   })
 })

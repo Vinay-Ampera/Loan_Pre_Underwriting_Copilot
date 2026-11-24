@@ -539,6 +539,7 @@ UI only, at the user's request; no API, role, wording-rule or scoring change. De
 - The notification bell opens a dropdown of the latest eight notices; the inbox page is unchanged. `e2e/inbox.spec.js` opens the inbox from the dropdown.
 - The account menu's items are left-aligned and the menu is wider.
 - Status chips no longer shrink below their label; the Users table keeps its chips whole and stacks into cards below 900 px; Help agent cards and the phone score bar keep their text inside.
+- Four UX fixes after a full review (combined UI and UX score 7.8): case tabs never collapse, the stepper slims once only the sign-off is left, phones get a Menu button instead of a wrapped icon row, and long file names end in "…" with a hover title. `DESIGN_SYSTEM.md` 16.1.
 - The 2-step screens, Help, the reset email and the docs say "your authenticator app (for example Google Authenticator or Microsoft Authenticator)" instead of naming Microsoft only (the user tests with Google Authenticator).
 - Checked with a scratch browser audit at 1920, 1440, 1280, 1024, 820 and 390 px wide on every officer, admin and auditor screen: text staying inside its box, no side scrolling, and the page not scrolling where panes are used.
 

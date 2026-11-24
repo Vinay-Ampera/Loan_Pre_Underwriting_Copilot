@@ -42,8 +42,20 @@ describe('CaseStepper', () => {
     expect(steps()[4]).toHaveTextContent('done') // still in the page for screen readers
   })
 
-  it('stays full size while the case is in progress', () => {
+  it('slims down once only the officer sign-off is left, which stays marked as current', () => {
     const { container } = render(<CaseStepper caseData={{ status: 'awaiting_confirmation' }} />)
+    expect(container.firstChild).toHaveClass('stepper-done')
+    expect(steps()[4]).toHaveAttribute('aria-current', 'step')
+    expect(steps()[4]).toHaveTextContent('in progress') // for screen readers
+  })
+
+  it('stays full size while the system is still working, and when a case stops', () => {
+    const { container, unmount } = render(<CaseStepper caseData={{ status: 'draft' }} />)
     expect(container.firstChild).not.toHaveClass('stepper-done')
+    unmount()
+    const stopped = render(
+      <CaseStepper caseData={{ status: 'stopped', report: { stopped_stage: 'kyc' } }} />,
+    )
+    expect(stopped.container.firstChild).not.toHaveClass('stepper-done')
   })
 })

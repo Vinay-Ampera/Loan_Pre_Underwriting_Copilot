@@ -3,6 +3,7 @@
 const paths = {
   home: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10',
   cases: 'M4 5h16M4 12h16M4 19h16',
+  menu: 'M4 7h16M4 12h16M4 17h10',
   plus: 'M12 5v14M5 12h14',
   precedent: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7',
   users:

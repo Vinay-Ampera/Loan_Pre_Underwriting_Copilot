@@ -330,3 +330,10 @@ Asked for by the user; layout and loading only, no change to what any screen doe
 - **Text inside its box:** the Help page's agent cards wrap their points line, and on a phone the score-weight bar keeps each number inside its segment. Checked on every screen at 1920, 1440, 1280, 1024, 820 and 390 px wide.
 - **The 2-step screens name no single app:** "your authenticator app (for example Google Authenticator or Microsoft Authenticator)".
 
+### 16.1 Four UX fixes after the full review (2026-11-24)
+
+- **Case tabs never collapse:** in a FitPanes column the fixed parts (tab strip, notes, the progress card) keep their full height; before, a long Documents or Report tab squeezed the tab strip to a line.
+- **Slim stepper earlier:** the stepper becomes one line as soon as the system's four stages are done (awaiting the officer, or decided), with Officer sign-off still marked as the current step; it stays full while the system works and when a case stops. This gives the report about 80 px more height.
+- **Phone menu:** at 720 px and below the sidebar is a bar with the Pramaan name and a **Menu** button (with the unread badge); the button opens the pages as a labelled list, and choosing a page, Escape or a tap outside closes it. Tablets keep the icon rail.
+- **Long file names** in the document list stay on one line and end in "…", with the whole name on hover, instead of breaking mid-word.
+

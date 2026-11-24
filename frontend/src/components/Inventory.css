@@ -50,8 +50,15 @@
   vertical-align: middle;
 }
 .inv-file {
-  word-break: break-all;
   max-width: 260px;
+}
+/* a long file name stays on one line and ends in "…"; the whole name shows on hover */
+.inv-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .inv-pick {
   min-width: 170px;

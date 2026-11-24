@@ -86,10 +86,15 @@
   }
 }
 
-/* phone: a bar across the top */
+/* the Menu button exists for phones only */
+.sidebar-menu-btn {
+  display: none;
+}
+
+/* phone: a bar with the brand and a Menu button; the pages open as a list with their names */
 @media (max-width: 720px) {
   .sidebar {
-    position: static;
+    position: relative;
     height: auto;
     flex-direction: row;
     flex-wrap: wrap;
@@ -106,10 +111,71 @@
     border-bottom: 0;
     align-self: center;
   }
+  .sidebar .brand-name {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+  .sidebar-menu-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: 40px;
+    padding: 0 var(--s-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-input);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .sidebar-menu-btn[aria-expanded='true'] {
+    background: var(--raised);
+    border-color: var(--line-strong);
+  }
+  .sidebar-menu-btn .nav-badge {
+    position: static;
+    margin-left: var(--s-1);
+  }
   .sidebar-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    flex: 0 1 auto;
+    display: none;
+  }
+  .sidebar-nav.open {
+    position: absolute;
+    top: calc(100% + var(--s-1));
+    left: var(--s-2);
+    right: var(--s-2);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--s-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow-float);
+    animation: menu-in var(--t-med) var(--ease) both;
+  }
+  .sidebar-nav.open a {
+    justify-content: flex-start;
+    width: auto;
+    min-height: 44px;
+    padding: 0 var(--s-3);
+  }
+  .sidebar-nav.open .nav-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+  .sidebar-nav.open .nav-badge {
+    position: static;
+    margin-left: auto;
   }
 }
 
