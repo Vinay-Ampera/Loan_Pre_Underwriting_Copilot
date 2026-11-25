@@ -165,7 +165,7 @@ A model answers questions about one case. The aim is that it can leak nothing, f
 - **Audit:** `case_chat_asked` with the outcome (answered, fixed text, refused, what-if, off, limited), the report version and citation counts. **Never the question or answer text.**
 - **Retention:** turns are deleted after `CHAT_RETENTION_DAYS` (90) by the daily retention job. That is well inside the six-month bureau limit, which matters because an answer may quote the credit score (section 7).
 
-## 4j. Counter-offer, Insights, export and decision timers (Stage 12 Parts A to C, planned 2026-11-25)
+## 4j. Counter-offer, Insights, export and decision timers (Stage 12 Parts A to C; A and B built 2026-11-25)
 
 - **Counter-offer box (Part A):**
   - It is worked out in code and stored with the report, and shown to the officer and the admin only (the report routes; the auditor still has none).
@@ -174,8 +174,9 @@ A model answers questions about one case. The aim is that it can leak nothing, f
 - **Insights (Part B):**
   - **Admin:** everything, with case references and links.
   - **Auditor:** the same counts and charts with **no case id, case reference or link** (decision 9). Rule IDs and counts are policy-level, not case data, and the auditor already sees "rules most often failed". A test walks the auditor's JSON for anything shaped like a case id or reference.
-  - **Officer:** only their own numbers (`/me/insights`); a test seeds two officers and checks that neither sees the other's cases in their counts.
-  - All counting is SQL, with no model.
+  - **Officer:** only their own numbers (`/me/insights`, `officer_only`, counted by `officer_actions.officer_id`); a test seeds two officers and checks that neither sees the other's cases in their counts.
+  - All counting is SQL, with no model; the test app's model router fails if called.
+  - The auditor's copy is made by `strip_refs` (no case lists, no officer ids); `test_insights.py` walks its JSON for any UUID, `CASE-`, `/cases` or link, and for the keys `cases`, `case_no`, `id` and `officer_id`. Roles: the officer gets 403 on both page routes, the auditor on the admin's, the admin on the auditor's, the admin and the auditor on `/me/insights`.
 - **Queue export (Part C):**
   - Officers export only their own cases; another officer's never appear. The admin exports all.
   - **No applicant name**, PAN, Aadhaar, phone, email, address or amount column; the case reference is enough. A search typed by the officer may match a name, but the name is never written to the file.
@@ -256,7 +257,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | A key leaks through the AI control page (2026-11-18) | Keys stay in `.env`; the page shows set or missing only; the model test returns the error class only; no key in any response, audit row or log (tested) |
 | The case chat leaks personal data, answers from outside the case, or obeys an instruction in a question or document (Stage 12, planned) | Masked question and material; data tags and the locked prompt part; injection scan with a fixed answer; every sentence cited and checked in code (clauses, rules, fields, numbers, wording, raw identifiers); one retry then fixed text; read-only routes; owner and admin only; per-person limit; no text in logs, traces or the audit log (section 4i) |
 | An export leaks applicant names or carries a spreadsheet formula (Stage 12, planned) | No name or identifier columns; officer sees own cases only; formula-like cells written as text; audit row per download (section 4j) |
-| Insights let the auditor reach a case, or one officer see another's numbers (Stage 12, planned) | Auditor answer has no case id, reference or link (tested by walking the JSON); officer route counts own cases only (tested with two officers) |
+| Insights let the auditor reach a case, or one officer see another's numbers (Stage 12 Part B, built) | Auditor answer has no case id, reference or link (tested by walking the JSON); officer route counts own cases only (tested with two officers) |
 | A counter-offer reaches the customer as an outcome hint (Stage 12, planned) | Shown to officer and admin only; not in prompts or the summary; the existing message check blocks its ₹ amount, FOIR and outcome words (tested) |
 
 ## 11. Review checklist (before each release)

@@ -377,10 +377,10 @@ Built with the existing tokens and components only (no new colour unless named b
 - **PDF:** the same sentences, under an "Other amounts or tenures (estimate)" heading after the stage scores table, with the tags in square brackets. The PDF's built-in font has no rupee sign, so the PDF writes "Rs 6.3L" where the screen shows "₹6.3L". The PDF export is the officer's (the admin view has none), so the admin sees the box on screen only.
 - **Where the words come from:** the sentences and tags are written by code (`app/scoring/counter_offer.py`) and stored with the report, so the screen and the PDF say the same thing; the title, intro and footer are fixed text in `CounterOfferBox.jsx` and the PDF builder.
 
-### 17.2 Insights page (Part B)
+### 17.2 Insights page (Part B, built 2026-11-25)
 
-- **Where:** the sidebar entry "Insights" (icon `chart`) for the admin (after Home) and the auditor (after Overview). The routes are `/admin/insights` and `/auditor/insights`. The officer gets no page, only Home tiles (17.3).
-- **Header:** "Insights", with the line "Counted from the case records. No AI is used on this page." Filters: From, To (cases created in this period), Loan type, and Clear filters. A "Showing cases created 1 Nov to 25 Nov 2026" line.
+- **Where:** the sidebar entry "Insights" (icon `trend`, a new rising-line icon, because the auditor's Overview already uses `chart` and tablet widths show icons alone) for the admin (after Home) and the auditor (after Overview). The routes are `/admin/insights` and `/auditor/insights`. The officer gets no page, only Home tiles (17.3).
+- **Header:** "Insights", with the line "Counted from the case records. No AI is used on this page." Filters: From, To (cases created in this period), Loan type, and Clear filters, in one row above every panel. A "Showing cases created 1 Nov 2026 to 25 Nov 2026." line ("Showing all cases." without dates). A To date before the From date shows "The end date is before the start date." and asks for nothing. A refetch keeps the last numbers on screen, dimmed, instead of flashing the loader.
 - **Panels** (cards on a two-column grid that stacks under 1000 px; each chart is `BarChart` with its numbers as text):
   1. **Time to decide:** two stat tiles ("Report ready after", "Officer decided after", each a median with "slowest: 4.2 days" under it), then bars per loan type and per officer.
   2. **Where cases are:** a funnel as horizontal bars (Created, Submitted, Report ready, Decided, split Confirmed and Changed by the officer), then "Open now": Not submitted, Stopped for a fix, Waiting for the officer.
@@ -392,6 +392,15 @@ Built with the existing tokens and components only (no new colour unless named b
 - **States:** the shared `SectionLoader` while loading; "No cases in this period" when empty; the usual error state with Try again.
 - **Wording:** "Changed by the officer" (not "overridden" alone) and "Admin correction". The direction chips use the officer's own decision words ("approve", "refer", "reject") with "(officer)", never "approved".
 
+- **As built:**
+  - The funnel's second bar reads "Submitted", with the line under the chart "Submitted: the officer sent the file for assessment (documents complete)." "Open now" also has "Being assessed" (a run in progress).
+  - Stat tiles use proportional figures in the body sans (dataviz rule for a standalone value). Times read "40 min", "13.5 hours" (under two days) or "4.2 days".
+  - Agreement bars are shares on a fixed 0 to 100 scale, labelled "82% of 11".
+  - Clause titles in both tables come from the policy in force. In "Why runs stopped" the title reads first, then the clause tag.
+  - For the admin, a count opens a list of case references as links ("2 · show cases"); the precedent line has "Show the case it moved". The clause tag opens `/admin/knowledge?doc=<policy>&clause=<id>`, where the knowledge base opens that policy, scrolls to the clause and outlines it.
+  - Phones: each table row becomes a small card with every cell named; a bar's name sits above its bar below 520 px (a `BarChart` change, so the auditor's Overview gains it too).
+- **`BarChart` additions** (optional, the auditor's Overview is unchanged): `max` fixes the scale (100 for shares), a row's `display` is the text shown for its value, `valueWidth` widens the number column, and each row repeats its label and value as a hover title.
+
 ### 17.3 Case age, due badges, export and Home tiles (Part C)
 
 - **Queue columns:** a new "Age" column ("3 days", "5 hours"), and a due badge beside the status chip:
@@ -401,7 +410,7 @@ Built with the existing tokens and components only (no new colour unless named b
   - There is no badge when the case is not timed (before submit, stopped for a fix, decided).
 - **Filter:** "Due" select (Any, Due today, Overdue) beside the status and loan filters.
 - **Export:** an "Export CSV" secondary button at the top right of the queue, with no dialog. The line under it reads "Exports the cases shown, with your filters. No applicant names." The admin's "Export all cases" sits on the admin officer page and on Home's recent-decisions card. Files are named `pramaan-cases-YYYY-MM-DD.csv`.
-- **Home (officer):** two tiles: "Overdue" (count, hint "Past the 2 working day target", opens the queue filtered) and "Your median time to decide" (for example "1.3 days", hint "Report ready to your decision, last 30 days"; "No decisions yet" when empty).
+- **Home (officer):** two tiles in a second row under the case tiles, labelled "Your pace": "Your median time to decide" (built in Part B: for example "36 hours", hint "Report ready to your decision, last 30 days"; "No decisions yet" when empty; a figure, not a link) and "Overdue" (Part C: count, hint "Past the 2 working day target", opens the queue filtered).
 - **Notices (fixed text, no digits):**
   - Officer: title "A case is past its decision time", body "Open the case to make your decision."
   - Admin: title "A case is still waiting for its officer", body "It passed its decision time a working day ago."

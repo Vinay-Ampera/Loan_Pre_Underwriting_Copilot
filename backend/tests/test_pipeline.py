@@ -169,6 +169,8 @@ def test_clean_case_runs_every_stage_and_waits_for_the_officer(engine: Engine) -
         assert stages == {"extraction", "kyc", "policy", "risk", "decision"}
         assert c.execute(text("SELECT count(*) FROM rule_results")).scalar_one() > 10
         assert c.execute(text("SELECT status FROM cases")).scalar_one() == "awaiting_confirmation"
+        times = c.execute(text("SELECT submitted_at, report_ready_at FROM cases")).one()
+        assert times.submitted_at is not None and times.report_ready_at >= times.submitted_at
         assert c.execute(text("SELECT count(*) FROM reports")).scalar_one() == 1
         assert c.execute(text("SELECT count(*) FROM eval_scores")).scalar_one() >= 10
 
@@ -185,6 +187,8 @@ def test_fix_type_stop_makes_a_short_report_and_waits_for_a_correction(engine: E
     with engine.connect() as c:
         stages = {r[0] for r in c.execute(text("SELECT stage FROM stage_runs"))}
         assert stages == {"extraction", "kyc", "decision"}  # Policy and Risk never ran
+        times = c.execute(text("SELECT submitted_at, report_ready_at FROM cases")).one()
+        assert times.submitted_at is not None and times.report_ready_at is None  # E-114
 
 
 def test_eligibility_stop_recommends_reject_with_a_written_reason(engine: Engine) -> None:

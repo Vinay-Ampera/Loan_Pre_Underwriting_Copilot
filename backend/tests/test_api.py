@@ -719,6 +719,10 @@ def test_a_case_without_a_purpose_runs_and_a_failed_run_is_shown_to_the_officer(
     wait_for(client, h, case_id, {"awaiting_confirmation"})
     detail = client.get(f"/api/v1/cases/{case_id}", headers=h).json()
     assert detail["purpose"] is None and detail["last_failure"] is None
+    with engine.connect() as c:  # Insights: the officer's submit and the waiting report (0026)
+        times = c.execute(text("SELECT submitted_at, report_ready_at FROM cases WHERE id = :i"),
+                          {"i": case_id}).one()  # fmt: skip
+    assert times.submitted_at is not None and times.report_ready_at >= times.submitted_at
 
     # a run that fails puts the case back and the case view says what failed
     with engine.begin() as c:

@@ -28,6 +28,18 @@ export function formatDay(v) {
   return d ? d.toLocaleDateString('en-IN', DAY) : ''
 }
 
+/** A span of seconds in words: "40 min", "13.5 hours", "1.3 days" (Insights). */
+export function duration(seconds) {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '–'
+  const one = (n, unit) => {
+    const v = Number(n.toFixed(1))
+    return `${v} ${unit}${v === 1 ? '' : 's'}`
+  }
+  if (seconds < 3600) return `${Math.max(1, Math.round(seconds / 60))} min`
+  if (seconds < 48 * 3600) return one(seconds / 3600, 'hour')
+  return one(seconds / 86400, 'day')
+}
+
 const num = (s) => Number(String(s).replaceAll(',', ''))
 
 /** 12800.0 becomes "12,800"; 72.6 stays "72.6". */

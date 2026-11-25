@@ -16,8 +16,15 @@ const links = (role) => {
 }
 
 describe('Sidebar', () => {
-  it('gives the auditor overview, cases table, audit log, users and help only', () => {
-    expect(links('auditor')).toEqual(['Overview', 'Cases', 'Audit log', 'Users', 'Help'])
+  it('gives the auditor overview, insights, cases table, audit log, users and help only', () => {
+    expect(links('auditor')).toEqual([
+      'Overview',
+      'Insights',
+      'Cases',
+      'Audit log',
+      'Users',
+      'Help',
+    ])
   })
 
   it('gives the officer the read-only policy library, and the admin the knowledge base', () => {
@@ -40,10 +47,15 @@ describe('Sidebar', () => {
     expect(links('auditor')).not.toContain('Inbox')
   })
 
+  it('gives the auditor Insights right after Overview (Stage 12)', () => {
+    expect(links('auditor').slice(0, 2)).toEqual(['Overview', 'Insights'])
+  })
+
   it('gives the admin messages but no audit log, case list or creating', () => {
     const items = links('admin')
     expect(items).toEqual([
       'Home',
+      'Insights',
       'Inbox',
       'Precedents',
       'Knowledge base',

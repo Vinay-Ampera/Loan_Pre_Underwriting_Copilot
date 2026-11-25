@@ -266,16 +266,18 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
 - In `test_pipeline.py`: the box is stored in `report_json`, absent from the summary and from every model message (scripted model records its inputs). `test_api.py`: it is in the report response and the PDF text for the officer and admin, and the auditor still gets 403.
 - Frontend: `CounterOfferBox.test.jsx` (wording never "approved" or "eligible", the "not scored" label, no box when the payload has none).
 
-**Part B, Insights** (`backend/tests/test_insights.py`, test database):
-- A seeded set of cases with known times, statuses, overrides, admin corrections, stops (one fixed later) and precedent uses. Each panel equals the hand count with no filter, with a date range and with a loan type.
-- Migration 0026 backfills `submitted_at` and `report_ready_at` correctly and rolls back.
+**Part B, Insights** (`backend/tests/test_insights.py`, 16 tests, test database; built 2026-11-25):
+- A seeded set of ten cases with known times (offsets from 20 days ago, so the officer's "last 30 days" holds them), two officers, statuses from draft to decided, two officer changes, one admin correction, failed rules on a confirmed and on changed cases, stops (one fixed and re-scored later, one eligibility stop that waits for the officer) and two precedent uses (one moved refer to approve). Each panel equals the hand count with no filter, with a date range (end exclusive) and with a loan type; an empty period counts nothing; a period that ends before it starts is refused (422).
+- Migration 0026 backfills `submitted_at` (the first of two submits; the first report when there is no audit row) and `report_ready_at` (the newest waiting report, not a stopped one), and rolls back. `store.update_case` sets `submitted_at` once and `report_ready_at` only on a waiting report; `test_pipeline.py` checks both on a real run and on a fix-type stop, and `test_api.py` on the officer's submit.
 - **Access:**
   - officer 403 on `/admin/insights` and `/auditor/insights`;
-  - auditor 403 on `/admin/insights`; admin 403 on `/auditor/insights`;
-  - `/me/insights` counts only the caller's cases (two officers seeded).
-- **No case data for the auditor:** the test walks the whole JSON for any UUID, `CASE-` reference or link.
-- **No model call:** the router is a fake that fails if used.
-- Frontend: `InsightsPage.test.jsx` (admin links present, auditor none, filters, empty and "no data yet" states), `HomePage` officer tile.
+  - auditor 403 on `/admin/insights`; admin 403 on `/auditor/insights`; admin and auditor 403 on `/me/insights`;
+  - `/me/insights` counts only the caller's own decisions (two officers seeded).
+- **No case data for the auditor:** the test walks the whole JSON for any UUID, `CASE-` reference, `/cases` path or link, and for the keys `cases`, `case_no`, `id` and `officer_id`.
+- **No model call:** the test app gets a model router that fails if used, and the two source files are checked for model calls.
+- `test_auditor.py`'s every-route walk covers the new routes; `test_fairness.py` still passes (Insights is not in `app.monitoring`).
+- Frontend: `InsightsPage.test.jsx` (admin panels, case and clause links; auditor same counts and no link; filters send local midnights and clear; a backwards period asks for nothing; the empty state; the officer Home tile and its empty text), `KnowledgeBasePage.test.jsx` (a link opens the policy at the clause; an unknown policy is ignored), `Sidebar.test.jsx`, and `format.test.js` (`duration`).
+- Looked at in Chrome (light and dark at 1440, the auditor at 1024, a phone at 390, the officer Home, the knowledge base link) on a throwaway database seeded with the same cases: no sideways scrolling, no cut labels after the phone fixes.
 
 **Part C, export and decision timers** (`backend/tests/test_sla.py`, `test_export.py`):
 - **Working-day maths (pure):**

@@ -44,6 +44,7 @@ import SentItemsPage from './pages/SentItemsPage'
 import IssuesPage from './pages/IssuesPage'
 import InboxPage from './pages/InboxPage'
 import AdminIssuesPage from './pages/AdminIssuesPage'
+import InsightsPage from './pages/InsightsPage'
 import './App.css'
 
 const SessionContext = createContext(null)
@@ -238,6 +239,22 @@ function Routing() {
         element={
           <Shell role="admin">
             <AdminMessagesPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/admin/insights"
+        element={
+          <Shell role="admin">
+            <InsightsPage audience="admin" />
+          </Shell>
+        }
+      />
+      <Route
+        path="/auditor/insights"
+        element={
+          <Shell role="auditor">
+            <InsightsPage audience="auditor" />
           </Shell>
         }
       />

@@ -646,7 +646,9 @@ def _prepare_submit(engine: Engine, request: Request, case_id: UUID, user: User)
                 "Proceed anyway on the inventory.",
             )
         sub = build_submission(conn, row)
-        conn.execute(text("UPDATE cases SET status = 'running', updated_at = now() WHERE id = :c"),
+        # the first submit is "documents complete" for Insights; a retry never moves it (E-114)
+        conn.execute(text("""UPDATE cases SET status = 'running', updated_at = now(),
+                                 submitted_at = coalesce(submitted_at, now()) WHERE id = :c"""),
                      {"c": case_id})  # fmt: skip
         write_audit(conn, user.id, "case_submitted", "case", case_id,
                     after={"documents": len(sub.documents)})  # fmt: skip

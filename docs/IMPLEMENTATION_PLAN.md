@@ -363,7 +363,7 @@ What was built (details and measured results in `PROGRESS.md` "Stage 11 build no
 
 **Goal:** five features picked by the user from the project manager's and CEO's review. Each one is useful on its own: a counter-offer box on the report, an Insights page, a queue export with decision timers, a score breakdown chart, and a read-only "Ask this case" chat. **Scoring does not change:** weights, bands, hard rules, the rules engine and the human confirmation stay as they are. The dev replay still gives 60 of 60 bands and the CI evaluation gate stays green. The test split is never used for tuning.
 
-**Status:** Part A built 2026-11-25 (see `PROGRESS.md`, "Stage 12 Part A build notes"); Parts B to E not started. The decisions are in `PROGRESS.md` (decisions log, 2026-11-25); edge cases E-107 to E-127.
+**Status:** Parts A and B built 2026-11-25 (see `PROGRESS.md`, "Stage 12 Part A build notes" and "Stage 12 Part B build notes"); Parts C to E not started. The decisions are in `PROGRESS.md` (decisions log, 2026-11-25); edge cases E-107 to E-127.
 
 **How it is built:** one part at a time, in the order A → B → C → D → E. After each part: stop, report what changed and what was verified, give a commit message, and wait for the user to commit. Tests: only the tests related to the change, **one test job at a time** (pytest, Vitest and Playwright together ran out of memory on the 15 GB machine), using the local pgvector container `lc-test-pg` for database tests. Migrations are written and tested locally; the user applies them to Neon with `python -m app.db.migrate`.
 
@@ -419,7 +419,7 @@ Exit criteria (Part A)
 ### Part B: Insights page (management dashboard and override insights)
 
 1. **Migration 0026:** `cases.submitted_at` (the first "Submit for assessment"; the funnel's "documents complete") and `cases.report_ready_at` (when the latest report that waits for the officer was written). Both are backfilled from the audit log and the stored reports. The other times already exist (`cases.created_at`, `reports.created_at`, `officer_actions.created_at`).
-2. **`monitoring/insights.py`, SQL only, no AI.** Filters: a date range (cases **created** in it) and a loan type.
+2. **`reporting/insights.py`, SQL only, no AI** (built in a new `app/reporting` package so `app/monitoring` stays the isolated fairness view). Filters: a date range (cases **created** in it; the browser sends its own midnights as instants) and a loan type.
    - **Time to decide:** created → report ready, and report ready → officer decision. Median and slowest, per loan type and per officer.
    - **Funnel:** created → submitted (documents complete) → report ready → decided (confirmed, overridden), plus where open cases sit now (not submitted, stopped for a fix, waiting for the officer).
    - **Officer agreement with the recommendation:** the share confirmed against overridden, by loan type and by band. Admin corrections are counted separately.
@@ -430,7 +430,7 @@ Exit criteria (Part A)
    - **Admin:** `GET /admin/insights`, the full page with links to the cases and to the rule's clause in the knowledge base.
    - **Auditor:** `GET /auditor/insights`, the same numbers with **no case id, case reference or link** (decision 9, E-115).
    - **Officer:** `GET /me/insights`, their own numbers only, shown on Home: their median time to decide (last 30 days), and their overdue count once Part C exists. Never another officer's numbers.
-4. **UI:** an Insights page in the admin and auditor sidebars, reusing `BarChart` and the tokens. The `dataviz` skill is loaded before any chart is drawn.
+4. **UI:** an Insights page in the admin and auditor sidebars, reusing `BarChart` and the tokens. The `dataviz` skill is loaded before any chart is drawn. The admin's clause tags open the clause in the knowledge base (`/admin/knowledge?doc=…&clause=…`).
 
 Exit criteria (Part B)
 - Every figure equals a hand count on a seeded test database (one test per panel, with and without each filter).

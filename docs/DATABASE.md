@@ -17,7 +17,7 @@ Eight per person with 2-step on, made at setup and shown once; a used code keeps
 
 **cases**
 `id, case_no (CASE-YYYY-NNNN, unique), loan_type (personal|home|education|business|vehicle), status (draft|uploaded|running|stopped|awaiting_confirmation|confirmed|overridden), created_by → users, loan_amount, tenure_months, purpose, form_data jsonb (type-specific fields), stopped_stage, stop_class (fix|eligibility|null), total_score (null if stopped), band (approve|refer|reject|null), recommendation, policy_version, rules_version, created_at, updated_at`
-Stage 12 (planned) adds `submitted_at`, `report_ready_at` (migration 0026) and `sla_due_at`, `sla_officer_notified_for`, `sla_admin_notified_for` (migration 0027); see section 4e.
+Stage 12 adds `submitted_at`, `report_ready_at` (migration 0026, built 2026-11-25) and, planned, `sla_due_at`, `sla_officer_notified_for`, `sla_admin_notified_for` (migration 0027); see section 4e.
 
 **applicants**
 `id, case_id → cases, role (primary|co), full_name, dob, pan, aadhaar_last4, address, phone, email (nullable; migration 0010, synthetic; kept only in this column, never in `cases.form_data`), employment_type (salaried|self_employed), employer_or_business, declared_monthly_income, relationship_to_primary, created_at`
@@ -140,14 +140,14 @@ Migration 0019 also adds `upload_links.expiry_notified_for` (the expiry time a "
 | `users.notice_emails` | The person's choice to get "new notice" emails (default true; new accounts take `STAFF_EMAILS_DEFAULT`). |
 | `outbox.delivery` | How a sent customer message went out: `printed`, `sent` or `redirected`. |
 
-## 4e. Stage 12: post-demo features (planned 2026-11-25; migrations 0026 to 0028)
+## 4e. Stage 12: post-demo features (planned 2026-11-25; migration 0026 built, 0027 and 0028 planned)
 
 Written and tested on the local test database; the user applies them to Neon with `python -m app.db.migrate`. Each one applies, rolls back and applies again (`test_migrations.py`). Grants follow the existing pattern: `app_rw` and `migrator`, and `report_ro` only where stated.
 
 | Migration | Part | Table or column | Purpose |
 |---|---|---|---|
-| 0026 | B | `cases.submitted_at` | The first "Submit for assessment" (the funnel's "documents complete"). Backfilled from the earliest `case_submitted` audit row of each case. Set once, never moved by a resume. |
-| 0026 | B | `cases.report_ready_at` | When the latest report that waits for the officer (`awaiting_confirmation`) was written. Set by the Decision node in the transaction that sets the status; a fix-type stop does not set it. Backfilled from the latest such report of each case. Index on `(report_ready_at)`. |
+| 0026 | B | `cases.submitted_at` | Built 2026-11-25. The first "Submit for assessment" (the funnel's "documents complete"), set by the submit route; a case run from the command line gets it when its first run starts (`store.update_case` to `running`). Set once (`coalesce`), never moved by a retry or a resume. Backfilled from the earliest `case_submitted` audit row, or, with none, from the case's first report. |
+| 0026 | B | `cases.report_ready_at` | When the latest report that waits for the officer (`awaiting_confirmation`) was written. Set by the Decision node in the transaction that sets the status; a fix-type stop does not set it. Backfilled from the latest such report of each case. Built 2026-11-25; no index (Insights scopes by `created_at`). |
 | 0027 | C | `cases.sla_due_at` | The decision due time: `report_ready_at` plus `SLA_WORKING_DAYS` × 24 hours of Monday-to-Friday time in `SLA_TIMEZONE`, worked out in code (`app/workflow/sla.py`). Set with `report_ready_at`, kept on reassignment, never cleared. A case counts as timed only while its status is `awaiting_confirmation`. Backfilled for cases that are waiting now. Index on `(status, sla_due_at)`. |
 | 0027 | C | `cases.sla_officer_notified_for`, `cases.sla_admin_notified_for` | The due time for which the officer's "overdue" notice and the admins' "still waiting" notice were written. Each is claimed by one `UPDATE … WHERE … IS DISTINCT FROM sla_due_at`, so each goes once per due time (E-118). |
 | 0027 | C | `notifications.kind` CHECK | Two more kinds (15 in all): `case_overdue` (officer) and `case_overdue_admin` (every active admin). Kept equal to `inbox.KINDS` by the existing test. |

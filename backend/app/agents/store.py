@@ -210,7 +210,13 @@ def update_case(conn: Connection, case_id: UUID, status: str, report: Report | N
     conn.execute(
         text("""UPDATE cases SET status = :st, stopped_stage = :ss, stop_class = :sc, total_score = :t,
                     band = :b, recommendation = :rec, policy_version = coalesce(:pv, policy_version),
-                    rules_version = coalesce(:rv, rules_version), updated_at = now()
+                    rules_version = coalesce(:rv, rules_version), updated_at = now(),
+                    report_ready_at = CASE WHEN :st = 'awaiting_confirmation' THEN now()
+                                           ELSE report_ready_at END,
+                    -- the first run counts as submitted when no officer submit came first
+                    -- (cases run from the command line); never moved afterwards (E-114)
+                    submitted_at = CASE WHEN :st = 'running' THEN coalesce(submitted_at, now())
+                                        ELSE submitted_at END
                 WHERE id = :c"""),
         {"c": case_id, "st": status, "ss": report.stopped_stage if report else None,
          "sc": report.stop_class if report else None, "t": report.total_score if report else None,
