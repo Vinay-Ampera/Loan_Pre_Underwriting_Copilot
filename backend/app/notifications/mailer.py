@@ -49,10 +49,10 @@ MAILS: dict[str, tuple[str, str]] = {
         "never sent by email. If you did not expect this, tell your admin.\n\n" + _SIGN_IN,
     ),
     "two_step_reset": (
-        "Pramaan: your 2-step verification was reset",
+        "Pramaan: your two-step verification was reset",  # no digit in a subject (test_email)
         "Your admin reset your 2-step verification for Pramaan. At your next sign-in, after your "
-        "password, you will scan a new QR code with the authenticator app on your phone. If "
-        "you did not expect this, tell your admin.\n\n" + _SIGN_IN,
+        "password, you will scan a new QR code with the authenticator app on your phone. Codes "
+        "are never sent by email. If you did not expect this, tell your admin.\n\n" + _SIGN_IN,
     ),
 }
 ACCOUNT_KINDS = ("account_created", "password_reset", "two_step_reset")

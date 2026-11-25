@@ -99,7 +99,12 @@ def test_with_no_redirect_it_is_printed_and_refused_never_sent(
 
 
 # --------------------------------------------------------------------------- the settings
-def test_console_needs_nothing_and_smtp_builds_a_guarded_sender() -> None:
+def test_console_needs_nothing_and_smtp_builds_a_guarded_sender(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # a library imported by the tests (LiteLLM) loads the developer's .env into the process
+    # environment, so a machine set up for real email would otherwise see smtp here
+    monkeypatch.delenv("NOTIFICATION_SENDER", raising=False)
     assert isinstance(build_sender(Settings(_env_file=None)), ConsoleSender)  # type: ignore[call-arg]
     sender = build_sender(smtp_settings())
     assert isinstance(sender, GuardedSender) and sender.redirect == ME
