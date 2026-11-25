@@ -23,7 +23,7 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 10b AI control for the admin | Built, committed (`f521e32`) | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 10c Knowledge base (policy documents and learnings) | Built, committed (`d484bff`) | Migration 0021; `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`, `api/knowledge.py`; admin Knowledge base page and officer Policies page. See "Knowledge base build notes". Run `python -m app.db.migrate` first |
 | 11 Hardening, Docker and demo | Built, committed (`61f34df`, `0d8b1e8`) | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), the demo script (moved out of the repo on 2026-11-23), README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
-| 12 Post-demo features | **Planned (docs only, 2026-11-25); waits for the trainer's approval** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
+| 12 Post-demo features | **Part A built (2026-11-25), not committed; Parts B to E not started** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
 
 In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
@@ -37,7 +37,7 @@ Notifications Part 3 (hardening and close-out) is built (2026-11-21, migration 0
 
 ### 2026-11-25: Stage 12 (post-demo features) planned; docs only, for the trainer's approval
 
-The user picked these from the project manager's and CEO's feature list of 2026-11-24 and asked for a plan in the docs before any code. No locked decision is changed by this plan. The wording for CLAUDE.md decisions 11 (a new model role) and 18 ("Docker is always last", while Docker was built in Stage 11) is proposed to the user, who edits CLAUDE.md.
+The user picked these from the project manager's and CEO's feature list of 2026-11-24 and asked for a plan in the docs before any code. No locked decision changes in substance. Two needed new wording: decision 11 (a new model role) and decision 18 ("Docker is always last", while Docker was built in Stage 11). The user chose the wording after Step 0, and CLAUDE.md now carries it (item 12).
 
 1. **What is built, in this order, one commit per part:**
    - A: counter-offer and alternate product (one box);
@@ -67,7 +67,7 @@ The user picked these from the project manager's and CEO's feature list of 2026-
    - **Clock rules.** Each new report restarts the clock; fix-type stops and cases waiting on the applicant are not timed; reassignment keeps the due date; the decision stops it.
    - **Reminders.** One to the officer at overdue and one to every active admin a working day later, each once. The check runs in the app under an advisory lock, like the retention job.
    - **Migration and assignment.** Migration 0027 adds the timer columns and two notification kinds. No auto-assignment.
-8. **Score breakdown (Part D).** Display only. The backend report carries the points lost per stage and the UI only draws them. Stopped cases show no chart. Screen only; the PDF question is with the user.
+8. **Score breakdown (Part D).** Display only. The backend report carries the points lost per stage and the UI only draws them. Stopped cases show no chart. The chart is on screen only; the report PDF's stage table gains a "Points lost" column from the same numbers (item 12).
 9. **"Ask this case" (Part E).**
    - **Sources and flow.** Retrieval plus a model, read-only. Sources are the report, the masked extracted fields and the policy clauses in the versions the run used; no precedents in the first version. The question is masked and treated as data.
    - **Checks.** Every sentence cites a rule, a clause or a document field. Code checks every ID and number, retries once, then gives a fixed text. "What if" points to the counter-offer box.
@@ -86,12 +86,17 @@ The user picked these from the project manager's and CEO's feature list of 2026-
     - the officer's "average" decision time is the median, like the admin's;
     - line (a) uses the shortest longer whole-year tenure;
     - line (b) is shown only when it says more than (a);
-    - the alternate-product line appears only inside a box that already shows a line;
+    - the alternate-product line appears only inside a box that already shows a line (confirmed by the user, item 12);
     - the overdue reminders are keyed to the due time (one per case in practice; a new report can restart them);
     - each person sees their own chat questions on a case;
     - chat questions are stored masked;
     - a question that matches the injection patterns gets the fixed answer;
     - chat rows are kept 90 days.
+12. **The user's answers to the Step 0 questions (2026-11-25):**
+    - **Decision 18:** option A. Stage 11 built Docker; Stage 12 comes after it, adds no service, and keeps the `Dockerfile` and `docker-compose.yml` building and starting, with every new setting in `.env.example`. CLAUDE.md updated with this wording.
+    - **Decision 11:** adds "Case assistant chat (Stage 12): Gemini Flash, with the Decision fallbacks." CLAUDE.md updated.
+    - **PDF (Part D):** the stage table gets a "Points lost" column; no chart in the PDF.
+    - **Alternate product (Part A):** only inside a box that already shows an amount or tenure line, never on its own (the planned default, kept).
 
 ### 2026-11-24: 2-step verification for the admin and the auditor (adds to locked decision 9)
 
@@ -605,3 +610,15 @@ UI only, at the user's request; no API, role, wording-rule or scoring change. De
 - The 2-step screens, Help, the reset email and the docs say "your authenticator app (for example Google Authenticator or Microsoft Authenticator)" instead of naming Microsoft only (the user tests with Google Authenticator).
 - Checked with a scratch browser audit at 1920, 1440, 1280, 1024, 820 and 390 px wide on every officer, admin and auditor screen: text staying inside its box, no side scrolling, and the page not scrolling where panes are used.
 
+
+## Stage 12 Part A build notes: counter-offer box (2026-11-25)
+
+Built after the user's go on 2026-11-25. Scoring, weights, bands and hard rules are unchanged; no migration.
+
+- **Code:** `app/scoring/counter_offer.py` (pure code; reuses `engine.score_case` with only `loan_amount` and `tenure_months` changed, and the run's applied precedent bonus passed through). Tenure limits are read from the product's own tenure rule (`tenure_months` or `repayment_years`, the vehicle kind picking VL-POL-10A, B or C) and `age.max_age_at_maturity`. The Decision node (`agents/graph.py`) adds the box to `Report.counter_offer` after the summary is written; an unexpected error in it is logged and the report goes out without a box. `api/reportpdf.py` prints it after the stage scores table. Frontend: `CounterOfferBox` under "At a glance", new `clock` icon.
+- **Rules file:** new `counter_offer` block (bands, `min_share` 0.5, `amount_step` 10,000, `tenure_step_months` 12, `min_tenure_months` 12, `moves_fields`, `alternate_products` with keywords and employment types), checked by the loader (an unknown `moves_fields` entry is refused). `rules_version` is now **2026.11.25-1** because the file changed. Record it in the database with `python -m app.db.seed --only rules` (or `python -m app.rag.reindex`).
+- **Worked example, measured:** ₹10L over 36 months gives EMI 33,214 and FOIR 72.0%; 60 months gives 22,244 and 53.7% (still 0 points, so no line (a)); ₹7L over 60 months gives 15,571 and 42.6% (6 points, still reject). **Line (b) is ₹6.3L over 60 months, EMI 14,014, FOIR 40.0%, refer**, not the ₹6.2L (39.7%) of the brief: FOIR is rounded to one decimal before the tier, so 40.02% earns the 40% tier, and ₹6.3L is the largest ₹10,000 step that reaches refer (E-128). ₹6.2L also reaches refer. The vehicle line for the purpose "car" is ₹10L over 84 months at 9.5%, EMI 16,344, FOIR 43.9%, with the dealer invoice as the extra document.
+- **Dev split:** 5 of 60 cases get a box (SYN-PL-D04 a longer tenure to refer; SYN-HL-D04 and SYN-BL-D04 a smaller amount to refer; SYN-HL-D11 and SYN-VL-D11 the age-stop tenure line), each worked out in under 50 ms. No dev purpose matches an alternate product.
+- **Unchanged scores:** `app.scoring.replay --split dev --verbose` output is byte-identical to a `git archive` of HEAD (band 60 of 60, exact 59 of 60, the known SYN-BL-D13); `app.eval.run --split dev` passes the gate. The test split was not run.
+- **Tests:** `tests/test_counter_offer.py` (31 tests, pure: the worked example, each "never shown" rule including the three cap rules, tenure and age caps with an education parent near 55, the age stop with no rescoring, the alternate-product rules, the precedent bonus passed through, the same box each time, the message check blocking every line kind, the rules-file check); `test_pipeline.py` (the box stored in `report_json` for SYN-PL-D04 and absent from every model message and the summary; none on a clean approve); `test_api.py` (the box in the report response for the officer and the admin and in the officer's PDF; no heading without one); `CounterOfferBox.test.jsx` and a `ReportPanel.test.jsx` case. Database tests ran on a local pgvector container (`lc-test-pg`, recreated on 127.0.0.1:55432).
+- **Differences from the plan text:** the PDF writes "Rs" for "₹" (its built-in font has no rupee sign); the admin sees the box on screen only, since the PDF export was already officer-only; the sentences are written by code and stored, so the screen and PDF match. `margin_ok` stays in `moves_fields` as the brief listed ED-POL-12, but the margin does not depend on the loan amount in code, so ED-POL-12 alone never produces a line (rescoring decides).

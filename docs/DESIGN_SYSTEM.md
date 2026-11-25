@@ -374,7 +374,8 @@ Built with the existing tokens and components only (no new colour unless named b
   - Alternate product: "The stated purpose fits a vehicle loan: ₹10L over 7 years at 9.5%, EMI ₹16,344, FOIR 43.9%. A new application, not scored. It would also need: dealer invoice." The tag reads "Not scored".
   - Footer (muted): "Rate from the bank's rules file. Your decision is still needed. Not for customer messages."
 - **Never:** "approved", "eligible", "you qualify", "offer" as a promise, or the score.
-- **PDF:** the same sentences, under a "Other amounts or tenures (estimate)" heading.
+- **PDF:** the same sentences, under an "Other amounts or tenures (estimate)" heading after the stage scores table, with the tags in square brackets. The PDF's built-in font has no rupee sign, so the PDF writes "Rs 6.3L" where the screen shows "₹6.3L". The PDF export is the officer's (the admin view has none), so the admin sees the box on screen only.
+- **Where the words come from:** the sentences and tags are written by code (`app/scoring/counter_offer.py`) and stored with the report, so the screen and the PDF say the same thing; the title, intro and footer are fixed text in `CounterOfferBox.jsx` and the PDF builder.
 
 ### 17.2 Insights page (Part B)
 
@@ -422,6 +423,7 @@ Built with the existing tokens and components only (no new colour unless named b
 - **No chart** when any stage did not run. The report's existing stopped wording is shown instead.
 - **Accessibility:** the SVG is `role="img"` with an `aria-label` sentence ("Score breakdown: starts at 100; KYC lost 2, Documents lost 0, Income and FOIR lost 18, Credit lost 6, Policy fit lost 2; final score 72, refer"). A "Show as a table" toggle shows the table (Stage, Out of, Earned, Lost), which is always in the DOM for screen readers.
 - **Themes:** light, dark and system from tokens; no hard-coded colour.
+- **PDF:** no chart. The report PDF's "Stage scores" table gets a third column, "Points lost" (right-aligned, like the Score column), with a dash for a stage that did not run. The column headings read "Stage", "Score" and "Points lost".
 
 ### 17.5 "Ask this case" panel (Part E)
 

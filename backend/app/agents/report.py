@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.results import RuleCheck
 from app.rag.schemas import ClauseRef, PrecedentMatch, RetrievedClause
+from app.scoring.counter_offer import CounterOffer
 from app.scoring.models import ScoreReport
 
 ACTION = {
@@ -83,6 +84,9 @@ class Report(BaseModel):
     # identity fields of the form that were read from the PAN and Aadhaar cards, per person
     # (Stage 10, Part B). A match against those same cards is not an independent check.
     identity_from_documents: dict[str, list[str]] = Field(default_factory=dict)
+    # other amounts or tenures worked out in code (Stage 12 Part A); None when it would not help.
+    # Added after the summary is written: never in a prompt, the summary or a customer message.
+    counter_offer: CounterOffer | None = None
 
 
 FROM_DOCUMENT_NOTE = "from document, not an independent check"

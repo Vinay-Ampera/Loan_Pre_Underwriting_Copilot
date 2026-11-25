@@ -250,7 +250,7 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
   - ₹10L over 36 months gives EMI 33,214 and FOIR 72.0%;
   - over 60 months, EMI 22,244 and FOIR 53.7%, so **no line (a)**;
   - ₹7L over 60 months gives EMI 15,571 and FOIR 42.6% (6 points);
-  - **line (b): ₹6.2L over 60 months, EMI 13,792, FOIR 39.7%, refer**;
+  - ₹6.2L over 60 months, EMI 13,792, FOIR 39.7%, refer; but **line (b) is ₹6.3L over 60 months, EMI 14,014, FOIR 40.0%, refer** (the largest ₹10,000 step that reaches refer; ₹6.4L gives 40.4%, reject; E-128);
   - purpose "car" gives the vehicle line, ₹10L over 84 months at 9.5%, EMI 16,344, FOIR 43.9%, labelled not scored, with the dealer invoice among its extra documents.
 - **One test per "never shown" rule:** approve; refer held by PL-CIBIL-02, CM-FRD-01 and BL-CRD-20 (no line aims at approve); a fix-type stop; a CIBIL-floor stop; a residency stop; a minimum-age stop; points lost only on rules amount and tenure cannot move; the only band-moving amount under 50%.
 - **Tenure caps:**
@@ -313,7 +313,8 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
   - a stopped case has no breakdown;
   - a capped case carries the cap and its rule IDs;
   - a bonus is a step up;
-  - an old stored report gets the same breakdown on read.
+  - an old stored report gets the same breakdown on read;
+  - the PDF's stage table has the "Points lost" column, equal to the breakdown for every scored dev replay case, with a dash for a stage that did not run (`test_api.py` PDF test extended).
 - **Frontend:**
   - the chart draws the payload's numbers and computes none (a payload with deliberately odd numbers is drawn as given);
   - the 85 and 60 lines;

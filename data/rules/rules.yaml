@@ -25,7 +25,7 @@
 # If a stage has both a fix and an eligibility failure, fix wins (correct the data, then re-check).
 
 meta:
-  rules_version: "2026.10.31-2"
+  rules_version: "2026.11.25-1"
   source_note: "Sample Bank policy, synthetic. Not any bank's actual policy."
 
 scoring:
@@ -46,6 +46,26 @@ precedent:                                    # OI-3 placeholders, tune on dev d
 # Indicative interest rate used to size the new instalment when computing FOIR (Stage 3).
 pricing:
   rate_pct: {personal: 12.0, home: 8.75, education: 9.5, business: 12.5, vehicle: 9.5}
+
+# Counter-offer box on the report (Stage 12 Part A). Display only: code scores the case again
+# with only the amount or the tenure changed, by these same rules. It never changes a score, a
+# band or a rule, and the officer still decides. Tenure limits come from the tenure rules below
+# and age.max_age_at_maturity, never from here.
+counter_offer:
+  bands: [reject, refer]                      # bands that may get a box
+  min_share: 0.5                              # never suggest less than half the amount asked
+  amount_step: 10000                          # smaller amounts are tried in these steps
+  tenure_step_months: 12                      # longer tenures are tried in whole years
+  min_tenure_months: 12                       # no line for a shorter tenure (age stop, alternate)
+  # a box needs points lost on a rule that reads one of these facts
+  moves_fields: [foir, tenure_months, loan_amount, ltv_percent, loan_to_turnover, repayment_years, collateral_ok, margin_ok]
+  # the purpose "clearly fits" another product when exactly one other list matches (whole words)
+  # and that product takes the earner's employment type; a new application, not scored
+  alternate_products:
+    vehicle: {keywords: [car, bike, motorbike, motorcycle, scooter, two-wheeler, two wheeler, vehicle], employment: [salaried, self_employed]}
+    home: {keywords: [house purchase, buy a house, buying a house, flat purchase, buy a flat, home purchase, apartment, residential property], employment: [salaried, self_employed]}
+    education: {keywords: [higher education, tuition, college fees, course fees, university, study abroad], employment: [salaried, self_employed]}
+    business: {keywords: [working capital, shop, machinery, business expansion, inventory], employment: [self_employed]}
 
 # Parameters read by the fact derivation code in app/scoring (no thresholds live in code).
 params:

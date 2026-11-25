@@ -601,6 +601,57 @@ def test_admin_summary_counts(client: TestClient, engine: Engine) -> None:
     assert second["active_officers"] == 1 and second["disabled_accounts"] == 1
 
 
+# --------------------------------------------------------------------------- counter-offer box
+OFFER_TEXT = "Pramaan estimates ₹6.3L over 5 years would be recommended for refer (FOIR 40.0%)."
+
+
+def stored_report(box: dict[str, Any] | None) -> dict[str, Any]:
+    return {
+        "loan_type": "personal", "recommendation_text": "Recommended: reject",
+        "awaiting": "Awaiting your confirmation.", "stop_text": None, "total_score": 52.0,
+        "band": "reject", "summary": "Written by code from the rules engine results.",
+        "stage_scores": [{"stage": "income", "label": "Income and FOIR", "score": 13.0, "max": 30.0, "ran": True}],
+        "rejection_reason": None, "findings": [], "citations": [], "unverified": [],
+        "counter_offer": box,
+    }  # fmt: skip
+
+
+def test_counter_offer_box_is_in_the_report_and_the_officers_pdf(
+    client: TestClient, engine: Engine
+) -> None:
+    """Stage 12 Part A: the stored box reaches the officer and the admin as stored; the officer's
+    PDF prints the same sentences. The auditor's 403 on reports is in test_auditor.py."""
+    h = login(client, "asha")
+    case_id = create(client, h, minimal())
+    box = {"rules_version": "2026.11.25-1", "lines": [{
+        "kind": "amount", "loan_type": "personal", "amount": 630000.0, "tenure_months": 60,
+        "rate_pct": 12.0, "emi": 14014.0, "foir": 40.0, "band": "refer", "scored": True,
+        "extra_documents": [], "text": OFFER_TEXT, "tags": ["EMI ₹14,014"]}]}  # fmt: skip
+    with engine.begin() as c:
+        c.execute(text("INSERT INTO reports (case_id, version, report_json) VALUES (:c, 1, CAST(:r AS jsonb))"),
+                  {"c": case_id, "r": json.dumps(stored_report(box))})  # fmt: skip
+    for who in ("asha", "ada"):
+        got = client.get(f"/api/v1/cases/{case_id}/report", headers=login(client, who))
+        assert got.status_code == 200 and got.json()["report"]["counter_offer"] == box, who
+
+    pdf = client.get(f"/api/v1/cases/{case_id}/report.pdf", headers=h)
+    assert pdf.status_code == 200
+    with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
+        words = " ".join(" ".join(p.get_text().split()) for p in doc)
+    assert "Other amounts or tenures (estimate)" in words
+    assert "Rs 6.3L over 5 years would be recommended for refer (FOIR 40.0%)." in words
+    assert "EMI Rs 14,014" in words and "Not for customer messages" in words
+    assert "approved" not in words.lower()
+
+    # a report without a box (approve, or made before Stage 12) prints no heading
+    with engine.begin() as c:
+        c.execute(text("INSERT INTO reports (case_id, version, report_json) VALUES (:c, 2, CAST(:r AS jsonb))"),
+                  {"c": case_id, "r": json.dumps(stored_report(None))})  # fmt: skip
+    pdf = client.get(f"/api/v1/cases/{case_id}/report.pdf", headers=h)
+    with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
+        assert "Other amounts" not in " ".join(p.get_text() for p in doc)
+
+
 # --------------------------------------------------------------------------- whole cases
 def upload_all(client: TestClient, h: dict[str, str], case_id: str, case: str) -> None:
     detail = client.get(f"/api/v1/cases/{case_id}", headers=h).json()

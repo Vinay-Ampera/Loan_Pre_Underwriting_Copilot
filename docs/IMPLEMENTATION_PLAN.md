@@ -11,7 +11,7 @@ Trainer approval of the documents comes first. Nothing below starts before that.
 11 Hardening & Docker   12 Post-demo features
 ```
 
-Stage 12 (post-demo features) was added on 2026-11-25, after the trainer and CEO demos. Docker was built in Stage 11; Stage 12 adds no new service and keeps the `Dockerfile` and `docker-compose.yml` working (the wording of locked decision 18 is with the user).
+Stage 12 (post-demo features) was added on 2026-11-25, after the trainer and CEO demos. Docker was built in Stage 11; Stage 12 adds no new service and keeps the `Dockerfile` and `docker-compose.yml` working, with every new setting in `.env.example` (locked decision 18, reworded by the user on 2026-11-25).
 
 Stages 8 and 9 were added on 2026-11-02 (the old Stage 8 is now Stage 11). Stage 8 was built first (2026-11-02). After both, there is a **review window**: the user collects additions and corrections, and they are done before Stage 11 starts. Docker is always last.
 
@@ -363,7 +363,7 @@ What was built (details and measured results in `PROGRESS.md` "Stage 11 build no
 
 **Goal:** five features picked by the user from the project manager's and CEO's review. Each one is useful on its own: a counter-offer box on the report, an Insights page, a queue export with decision timers, a score breakdown chart, and a read-only "Ask this case" chat. **Scoring does not change:** weights, bands, hard rules, the rules engine and the human confirmation stay as they are. The dev replay still gives 60 of 60 bands and the CI evaluation gate stays green. The test split is never used for tuning.
 
-**Status:** docs only, waiting for the trainer's approval. The decisions are in `PROGRESS.md` (decisions log, 2026-11-25); edge cases E-107 to E-127.
+**Status:** Part A built 2026-11-25 (see `PROGRESS.md`, "Stage 12 Part A build notes"); Parts B to E not started. The decisions are in `PROGRESS.md` (decisions log, 2026-11-25); edge cases E-107 to E-127.
 
 **How it is built:** one part at a time, in the order A → B → C → D → E. After each part: stop, report what changed and what was verified, give a commit message, and wait for the user to commit. Tests: only the tests related to the change, **one test job at a time** (pytest, Vitest and Playwright together ran out of memory on the 15 GB machine), using the local pgvector container `lc-test-pg` for database tests. Migrations are written and tested locally; the user applies them to Neon with `python -m app.db.migrate`.
 
@@ -394,7 +394,7 @@ Shown **only when it helps**, never on every case.
    - exactly one other loan type matches;
    - that product accepts the applicant's employment type (business needs self-employed);
    - its FOIR is lower than the case's;
-   - the box already shows a line (a) or (b).
+   - the box already shows a line (a) or (b) (the user's choice, 2026-11-25: never on its own).
 
    It gives the indicative EMI and FOIR at that product's rate and longest tenure (age-capped as in step 3) and the extra documents a new application would need (the rules-file `documents` block for that product, minus what this loan already asks for). It is labelled "a new application, not scored" (E-111).
 7. **Stored with the report.** The box is computed in the Decision node from the run's own `case_input` (already in the run state, so no new storage) and saved in `report_json.counter_offer`: audited, and the same every time it is shown. A re-run after a fix makes a new one with its report version. Reports made before Stage 12 have none (no backfill, E-113). It is **not** part of the LLM summary or any prompt.
@@ -407,12 +407,12 @@ Exit criteria (Part A)
   - ₹10L over 36 months gives EMI 33,214 and FOIR 72.0% (0 FOIR points);
   - over 60 months it gives EMI 22,244 and FOIR 53.7%, which is still 0 points, so there is **no line (a)**;
   - ₹7L over 60 months gives EMI 15,571 and FOIR 42.6% (6 points);
-  - **line (b) is ₹6.2L over 60 months**, EMI 13,792, FOIR 39.7% (12 points), recommended for refer;
+  - ₹6.2L over 60 months gives EMI 13,792 and FOIR 39.7% (12 points), recommended for refer, but it is not the largest such amount: **line (b) is ₹6.3L over 60 months**, EMI 14,014, FOIR 40.0% (FOIR is rounded to one decimal before the 40% tier, so 40.0% still earns 12 points; E-128). ₹6.4L gives 40.4% and stays in reject;
   - with the purpose "car", the vehicle line is ₹10L over 84 months at 9.5%, EMI 16,344, FOIR 43.9%.
 - Never shown (one test each): approve; refer held by a cap rule; fix-type stop; eligibility stop other than age; points lost only to rules amount and tenure cannot move; a suggestion under 50%.
 - Never past the product's tenure limit or age 55 at maturity for any person (tests include education with a parent co-applicant near 55).
 - Age stop: the tenure line only, with no band.
-- The same input gives the same box. It is stored in the report, shown in the report and the PDF, and absent from the summary and every prompt.
+- The same input gives the same box. It is stored in the report, shown in the report and the officer's PDF, and absent from the summary and every prompt.
 - The customer-message check blocks every line kind.
 - The dev replay gives 60 of 60 bands with byte-identical scores, and the CI gate stays green.
 
@@ -484,11 +484,12 @@ Exit criteria (Part C)
    A stored report without it gets it on read from its own stage scores, through the same function. The UI only draws.
 2. **The chart** (`ScoreWaterfall`) sits at the top of the report for scored cases. It starts at 100 and steps down by the points lost in each stage to the final score. The 85 and 60 lines are marked, a precedent bonus is a step up, and a refer cap is marked clearly with its rule (E-120). A stopped case, where some stages did not run, shows no chart.
 3. **Accessibility and themes:** light, dark and system themes; a one-sentence text summary for screen readers and a "Show as a table" alternative.
-4. **Screen only.** The PDF already lists each stage's score out of its maximum and stays unchanged unless the user asks for a points-lost column (question asked in Step 0).
+4. **PDF: one new column, no chart** (the user's choice, 2026-11-25). The PDF's "Stage scores" table already lists each stage's score out of its maximum; it gains a third column, "Points lost", read from the same numbers the chart draws (a dash for a stage that did not run). The chart itself is on screen only.
 
 Exit criteria (Part D)
 - For every scored dev replay case: 100 minus the points lost plus the bonus equals the final score (test).
 - A stopped case has no `score_breakdown`; a capped case carries the cap; a bonus is a step up.
+- The report PDF's stage table has the "Points lost" column, equal to the breakdown for every scored dev replay case, with a dash for a stage that did not run (test).
 - Component tests: the chart draws exactly the numbers it is given and computes none; the table alternative and the text summary match; contrast passes in both themes (`tokens.test.js` pairs).
 
 ### Part E: "Ask this case" chat (retrieval plus a model, read-only)

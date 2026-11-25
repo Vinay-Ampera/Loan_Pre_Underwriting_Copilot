@@ -12,6 +12,7 @@ rules engine does, once, in `extraction`, and every later node reads that result
 """
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from typing import Any, cast
@@ -41,6 +42,7 @@ from app.notifications import inbox
 from app.observability import metrics, tracing
 from app.observability.tracing import stage_span
 from app.rag.schemas import PolicyResult
+from app.scoring.counter_offer import build_counter_offer
 from app.scoring.engine import score_case
 from app.scoring.models import CaseInput, ScoreReport
 from app.services import ai_config
@@ -48,6 +50,7 @@ from app.services import ai_config
 Update = dict[str, Any]
 Node = Callable[[PipelineState], Awaitable[Any]]
 NO_RETRY = (asyncio.CancelledError, KeyboardInterrupt, SystemExit)
+log = logging.getLogger(__name__)
 
 
 def _dump(items: list[Any]) -> list[dict[str, Any]]:
@@ -317,6 +320,11 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             report,
             Submission.model_validate(state["submission"]).application.get("from_documents") or {},
         )
+        # Stage 12 Part A: code only, added after the summary was written, so no prompt sees it
+        try:
+            report.counter_offer = build_counter_offer(_input(state), score, rs)
+        except Exception:  # display only: never blocks the report
+            log.exception("counter-offer box skipped for case %s", state["case_uuid"])
         new_evals = evals.decision_evals(
             report, score, set(meta["known_ids"]) | {c.clause_id for c in report.citations}
         )

@@ -41,6 +41,7 @@ const paths = {
   upload: 'M12 15V4M7.5 8.5L12 4l4.5 4.5M4 15v5h16v-5',
   // loan types and ways to start (New case page)
   wallet: 'M4 7V6a2 2 0 012-2h10v3M4 7h15a1 1 0 011 1v11a1 1 0 01-1 1H5a1 1 0 01-1-1zM16 13.5h.01',
+  clock: 'M12 21a9 9 0 100-18 9 9 0 000 18M12 7.5V12l3 2',
   cap: 'M2.5 9L12 4.5 21.5 9 12 13.5zM6.5 11v4.5c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3V11M21.5 9v5',
   briefcase: 'M3.5 8h17v11.5h-17zM8.5 8V5h7v3M3.5 13h17',
   car: 'M3.5 16.5V12l2.2-5h12.6l2.2 5v4.5zM3.5 12h17M7 16.5V19M17 16.5V19M7.5 14.2h.01M16.5 14.2h.01',

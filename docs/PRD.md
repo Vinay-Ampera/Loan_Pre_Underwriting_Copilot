@@ -342,8 +342,8 @@ Picked by the user from the project manager's and CEO's review. Built in parts A
   - the indicative EMI and FOIR at that product's rate and longest tenure;
   - the extra documents a new application needs, from the rules file.
 
-  It is labelled "a new application, not scored" and is shown only if its FOIR is better than the case's.
-- FR-64 The box is computed when the report is made and stored with it (audited, the same every time). It is shown in the report and the PDF to the officer and the admin. It is not part of the model-written summary or any prompt, and it never reaches a customer message: the existing message check blocks its text. Wording: "Pramaan estimates ₹6.2L over 5 years would be recommended for refer (FOIR 39.7%)". Never "approved" or "eligible for".
+  It is labelled "a new application, not scored" and is shown only if its FOIR is better than the case's, and only inside a box that already shows an amount or tenure line (never on its own).
+- FR-64 The box is computed when the report is made and stored with it (audited, the same every time). It is shown on the report screen to the officer and the admin, and in the officer's report PDF (the admin view has no PDF export). It is not part of the model-written summary or any prompt, and it never reaches a customer message: the existing message check blocks its text. Wording: "Pramaan estimates ₹6.2L over 5 years would be recommended for refer (FOIR 39.7%)". Never "approved" or "eligible for".
 
 **Part B: Insights**
 
@@ -377,7 +377,7 @@ Picked by the user from the project manager's and CEO's review. Built in parts A
   - the backend sends the numbers and the screen only draws them;
   - it works in light, dark and system themes and has a text and table alternative for screen readers.
 
-  A stopped case, with stages that did not run, shows no chart. The PDF is unchanged.
+  A stopped case, with stages that did not run, shows no chart. The chart is on screen only; the report PDF's stage table gains a "Points lost" column from the same numbers.
 
 **Part E: "Ask this case"**
 
@@ -477,4 +477,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) and Stage 11 (hardening, Docker, demo) are built (2026-11-21); the real-model test-split run is left to the user. 2-step verification for the admin and the auditor is built (2026-11-24). Stage 12 (post-demo features, section 9.12) is planned (2026-11-25) and waits for the trainer's approval. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) and Stage 11 (hardening, Docker, demo) are built (2026-11-21); the real-model test-split run is left to the user. 2-step verification for the admin and the auditor is built (2026-11-24). Stage 12 (post-demo features, section 9.12) was planned on 2026-11-25; Part A (counter-offer box) is built, Parts B to E are not started. Status is tracked in `PROGRESS.md`.

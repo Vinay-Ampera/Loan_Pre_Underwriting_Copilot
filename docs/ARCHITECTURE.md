@@ -93,14 +93,14 @@ Policy text lives in the database (`policy_documents.body`, one row per version 
 
 None of these changes the graph order, the gates or a score.
 
-- **Counter-offer (Part A).** `app/scoring/counter_offer.py` is pure code beside the engine. The Decision node calls it after the one scoring run (and after the precedent rescore), with the run's own `case_input` and `ScoreReport` from the state and the rules file. It calls `score_case` again with only the amount and tenure changed. The result goes into `Report.counter_offer`, which is saved in `reports.report_json`; nothing is sent to a model. A re-run after a fix makes a new report version with its own box.
+- **Counter-offer (Part A).** `app/scoring/counter_offer.py` is pure code beside the engine. The Decision node calls it after the one scoring run (and after the precedent rescore), with the run's own `case_input` and `ScoreReport` from the state and the rules file. It calls `score_case` again with only the amount and tenure changed. The result goes into `Report.counter_offer`, which is saved in `reports.report_json`; nothing is sent to a model. The box is added after the summary is written, and an unexpected error in it is logged and the report goes out without a box (display only). The sentences are written in code and shown as stored by `CounterOfferBox` and the officer's PDF. A re-run after a fix makes a new report version with its own box.
 - **Insights (Part B).** `app/monitoring/insights.py` builds every panel with SQL over `cases`, `reports`, `officer_actions`, `admin_actions`, `rule_results`, `precedent_uses` and `rules`. `api/insights.py` serves it three ways: admin (with case references and links), auditor (counts only), officer (own numbers). No model.
 - **Export and decision timers (Part C).**
   - The CSV routes reuse `auditlog.csv_response`.
   - `app/workflow/sla.py` (pure) does the working-day maths and the due state.
   - The clock starts where the Decision node sets `awaiting_confirmation` (it writes `report_ready_at` and `sla_due_at` in the same transaction) and stops in `Pipeline.officer_action`.
   - A loop in the app (`run_sla_watch`, started like the retention job and the email worker, every `SLA_CHECK_MINUTES`, under an advisory lock) writes the overdue notices through `inbox.notify`, so they go in the same transaction as their audit row and follow the staff-email switch.
-- **Score breakdown (Part D).** `agents/report.py` adds `Report.score_breakdown` (per stage: max, earned, lost; bonus; cap; band lines) when every stage ran. The case API adds it to an older stored report from its own stage scores, using the same function. The UI draws only.
+- **Score breakdown (Part D).** `agents/report.py` adds `Report.score_breakdown` (per stage: max, earned, lost; bonus; cap; band lines) when every stage ran. The case API adds it to an older stored report from its own stage scores, using the same function. The UI draws only. The report PDF (`api/reportpdf.py`) adds a "Points lost" column to its stage table from the same numbers; the chart is not in the PDF.
 - **"Ask this case" (Part E).** `app/chat/` and `api/chat.py`, outside the graph:
 
 ```
