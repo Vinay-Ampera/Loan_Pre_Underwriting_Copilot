@@ -356,3 +356,88 @@ The documents desk and the application form were squeezed into a pane about a th
 - **Next-step bar.** At the bottom of the desk, kept at the bottom of the window while the list scrolls past (in place on phones): why a button is off ("State the employment type above…", "Some documents are still missing…", "Add the applicant's documents above first."), then "Download all files (zip)" on the left and Ask the applicant, Proceed anyway and Continue on the right.
 - **Back and Cancel beside Save.** On the application form, "Back to the documents" (and "Cancel" when correcting) sit next to the save button instead of alone under the form. "Edit the application form" is not offered while that form is already open.
 
+
+## 17. Stage 12 design: post-demo features (planned 2026-11-25)
+
+Built with the existing tokens and components only (no new colour unless named below, and any new colour pair is added to `tokens.test.js`). Icons named below that do not exist yet (`clock`, `chat`) are added to `Icons.jsx` in the same 1.5 stroke line set. The `dataviz` skill is loaded before the Insights charts and the waterfall are drawn. Wording rules hold everywhere: "recommended", never "approved" or "eligible for"; no outcome words to a customer.
+
+### 17.1 Counter-offer box (Part A)
+
+- **Where:** on the report, under "At a glance" and above the stage cards, for the officer and the admin. It is shown only when `report.counter_offer` exists. There is no empty state: no box at all when it does not help.
+- **Look:** a plain card with a thin `--line` border and no status colour, because it is an estimate, not a result. The title is "Other amounts or tenures (estimate)". Each line is a row: a small icon (`clock` for a longer tenure, `wallet` for a smaller amount, `car`, `cap`, `briefcase` or `home` for another product), the sentence, and mono tags for EMI and FOIR. Amounts are in Indian short form (₹6.2L, ₹1.25Cr). Tenures are in years when whole ("5 years"), otherwise in months.
+- **Wording:**
+  - Intro: "Worked out in code from this case's checked figures. For you to discuss with the applicant; it does not change the score or the recommendation."
+  - Line (a), for example a vehicle loan asked over 4 years: "Pramaan estimates ₹10L over 7 years would be recommended for refer (FOIR 43.9%)." The EMI follows as a tag: "EMI ₹16,344".
+  - Line (b): "Pramaan estimates ₹6.2L over 5 years would be recommended for refer (FOIR 39.7%)." The EMI follows as a tag: "EMI ₹13,792".
+  - Approve band: "… would be recommended for approve (FOIR 35.2%)."
+  - Age stop: "A tenure of up to 96 months keeps every applicant at 55 or under at maturity. Not scored: the assessment stopped before income was checked."
+  - Alternate product: "The stated purpose fits a vehicle loan: ₹10L over 7 years at 9.5%, EMI ₹16,344, FOIR 43.9%. A new application, not scored. It would also need: dealer invoice." The tag reads "Not scored".
+  - Footer (muted): "Rate from the bank's rules file. Your decision is still needed. Not for customer messages."
+- **Never:** "approved", "eligible", "you qualify", "offer" as a promise, or the score.
+- **PDF:** the same sentences, under a "Other amounts or tenures (estimate)" heading.
+
+### 17.2 Insights page (Part B)
+
+- **Where:** the sidebar entry "Insights" (icon `chart`) for the admin (after Home) and the auditor (after Overview). The routes are `/admin/insights` and `/auditor/insights`. The officer gets no page, only Home tiles (17.3).
+- **Header:** "Insights", with the line "Counted from the case records. No AI is used on this page." Filters: From, To (cases created in this period), Loan type, and Clear filters. A "Showing cases created 1 Nov to 25 Nov 2026" line.
+- **Panels** (cards on a two-column grid that stacks under 1000 px; each chart is `BarChart` with its numbers as text):
+  1. **Time to decide:** two stat tiles ("Report ready after", "Officer decided after", each a median with "slowest: 4.2 days" under it), then bars per loan type and per officer.
+  2. **Where cases are:** a funnel as horizontal bars (Created, Submitted, Report ready, Decided, split Confirmed and Changed by the officer), then "Open now": Not submitted, Stopped for a fix, Waiting for the officer.
+  3. **Officer agreement:** "Confirmed 41 (82%) · Changed by the officer 9 (18%)", bars by loan type and by band, and a separate line "Admin corrections: 2".
+  4. **Rules in changed decisions:** a table (rule tag, clause tag, direction chip such as "Refer → approve (officer)", count). For the admin the clause tag opens the clause in the knowledge base and the count opens the list of cases.
+  5. **Why runs stopped:** a table (stage, rule tag, a plain label from the clause title, count), for example "KYC · CM-KYC-03 · Name match · 12 cases".
+  6. **Precedents:** "A precedent's bonus reached 6 cases; it moved 2 of them to another band."
+- **Auditor version:** the same panels. No links, no case references, no "open the cases" counts, and a line "Counts only. Cases cannot be opened from here."
+- **States:** the shared `SectionLoader` while loading; "No cases in this period" when empty; the usual error state with Try again.
+- **Wording:** "Changed by the officer" (not "overridden" alone) and "Admin correction". The direction chips use the officer's own decision words ("approve", "refer", "reject") with "(officer)", never "approved".
+
+### 17.3 Case age, due badges, export and Home tiles (Part C)
+
+- **Queue columns:** a new "Age" column ("3 days", "5 hours"), and a due badge beside the status chip:
+  - **Due today:** the refer (amber) status tokens, a `clock` icon, the text "Due today".
+  - **Overdue:** the reject (red) status tokens, an `alert` icon, the text "Overdue".
+  - Hovering the badge, or a screen reader, gives "Decision due 27 Nov 2026, 3:00 pm (2 working days after the report)".
+  - There is no badge when the case is not timed (before submit, stopped for a fix, decided).
+- **Filter:** "Due" select (Any, Due today, Overdue) beside the status and loan filters.
+- **Export:** an "Export CSV" secondary button at the top right of the queue, with no dialog. The line under it reads "Exports the cases shown, with your filters. No applicant names." The admin's "Export all cases" sits on the admin officer page and on Home's recent-decisions card. Files are named `pramaan-cases-YYYY-MM-DD.csv`.
+- **Home (officer):** two tiles: "Overdue" (count, hint "Past the 2 working day target", opens the queue filtered) and "Your median time to decide" (for example "1.3 days", hint "Report ready to your decision, last 30 days"; "No decisions yet" when empty).
+- **Notices (fixed text, no digits):**
+  - Officer: title "A case is past its decision time", body "Open the case to make your decision."
+  - Admin: title "A case is still waiting for its officer", body "It passed its decision time a working day ago."
+  - Both open the case.
+- **Help:** officer and admin sections explaining the 2-working-day target, the badges and the export.
+
+### 17.4 Score breakdown chart (Part D)
+
+- **Where:** the first card of the report for scored cases, titled "How the score was reached", with the line "Starts at 100. Each step is the points lost in a stage."
+- **Chart (`ScoreWaterfall`, inline SVG):**
+  - Bars:
+    - a full bar at 100;
+    - one floating bar per stage, dropping by its points lost and labelled "KYC −2", "Income and FOIR −18" (a stage that lost nothing shows "−0" as a thin tick);
+    - a rising bar for a precedent bonus ("Precedent +3");
+    - the final bar, labelled "Score 72 · Refer".
+  - Colours: the bars use `--brand` for the start and end bars and `--muted` for the drops; the bonus uses the approve token. The band lines are dashed `--line-strong` lines labelled "85 recommend approve" and "60 refer".
+  - Cap: a mono tag on the final bar, "Capped at refer · CM-FRD-01", in the refer tokens, with a note under the chart: "The score is above 85, but a rule keeps this case at refer."
+  - Values use tabular numbers. Every label is text, so colour is never the only signal.
+- **No chart** when any stage did not run. The report's existing stopped wording is shown instead.
+- **Accessibility:** the SVG is `role="img"` with an `aria-label` sentence ("Score breakdown: starts at 100; KYC lost 2, Documents lost 0, Income and FOIR lost 18, Credit lost 6, Policy fit lost 2; final score 72, refer"). A "Show as a table" toggle shows the table (Stage, Out of, Earned, Lost), which is always in the DOM for screen readers.
+- **Themes:** light, dark and system from tokens; no hard-coded colour.
+
+### 17.5 "Ask this case" panel (Part E)
+
+- **Where:** a case tab "Ask" (label "Ask this case", icon `chat`) after Report, for the case's officer and the admin. In the fitted case layout it is a pane that scrolls on its own, with the input pinned to the bottom. Before a report exists the tab reads "Chat opens when the report is ready."
+- **Top line (muted):** "Answers come only from this case's report, its documents (personal numbers hidden) and the policy in force for this case. Chat cannot change the score or decide anything."
+- **Conversation:**
+  - the person's question in a soft (`--brand-soft`) block;
+  - the answer as plain sentences, each followed by its citation chips: rule tags and clause tags in the `ref-id` style (a clause chip opens the clause, as in the report's citations), and field chips such as "Payslip · employer";
+  - under the answer, in muted text, "Check the cited source before relying on an answer."
+  - an answer about an older report version carries "About report version 1".
+- **Input:** a textarea ("Ask about this case, for example: Why did Income and FOIR lose points?"), at most 500 characters with a counter, and an **Ask** button (Enter sends, Shift+Enter makes a new line). No second click: asking changes nothing. While waiting, the shared `SectionLoader` reads "Reading the case".
+- **Fixed texts:**
+  - Cannot answer: "I can't answer that from this case's documents and policy."
+  - What if: "Chat does not work out other amounts or tenures. If a change would help, the report shows it under Other amounts or tenures."
+  - Off: "Chat is off because the AI models are switched off. The report and its citations are still here."
+  - Limit: "You have asked many questions in the last hour. Please try again a little later."
+  - Masked note, when the question held a personal number: "Personal numbers in your question were hidden before it was sent."
+- **Never:** "approved", a new score, or advice to the customer.
+- **Help:** officer and admin sections "Ask this case" (what it reads, what it cannot do, why some answers are the fixed text).

@@ -144,6 +144,45 @@ The two most powerful accounts (the admin, who manages users and policy, and the
 - **Audit rows:** `two_step_asked` (password right, code next), `two_step_failed`, `two_step_enabled`, `two_step_recovery_used` (with the number left), `two_step_reset` (by whom and why; `by: command line` from the CLI), and `login` with `two_step: app | recovery | setup`. No code, key or recovery code is ever written to the audit log, a log line or an email.
 - **Limits:** someone with the password can set up 2-step on an account that has none yet (a new admin, or right after a reset) before its owner does; resets are deliberate, audited and emailed for that reason. The 5-minute token can be tried again with new codes until it expires or the account locks. The reset email goes to officers and admins only (the auditor gets no staff email).
 
+## 4i. "Ask this case" chat (Stage 12 Part E, planned 2026-11-25)
+
+A model answers questions about one case. The aim is that it can leak nothing, follow no instruction hidden in a document or a question, answer from nothing but this case and its policy, and change nothing.
+
+- **Access:** the officer who owns the case and the admin only (`case_reader`; another officer's case is a 404, as for every case route). The auditor gets 403 (decision 9: never a case). No session gets 401. Each person reads only their own questions and answers on a case; another person's turn id is a 404.
+- **Masking:**
+  - The question is masked with the same masker as every other model input (PAN, Aadhaar, phone, account number, email; the applicant names on the case are tokenised). `assert_masked` still guards the model call.
+  - The question is **stored masked**, so the database never holds what the officer typed raw.
+  - The material is the report's facts and findings (masked as for the Decision writer and the judge) and the masked extracted fields. Raw page text and document images are never used.
+  - An answer that holds a raw identifier pattern fails the check and is never stored or shown.
+- **Data, not instructions:**
+  - The question, the fields and the clauses go to the model inside data tags. The locked part of the prompt (from git) says they are data.
+  - A question that matches the injection patterns of `intake/injection.py` gets the fixed answer with no model call and an audit row.
+  - The poisoned-document test (`poisoned_1.pdf`) must change nothing.
+- **Grounding:** every sentence must cite a given rule, clause or document field, and every number must come from the material. A failure is retried once, then replaced by the fixed text "I can't answer that from this case's documents and policy." Clauses come only from the policy versions recorded on the report.
+- **Read-only:** the chat routes write only their own rows, `llm_calls` and the audit log. No chat route can confirm, override, rescore, edit a form or send a message.
+- **Quota and off switch:** `CHAT_MAX_PER_HOUR` per person (429 with plain text). With `LLM_ENABLED=false` or the AI control switch off, nothing is called.
+- **Logs and traces:** no question or answer text in log lines, metrics or Langfuse (stage, model, tokens, cost and latency only). `llm_calls` has `stage = chat`.
+- **Audit:** `case_chat_asked` with the outcome (answered, fixed text, refused, what-if, off, limited), the report version and citation counts. **Never the question or answer text.**
+- **Retention:** turns are deleted after `CHAT_RETENTION_DAYS` (90) by the daily retention job. That is well inside the six-month bureau limit, which matters because an answer may quote the credit score (section 7).
+
+## 4j. Counter-offer, Insights, export and decision timers (Stage 12 Parts A to C, planned 2026-11-25)
+
+- **Counter-offer box (Part A):**
+  - It is worked out in code and stored with the report, and shown to the officer and the admin only (the report routes; the auditor still has none).
+  - It is never put in a prompt, the model-written summary or a customer message. The existing message check (section 4b) already blocks its text on three counts (the ₹ amount, "FOIR", "recommended"/"refer"), and a test keeps it so.
+  - The applicant's upload page never shows it.
+- **Insights (Part B):**
+  - **Admin:** everything, with case references and links.
+  - **Auditor:** the same counts and charts with **no case id, case reference or link** (decision 9). Rule IDs and counts are policy-level, not case data, and the auditor already sees "rules most often failed". A test walks the auditor's JSON for anything shaped like a case id or reference.
+  - **Officer:** only their own numbers (`/me/insights`); a test seeds two officers and checks that neither sees the other's cases in their counts.
+  - All counting is SQL, with no model.
+- **Queue export (Part C):**
+  - Officers export only their own cases; another officer's never appear. The admin exports all.
+  - **No applicant name**, PAN, Aadhaar, phone, email, address or amount column; the case reference is enough. A search typed by the officer may match a name, but the name is never written to the file.
+  - Cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return are written as text (existing `_cell`). `Cache-Control: private, no-store`.
+  - Every download writes an audit row `cases_exported` (filters and row count, no rows). The auditor's own CSVs are unchanged.
+- **Overdue reminders (Part C):** fixed text from `inbox.KINDS` (no digit, no name, no outcome word, checked by `check_notification_text`), the case reference and a link only. The officer kind goes to the case owner, the admin kind to every active admin, never to the auditor. Staff emails follow the per-person switch and carry no case data.
+
 ## 5. Secrets and logging
 
 - **E. API keys and secrets in `.env`, never in git.** `.env.example` has placeholders only. Pre-commit secret scanning.
@@ -176,6 +215,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
   - **Bureau data:** six months after a case was made (v1 has no consent renewal), it removes the stored values of the bureau rules (credit score, days past due, enquiries) from `rule_results` and from the report findings. The pass or fail, the points and the written finding stay, because they are the record of the decision.
   - **Run checkpoints:** once the officer has decided, it deletes the run's LangGraph checkpoints, which hold the whole bureau record, and stamps the case.
   - **Staff email:** it deletes rows that are no longer queued after `EMAIL_RETENTION_DAYS` (90).
+  - **Chat turns (Stage 12 Part E, planned):** it deletes `case_chat_messages` rows older than `CHAT_RETENTION_DAYS` (90), well inside the six-month bureau limit, because an answer may quote the credit score.
   - **Record:** one `retention_run` audit row with counts only.
 - Rejection reasons are always produced in writing (RBI expectation).
 - Key Fact Statement and fair-practice wording cited by the Policy agent.
@@ -214,6 +254,10 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | A notification leaks personal data or an outcome, or reaches the auditor (2026-11-19) | Text only from a code table, content check as a safety net, a role guard in the insert, own rows only (404 on others), 403 for the auditor, tests over every template and every row |
 | A stolen admin or auditor password (2026-11-24) | 2-step verification: a code from the person's own phone after the password, each code once, shared lockout, recovery codes hashed, resets need a reason, a second click, another admin and an email to the person (section 4h) |
 | A key leaks through the AI control page (2026-11-18) | Keys stay in `.env`; the page shows set or missing only; the model test returns the error class only; no key in any response, audit row or log (tested) |
+| The case chat leaks personal data, answers from outside the case, or obeys an instruction in a question or document (Stage 12, planned) | Masked question and material; data tags and the locked prompt part; injection scan with a fixed answer; every sentence cited and checked in code (clauses, rules, fields, numbers, wording, raw identifiers); one retry then fixed text; read-only routes; owner and admin only; per-person limit; no text in logs, traces or the audit log (section 4i) |
+| An export leaks applicant names or carries a spreadsheet formula (Stage 12, planned) | No name or identifier columns; officer sees own cases only; formula-like cells written as text; audit row per download (section 4j) |
+| Insights let the auditor reach a case, or one officer see another's numbers (Stage 12, planned) | Auditor answer has no case id, reference or link (tested by walking the JSON); officer route counts own cases only (tested with two officers) |
+| A counter-offer reaches the customer as an outcome hint (Stage 12, planned) | Shown to officer and admin only; not in prompts or the summary; the existing message check blocks its ₹ amount, FOIR and outcome words (tested) |
 
 ## 11. Review checklist (before each release)
 
@@ -224,4 +268,5 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 - [x] Audit log covers all actions (`test_audit_coverage.py`)
 - [x] Secrets not in git history (scanned 2026-11-21)
 - [x] Retention job runs (Stage 11: `app/db/retention.py`, daily in the app)
-- [ ] Customer message check blocks every forbidden pattern (Stage 9)
+- [ ] Customer message check blocks every forbidden pattern (Stage 9), including every counter-offer line (Stage 12)
+- [ ] Chat leak, injection, grounding and access tests pass (Stage 12)
