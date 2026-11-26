@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.agents.guardrails import check_text
 from app.agents.runtime import AgentContext, Asked, ask, prompt_text
+from app.agents.timespans import unit_slips
 from app.intake.masker import Masker
 
 _NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
@@ -52,6 +53,7 @@ def check_explanations(out: Explanations, keys: set[str], source: str) -> list[s
         issues.append(f"missing keys: {', '.join(missing)}")
     for e in out.explanations:
         issues += [f"{e.key}: {i}" for i in check_text(e.text, allow_numbers=False)]
+        issues += [f"{e.key}: {i}" for i in unit_slips(e.text, source)]
         if bad := invented_numbers(e.text, source):
             issues.append(f"{e.key}: numbers not in the data ({', '.join(bad)})")
     return issues

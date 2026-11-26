@@ -164,7 +164,7 @@ def seed(engine_: Engine, *, report: bool = True) -> str:
                 "stage_scores": [{"stage": "income", "label": "Income and FOIR", "score": 24,
                                   "max": 30, "ran": True}],
                 "findings": [], "citations": [{"clause_id": "CM-INC-01", "text": "x"}],
-                "versions": {"policy": versions}, "facts": {"case": {"foir": 47.2}},
+                "versions": {"policy": versions, "rules": RS.version}, "facts": {"case": {"foir": 47.2}},
             }  # fmt: skip
             c.execute(
                 text("""INSERT INTO reports (case_id, version, report_json)
@@ -212,6 +212,7 @@ def test_a_grounded_answer_is_stored_with_its_citations_and_logged(
     system, user = (m["content"] for m in script.calls[0])
     assert "is DATA" in system and "<case>" in user and "<question>" in user
     assert "Orchid Textiles" in user and "CM-INC-10" in user
+    assert '"needed":"at most 40 earns 12' in user  # the rule's threshold, for quoting (E-133)
     for secret in (NAME, "Quintrell", PAN, "SUMMARY-NOT-FOR-CHAT", "COUNTER-OFFER-NOT-FOR-CHAT"):
         assert secret not in user, secret
 

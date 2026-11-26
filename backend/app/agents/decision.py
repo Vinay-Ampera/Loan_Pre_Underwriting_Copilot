@@ -32,6 +32,7 @@ from app.agents.results import checks_for
 from app.agents.risk import RiskResult
 from app.agents.runtime import AgentContext, Asked, ask, prompt_text
 from app.agents.state import Flag
+from app.agents.timespans import unit_slips
 from app.intake.masker import Masker
 from app.rag import versions
 from app.rag.retrieve import PolicyRetriever
@@ -138,6 +139,7 @@ def check_narrative(
     )  # may state the code's score; invented numbers are caught below
     if "recommend" not in out.summary.lower():
         issues.append("the summary must use the word 'recommended'")
+    issues += unit_slips(out.summary, source)
     if bad := invented_numbers(out.summary, source):
         issues.append(f"summary has numbers not in the data ({', '.join(bad)})")
     issues += check_cites(out.summary, known_ids, ID_PATTERN)
@@ -150,6 +152,7 @@ def check_narrative(
             issues += check_cites(reason, known_ids, ID_PATTERN)
             if not set(ID_PATTERN.findall(reason)) & known_ids:
                 issues.append("the rejection_reason must cite a rule id and a clause id")
+            issues += unit_slips(reason, source)
             if bad := invented_numbers(reason, source):
                 issues.append(f"reason has numbers not in the data ({', '.join(bad)})")
     return issues

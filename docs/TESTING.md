@@ -326,7 +326,7 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
 
   Token pairs for the chart colours are added to `tokens.test.js` (AA in light and dark).
 
-**Part E, "Ask this case"** (built 2026-11-26: `backend/tests/test_chat.py`, test database, scripted fake model; the poisoned case needs the generated data):
+**Part E, "Ask this case"** (time figures and units: `backend/tests/test_timespans.py`, E-133. Built 2026-11-26: `backend/tests/test_chat.py`, test database, scripted fake model; the poisoned case needs the generated data):
 - **Grounded answer:** stored with its citations and outcome `answered`, an `llm_calls` row with stage `chat`, and an audit row without text.
 - **Grounding failures**, each retried once and then answered with the fixed text: a clause not given, a rule not the case's, an unknown field, a number not in the material, a sentence with no citation, "approved" wording, a raw identifier, a person's name. `answerable: false` gives the fixed text at once, with no retry (`AGENTS.md` 8).
 - **PII guard:**

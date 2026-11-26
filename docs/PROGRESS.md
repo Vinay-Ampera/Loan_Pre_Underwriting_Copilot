@@ -680,3 +680,11 @@ Read-only: scoring, statuses and decisions are untouched.
 - **Floors:** only `chat.citation_validity` 1.0 is set; floors for the other measures stay open (OI-7).
 - **Docker:** `docker compose up -d --build` built the image and started the stack; the app container is healthy and `/api/health` answers.
 
+## Time figures keep their unit (2026-11-26)
+
+Asked by the user after the refused question a09. Scoring was checked first and is consistent: every time-based rule matches its clause (24 months and "two years", 12 months and "one year", 360 months and "30 years"), education repayment is converted from months to years, ages are in years.
+
+- **Found:** the number check ignored units, so "The business vintage is 20 years" passed for 20 months, and "at least 24 months" was refused.
+- **Fixed (E-133):** `agents/timespans.py`; chat sentences must match the time figures of what they cite; report summary and explanations are refused for a wrong unit; the chat is given rule thresholds.
+- **Checks:** 196 chat, agent, pipeline, AI control and scoring tests pass, `ruff` and `mypy` clean, golden set (no model) 0 problems, evaluation gate unchanged. **Not rerun with real models.**
+- **Open, not asked for:** the month boxes on the form accept years typed by mistake (5 is read as five months); report text does not catch a figure borrowed from another rule; the policy findings' grounding check was not changed.

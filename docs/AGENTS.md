@@ -135,7 +135,7 @@ Observed limits: Groq gpt-oss-20b 1,000 requests/day and **8,000 tokens/minute**
 
 ## 8. Case assistant: "Ask this case" (Stage 12 Part E, built 2026-11-26)
 
-As built: the code-derived facts are kept on the report (`report_json.facts`, written after the summary; reports made before have only the rule evidence). A sentence is also refused when it holds a person's name or promises an outcome ("eligible for", "should approve").
+Time figures keep their unit (E-133): a chat sentence's "N months" or "N years" must match what it cites, months and years compared in code; report text is refused for a wrong unit. As built: the code-derived facts are kept on the report (`report_json.facts`, written after the summary; reports made before have only the rule evidence). A sentence is also refused when it holds a person's name or promises an outcome ("eligible for", "should approve").
 
 Not a pipeline agent: it runs only when a person asks a question about a case that already has a report, and it never changes the case.
 

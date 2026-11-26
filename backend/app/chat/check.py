@@ -12,6 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.agents.explain import invented_numbers
 from app.agents.guardrails import ID_PATTERN, check_text
+from app.agents.timespans import known as time_figures
+from app.agents.timespans import said, without
 from app.chat.context import Material
 from app.intake.masker import find_leaks
 
@@ -66,6 +68,14 @@ def check_answer(answer: ChatAnswer, material: Material) -> list[str]:
         if unknown := sorted(set(ID_PATTERN.findall(s.text)) - mentioned):
             issues.append(f"sentence {i}: names {', '.join(unknown)}, which was not given")
         plain = _TOKEN.sub(" ", ID_PATTERN.sub(" ", s.text))
+        # a time figure must be one of what this sentence cites, with months and years compared
+        # as months; one that matches is verified, so it is not also checked as a bare number
+        cited = material.cited_text(s.text, [(c.kind, c.id) for c in s.citations])
+        allowed = {f.months for f in time_figures(cited)}
+        spans = said(plain)
+        if off := [t.text for t in spans if t.months not in allowed]:
+            issues.append(f"sentence {i}: time figures not in what it cites ({', '.join(off)})")
+        plain = without(plain, spans)
         if bad := invented_numbers(plain, source):
             issues.append(f"sentence {i}: numbers not in the data ({', '.join(bad)})")
         issues += [f"sentence {i}: {p}" for p in check_text(s.text)]

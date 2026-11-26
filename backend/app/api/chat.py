@@ -154,6 +154,7 @@ async def ask_case(
             return load_material(
                 conn, state.retriever_factory(conn), case_id=case_id, loan_type=case.loan_type,
                 form=case.form_data or {}, report=report.report_json, question=question,
+                ruleset=state.ruleset,
             )  # fmt: skip
 
     material = await asyncio.to_thread(material_now)

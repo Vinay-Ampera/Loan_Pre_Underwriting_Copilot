@@ -24,6 +24,7 @@ from app.intake.masker import Masker
 from app.rag.retrieve import PolicyRetriever
 from app.rag.schemas import RetrievedClause
 from app.scoring.models import RuleOutcome
+from app.scoring.rules import Rule, RuleSet
 
 # values that identify a person or an account: never sent, whatever their shape
 HIDDEN_FIELDS = frozenset(
@@ -31,6 +32,8 @@ HIDDEN_FIELDS = frozenset(
 )
 SEARCH_CLAUSES = 5  # reranked clauses added for the question, beside the report's cited ones
 MAX_VALUE = 200
+_ABOUT_TERM = re.compile(r"\b(loan|tenure|term|repay\w*|emi|instalments?)\b", re.I)
+_ABOUT_AGE = re.compile(r"\b(age|aged|maturity)\b", re.I)
 _TOKEN = re.compile(r"<[A-Z_]+(?:_\d+)?>")
 # A typed question is free text, and the shared masker does not join a number written in groups
 # (in a document that would swallow figures that sit side by side). Here any run of 9 to 18
@@ -95,6 +98,33 @@ class Material:
     def field_labels(self) -> dict[str, str]:
         return {f["id"]: f["label"] for f in self.fields}
 
+    def cited_text(self, sentence: str, citations: Iterable[tuple[str, str]]) -> str:
+        """What a sentence's citations say, for checking its time figures: each cited rule with
+        its clause, each cited clause with its rules and each cited field. The loan's own term
+        counts only in a sentence about the loan, and the ages only in one about age: otherwise
+        a 36-month tenure would let "a business three years old" through."""
+        cited = set(citations)
+        rule_ids = {i for k, i in cited if k == "rule"}
+        clause_ids = {i for k, i in cited if k == "clause"}
+        clause_ids |= {r["clause_id"] for r in self.rules if r["rule_id"] in rule_ids}
+        rule_ids |= {r["rule_id"] for r in self.rules
+                     if ("clause", r["clause_id"]) in cited}  # fmt: skip
+        field_ids = {i for k, i in cited if k == "field"}
+        parts = [f"{r['result']} | {r.get('needed') or ''}"
+                 for r in self.rules if r["rule_id"] in rule_ids]  # fmt: skip
+        parts += [c["text"] for c in self.clauses if c["clause_id"] in clause_ids]
+        parts += [f"{f['id']}: {f['value']}" for f in self.fields if f["id"] in field_ids]
+        facts = self.result.get("facts") or {}
+        case = facts.get("case") or {}
+        if _ABOUT_TERM.search(sentence):
+            terms = {k: case[k] for k in ("tenure_months", "repayment_years") if k in case}
+            parts.append(json.dumps(terms))
+        if _ABOUT_AGE.search(sentence):
+            ages = [{k: v for k, v in p.items() if k.startswith("age")}
+                    for p in facts.get("persons") or []]  # fmt: skip
+            parts.append(json.dumps(ages))
+        return "\n".join(parts)
+
     def block(self) -> str:
         """The data given to the model, as one JSON document, already masked."""
         data = {
@@ -145,8 +175,43 @@ def field_entries(rows: Sequence[FieldRow]) -> list[dict[str, str]]:
     return out
 
 
-def rule_entry(r: RuleOutcome) -> dict[str, Any]:
-    return {
+_NEEDS = {
+    "gte": "at least",
+    "lte": "at most",
+    "gt": "more than",
+    "lt": "less than",
+    "eq": "equal to",
+}
+
+
+def needed_text(rule: Rule) -> str | None:
+    """The rule's own threshold in words with its unit ("at least 24 months"), so the model can
+    quote it. Only numeric thresholds; commas keep a large amount from reading as an account."""
+    if "months" in rule.field:
+        unit = " months"
+    elif "years" in rule.field or rule.field.startswith("age_at"):
+        unit = " years"
+    else:
+        unit = ""
+
+    def one(op: str | None, threshold: Any) -> str | None:
+        if (
+            op not in _NEEDS
+            or isinstance(threshold, bool)
+            or not isinstance(threshold, int | float)
+        ):
+            return None
+        whole = threshold == int(threshold)
+        return f"{_NEEDS[op]} {f'{int(threshold):,}' if whole else threshold}{unit}"
+
+    if rule.tiers:
+        steps = [(one(t.operator, t.threshold), t.points) for t in rule.tiers]
+        return "; ".join(f"{words} earns {points:g}" for words, points in steps if words) or None
+    return one(rule.operator, rule.threshold)
+
+
+def rule_entry(r: RuleOutcome, rule: Rule | None = None) -> dict[str, Any]:
+    entry = {
         "rule_id": r.rule_id,
         "stage": STAGE_LABEL.get(r.stage, r.stage),
         "passed": r.passed,
@@ -155,6 +220,9 @@ def rule_entry(r: RuleOutcome) -> dict[str, Any]:
         "clause_id": r.clause_id,
         "person": r.role,
     }
+    if rule is not None and (needed := needed_text(rule)):
+        entry["needed"] = needed
+    return entry
 
 
 def result_entry(report: dict[str, Any]) -> dict[str, Any]:
@@ -179,12 +247,16 @@ def result_entry(report: dict[str, Any]) -> dict[str, Any]:
 def build_material(
     report: dict[str, Any], rules: Sequence[RuleOutcome], fields: Sequence[FieldRow],
     clauses: Sequence[RetrievedClause], *, names: Sequence[str], addresses: Sequence[str] = (),
+    ruleset: RuleSet | None = None,
 ) -> Material:  # fmt: skip
     # names read from documents may be spelled differently from the form: hide those too
     seen_names = [f.value for f in fields if f.name in NAME_FIELDS]
+    # thresholds only from the rules version the run used: a later file may say otherwise
+    same = ruleset is not None and (report.get("versions") or {}).get("rules") == ruleset.version
+    by_id = {r.rule_id: r for r in ruleset.rules} if ruleset is not None and same else {}
     return Material(
         result=result_entry(report),
-        rules=[rule_entry(r) for r in rules],
+        rules=[rule_entry(r, by_id.get(r.rule_id)) for r in rules],
         fields=field_entries(fields),
         clauses=[{"clause_id": c.clause_id, "title": c.title, "text": c.text} for c in clauses],
         names=Names(dict.fromkeys([*names, *seen_names])),
@@ -270,7 +342,7 @@ def clauses_for(
 
 def load_material(
     conn: Connection, retriever: PolicyRetriever, *, case_id: UUID, loan_type: str,
-    form: dict[str, Any], report: dict[str, Any], question: str,
+    form: dict[str, Any], report: dict[str, Any], question: str, ruleset: RuleSet | None = None,
 ) -> Material:  # fmt: skip
     retriever.docs = run_versions(conn, report)
     rules = _rules(conn, case_id)
@@ -278,5 +350,5 @@ def load_material(
     return build_material(
         report, rules, _fields(conn, case_id),
         clauses_for(retriever, report, rules, loan_type, question),
-        names=names, addresses=addresses,
+        names=names, addresses=addresses, ruleset=ruleset,
     )  # fmt: skip

@@ -77,6 +77,7 @@ def case_material(inp: CaseInput, rs: RuleSet, app: dict[str, Any], question: st
         "precedent_bonus": 0,
         "facts": code_facts(score),
         "findings": [f.model_dump() for f in findings],
+        "versions": {"rules": score.rules_version},
     }
     fields = [
         FieldRow(d.role, d.doc_type, name, str(value))
@@ -88,6 +89,7 @@ def case_material(inp: CaseInput, rs: RuleSet, app: dict[str, Any], question: st
     return build_material(
         report, score.results, fields, policy_clauses(inp.loan_type, cited, question),
         names=[a["full_name"] for a in people], addresses=[a["address"] for a in people],
+        ruleset=rs,
     )  # fmt: skip
 
 
