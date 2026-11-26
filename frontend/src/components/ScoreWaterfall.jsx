@@ -98,13 +98,9 @@ export default function ScoreWaterfall({ data }) {
           <h3 id="waterfall-h">How the score was reached</h3>
           <p className="muted">Starts at {data.start}. Each step is the points lost in a stage.</p>
         </div>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          aria-pressed={asTable}
-          onClick={() => setAsTable((v) => !v)}
-        >
-          Show as a table
+        {/* the label names the other view */}
+        <button type="button" className="btn btn-ghost" onClick={() => setAsTable((v) => !v)}>
+          {asTable ? 'Show as a graph' : 'Show as a table'}
         </button>
       </div>
 
