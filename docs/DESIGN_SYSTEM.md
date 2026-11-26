@@ -438,7 +438,7 @@ Built with the existing tokens and components only (no new colour unless named b
 
 - **As built:** the stage names are the report's own ("Credit and behaviour"), broken onto two lines under the bar; the band-line labels wrap in a right margin. The chart is drawn 600 units wide and never narrower than 540 px, so it fits the case pane at 1024; on a phone the card scrolls sideways and the page does not. The cap tag shows only when the final band is refer, and the sentence under the chart only when the score also reaches the approve line.
 
-### 17.5 "Ask this case" panel (Part E)
+### 17.5 "Ask this case" panel (Part E, built 2026-11-26)
 
 - **Where:** a case tab "Ask" (label "Ask this case", icon `chat`) after Report, for the case's officer and the admin. In the fitted case layout it is a pane that scrolls on its own, with the input pinned to the bottom. Before a report exists the tab reads "Chat opens when the report is ready."
 - **Top line (muted):** "Answers come only from this case's report, its documents (personal numbers hidden) and the policy in force for this case. Chat cannot change the score or decide anything."
@@ -456,3 +456,4 @@ Built with the existing tokens and components only (no new colour unless named b
   - Masked note, when the question held a personal number: "Personal numbers in your question were hidden before it was sent."
 - **Never:** "approved", a new score, or advice to the customer.
 - **Help:** officer and admin sections "Ask this case" (what it reads, what it cannot do, why some answers are the fixed text).
+- **As built:** the tab carries the `chat` icon beside its label. A rule chip is a plain tag; a clause chip is a button that opens the clause's title and text under the answer (the clause is stored with the turn, so it reads the same later). The question box is two rows, so the conversation keeps the height. A question is shown as it is stored, with tokens such as `<ACCT_0>` where a number was hidden.

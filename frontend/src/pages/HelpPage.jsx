@@ -56,6 +56,7 @@ const OFFICER = [
   ['report', 'Reading the report', 'precedent'],
   ['confirm', 'Confirm or override', 'shield'],
   ['timer', 'Decision timer and export', 'clock'],
+  ['ask', 'Ask this case', 'chat'],
   ['contact', 'Contact the customer', 'mail'],
   ['inbox', 'Your inbox', 'bell'],
   ['problem', 'Report a problem', 'flag'],
@@ -71,6 +72,7 @@ const ADMIN = [
   ['adm-case', 'Open and correct a case', 'cases'],
   ['adm-reassign', 'Reassign a case', 'users'],
   ['adm-timer', 'Decision timer and export', 'clock'],
+  ['adm-ask', 'Ask this case', 'chat'],
   ['adm-records', "Messages and a case's history", 'mail'],
   ['adm-inbox', 'Your inbox', 'bell'],
   ['issues', 'Read issue reports', 'flag'],
@@ -356,6 +358,31 @@ function OfficerGuide() {
         </ul>
       </HelpSection>
 
+      <HelpSection id="ask" icon="chat" title="Ask this case">
+        <ul>
+          <li>
+            On a case with a report, open <strong>Ask this case</strong> and type a question.
+          </li>
+          <li>
+            It reads only this case: the report, its documents with personal numbers hidden, and the
+            policy that was in force when the case was checked.
+          </li>
+          <li>
+            Every sentence shows the rule, clause or document field it rests on. Open a clause from
+            its tag and check it before you rely on the answer.
+          </li>
+          <li>
+            You get <em>I can&apos;t answer that</em> when the case does not hold the answer, or
+            when a check on the answer failed. For another amount or tenure, see{' '}
+            <em>Other amounts or tenures</em> on the report.
+          </li>
+          <li>
+            Chat cannot change a score, a status or your decision. You can ask 20 questions in an
+            hour, and your questions are deleted after 90 days.
+          </li>
+        </ul>
+      </HelpSection>
+
       <HelpSection id="contact" icon="mail" title="Contact the customer">
         <ul>
           <li>
@@ -580,6 +607,15 @@ function AdminGuide() {
             Neither holds applicant names. Each download is recorded in the audit log.
           </li>
         </ul>
+      </HelpSection>
+
+      <HelpSection id="adm-ask" icon="chat" title="Ask this case">
+        <p>
+          You can ask questions on any case with a report. The answers come only from that case and
+          its policy, and cite what they rest on. You see your own questions, not the
+          officer&apos;s. The audit trail records that a question was asked, never its words. Choose
+          the model, or switch all models off, in AI control.
+        </p>
       </HelpSection>
 
       <HelpSection id="adm-records" icon="mail" title="Messages and a case's history">

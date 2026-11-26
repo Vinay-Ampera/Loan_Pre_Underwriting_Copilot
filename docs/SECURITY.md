@@ -144,13 +144,13 @@ The two most powerful accounts (the admin, who manages users and policy, and the
 - **Audit rows:** `two_step_asked` (password right, code next), `two_step_failed`, `two_step_enabled`, `two_step_recovery_used` (with the number left), `two_step_reset` (by whom and why; `by: command line` from the CLI), and `login` with `two_step: app | recovery | setup`. No code, key or recovery code is ever written to the audit log, a log line or an email.
 - **Limits:** someone with the password can set up 2-step on an account that has none yet (a new admin, or right after a reset) before its owner does; resets are deliberate, audited and emailed for that reason. The 5-minute token can be tried again with new codes until it expires or the account locks. The reset email goes to officers and admins only (the auditor gets no staff email).
 
-## 4i. "Ask this case" chat (Stage 12 Part E, planned 2026-11-25)
+## 4i. "Ask this case" chat (Stage 12 Part E, built 2026-11-26)
 
 A model answers questions about one case. The aim is that it can leak nothing, follow no instruction hidden in a document or a question, answer from nothing but this case and its policy, and change nothing.
 
 - **Access:** the officer who owns the case and the admin only (`case_reader`; another officer's case is a 404, as for every case route). The auditor gets 403 (decision 9: never a case). No session gets 401. Each person reads only their own questions and answers on a case; another person's turn id is a 404.
 - **Masking:**
-  - The question is masked with the same masker as every other model input (PAN, Aadhaar, phone, account number, email; the applicant names on the case are tokenised). `assert_masked` still guards the model call.
+  - The question is masked with the same masker as every other model input (PAN, Aadhaar, phone, account number, email; the applicant names on the case, whole or in parts, are tokenised), plus a second pass that hides any run of 9 to 18 digits, together or spaced (E-130). `assert_masked` still guards the model call. In the material, document fields that hold a person's name, an address, a date of birth or an identity number are replaced by field name before the pattern pass.
   - The question is **stored masked**, so the database never holds what the officer typed raw.
   - The material is the report's facts and findings (masked as for the Decision writer and the judge) and the masked extracted fields. Raw page text and document images are never used.
   - An answer that holds a raw identifier pattern fails the check and is never stored or shown.
@@ -216,7 +216,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
   - **Bureau data:** six months after a case was made (v1 has no consent renewal), it removes the stored values of the bureau rules (credit score, days past due, enquiries) from `rule_results` and from the report findings. The pass or fail, the points and the written finding stay, because they are the record of the decision.
   - **Run checkpoints:** once the officer has decided, it deletes the run's LangGraph checkpoints, which hold the whole bureau record, and stamps the case.
   - **Staff email:** it deletes rows that are no longer queued after `EMAIL_RETENTION_DAYS` (90).
-  - **Chat turns (Stage 12 Part E, planned):** it deletes `case_chat_messages` rows older than `CHAT_RETENTION_DAYS` (90), well inside the six-month bureau limit, because an answer may quote the credit score.
+  - **Chat turns (Stage 12 Part E):** it deletes `case_chat_messages` rows older than `CHAT_RETENTION_DAYS` (90), well inside the six-month bureau limit, because an answer may quote the credit score.
   - **Record:** one `retention_run` audit row with counts only.
 - Rejection reasons are always produced in writing (RBI expectation).
 - Key Fact Statement and fair-practice wording cited by the Policy agent.

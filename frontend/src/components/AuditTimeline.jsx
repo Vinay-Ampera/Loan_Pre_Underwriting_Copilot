@@ -16,6 +16,7 @@ const LABEL = {
   admin_override: 'Decision changed by an admin',
   case_reassigned: 'Case reassigned to another officer',
   report_exported: 'Report exported to PDF',
+  case_chat_asked: 'Question asked about the case',
 }
 
 export default function AuditTimeline({ events }) {

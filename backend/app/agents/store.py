@@ -151,9 +151,9 @@ def stage_run_ids(conn: Connection, case_id: UUID) -> dict[str, UUID]:
     return {r[0]: r[1] for r in rows}
 
 
-# Calls made after the run (the precedent summary at an override) belong to the case, not to
+# Calls made after the run (the precedent summary at an override, the case chat) belong to the case, not to
 # the run, so a run that writes its logs again leaves them in place.
-AFTER_RUN_STAGES = ("precedent",)
+AFTER_RUN_STAGES = ("precedent", "chat")
 
 
 def add_calls(conn: Connection, case_id: UUID, calls: list[LLMCallRecord]) -> None:

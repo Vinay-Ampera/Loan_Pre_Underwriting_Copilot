@@ -19,6 +19,7 @@ from app.agents.report import (
     ReportFinding,
     cap_rules,
     citations_for,
+    code_facts,
     code_rejection_reason,
     code_summary,
     findings_from,
@@ -225,6 +226,7 @@ async def run_decision(
         bonus=score.precedent_bonus, cap_rule_ids=cap_rules((f.severity, f.rule_id) for f in findings),
         bands=ctx.ruleset.scoring.bands,
     )  # fmt: skip
+    report.facts = code_facts(score)
     meta = {"needs_judge": asked.output is not None and needs_judge(
         summary, [r.label for r in report.stage_scores]), "known_ids": sorted(known), "version": version,
         "evidence": masker.mask(source)}  # fmt: skip

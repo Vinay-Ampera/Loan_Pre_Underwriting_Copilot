@@ -6,7 +6,7 @@ What is editable and what is not
     `llm_models.yaml` (a fixed catalogue); the router's retries, timeout and cooldown.
   - Settings: the model switch (off = code writes the report text), temperature and an output
     token limit per role.
-  - Prompts: the **editable part** of each of the six prompts (its role and style). The **locked
+  - Prompts: the **editable part** of each of the seven prompts (its role and style). The **locked
     part** (data is not instructions, no arithmetic, "recommended" wording, no protected
     attributes, the reply format) always comes from the file in git and is appended after the
     editable part. A prompt can never be published without its locked part.
@@ -39,8 +39,8 @@ log = logging.getLogger("loan_copilot.ai_config")
 PROMPTS_DIR = Path(__file__).resolve().parents[2] / "prompts"
 CONFIG_PATH = Path(__file__).with_name("llm_models.yaml")
 MARKER = "<!-- locked -->"
-PROMPT_NAMES = ("supervisor", "extraction", "kyc", "risk", "policy", "decision")
-ROLES = ("supervisor", "extraction", "decision", "kyc", "risk", "policy", "judge")
+PROMPT_NAMES = ("supervisor", "extraction", "kyc", "risk", "policy", "decision", "case_assistant")
+ROLES = ("supervisor", "extraction", "decision", "kyc", "risk", "policy", "judge", "case_assistant")
 MAX_PROMPT_CHARS = 4000
 MAX_FALLBACKS = 3
 LIMITS = {
@@ -58,6 +58,7 @@ ROLE_LABELS = {
     "risk": "Risk: explains income, credit and behaviour",
     "policy": "Policy: cites policy clauses",
     "judge": "Judge: a second model that grades the report text",
+    "case_assistant": "Case assistant: answers questions about one case",
 }
 
 
@@ -110,6 +111,15 @@ def default_config() -> dict[str, Any]:
         "router": dict(y["router"]),
         "llm_enabled": True,
     }  # fmt: skip
+
+
+def with_new_roles(cfg: Any) -> Any:
+    """A configuration saved before a role existed keeps its choices; the new role starts on the
+    file default. Without this the whole saved row would be judged damaged and ignored."""
+    if not isinstance(cfg, dict) or not isinstance(cfg.get("roles"), dict):
+        return cfg
+    missing = {r: s for r, s in default_config()["roles"].items() if r not in cfg["roles"]}
+    return {**cfg, "roles": {**cfg["roles"], **missing}} if missing else cfg
 
 
 def key_status(settings: Settings) -> dict[str, bool]:
@@ -315,7 +325,7 @@ def load(conn: Connection, settings: Settings | None = None) -> Snapshot:
     cfg = default_config()
     version = 0
     if row is not None:
-        saved = row.config
+        saved = with_new_roles(row.config)
         if not validate_config(saved, require_keys=False):  # a damaged row is ignored, never used
             cfg, version = saved, int(row.version)
     prompts: dict[str, tuple[str, int]] = {}
@@ -417,6 +427,7 @@ def validate_prompt_body(name: str, body: Any) -> list[str]:
     tags = {
         "supervisor": ("case",), "kyc": ("checks",), "risk": ("items",), "decision": ("report",),
         "policy": ("clauses", "results"), "extraction": ("document",),
+        "case_assistant": ("case", "question"),
     }[name]  # fmt: skip
     for t in tags:
         if f"<{t}>" in body or f"</{t}>" in body:

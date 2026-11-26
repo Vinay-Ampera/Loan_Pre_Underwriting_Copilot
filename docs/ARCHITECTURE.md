@@ -128,7 +128,7 @@ officer or admin question (POST /cases/{id}/chat)
 | Supervisor, Extraction, Decision | Gemini Flash | Long context, document understanding, report writing |
 | KYC, Risk | Groq gpt-oss-20b | Fast, cheap reasoning on structured data |
 | Policy | NVIDIA Nemotron | Retrieval-grounded answering |
-| Case assistant chat (Stage 12, planned) | Gemini Flash | Long context, cited answers in plain words; outside the pipeline |
+| Case assistant chat (Stage 12) | Gemini Flash | Long context, cited answers in plain words; outside the pipeline |
 | Any (on 429 or error) | Fallback free model via LiteLLM | Keeps runs alive under free-tier limits |
 | Evaluation judge | A lighter model from a different family than the generator | Avoids self-grading |
 
@@ -182,7 +182,7 @@ All via `.env` and the rules file; nothing secret in git.
 | `RULES_PATH`, `POLICY_PATH` | Rule and policy files |
 | `JWT_SECRET` | Auth signing |
 | `SLA_WORKING_DAYS`, `SLA_TIMEZONE`, `SLA_CHECK_MINUTES` | Decision timer (Stage 12 Part C): 2 working days, Asia/Kolkata, check every 15 minutes |
-| `CHAT_MAX_PER_HOUR`, `CHAT_RETENTION_DAYS` | "Ask this case" (Stage 12 Part E, planned): 20 questions per person per hour, rows kept 90 days |
+| `CHAT_MAX_PER_HOUR`, `CHAT_RETENTION_DAYS` | "Ask this case" (Stage 12 Part E): 20 questions per person per hour, rows kept 90 days |
 
 ## 9. Deployment
 

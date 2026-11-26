@@ -37,6 +37,8 @@ roles:
   kyc:         {primary: groq_gpt_oss_20b,  fallbacks: [nvidia_gpt_oss_20b, openrouter_nemotron_free]}
   risk:        {primary: groq_gpt_oss_20b,  fallbacks: [nvidia_gpt_oss_20b, openrouter_nemotron_free]}
   policy:      {primary: nvidia_nemotron,   fallbacks: [openrouter_nemotron_free, gemini_flash_lite]}
+  # the "Ask this case" chat (Stage 12 Part E), outside the pipeline
+  case_assistant: {primary: gemini_flash,   fallbacks: [openrouter_nemotron_free, gemini_flash_lite]}
   # judge must be a lighter model from a different family than the generator (TESTING.md)
   judge:       {primary: gemini_flash_lite, fallbacks: [nvidia_gpt_oss_20b]}
 

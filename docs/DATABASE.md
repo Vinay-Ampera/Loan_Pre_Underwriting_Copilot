@@ -140,7 +140,7 @@ Migration 0019 also adds `upload_links.expiry_notified_for` (the expiry time a "
 | `users.notice_emails` | The person's choice to get "new notice" emails (default true; new accounts take `STAFF_EMAILS_DEFAULT`). |
 | `outbox.delivery` | How a sent customer message went out: `printed`, `sent` or `redirected`. |
 
-## 4e. Stage 12: post-demo features (planned 2026-11-25; migrations 0026 and 0027 built, 0028 planned)
+## 4e. Stage 12: post-demo features (planned 2026-11-25; migrations 0026 to 0028 built)
 
 Written and tested on the local test database; the user applies them to Neon with `python -m app.db.migrate`. Each one applies, rolls back and applies again (`test_migrations.py`). Grants follow the existing pattern: `app_rw` and `migrator`, and `report_ro` only where stated.
 
@@ -151,7 +151,8 @@ Written and tested on the local test database; the user applies them to Neon wit
 | 0027 | C | `cases.sla_due_at` | The decision due time: `report_ready_at` plus `SLA_WORKING_DAYS` × 24 hours of Monday-to-Friday time in `SLA_TIMEZONE`, worked out in code (`app/workflow/sla.py`). Set with `report_ready_at`, kept on reassignment, never cleared. A case counts as timed only while its status is `awaiting_confirmation`. Cases already waiting are filled by the app's first check, not by the migration (E-129). Partial index on `(sla_due_at)` where the status is `awaiting_confirmation`. |
 | 0027 | C | `cases.sla_officer_notified_for`, `cases.sla_admin_notified_for` | The due time for which the officer's "overdue" notice and the admins' "still waiting" notice were written. Each is claimed by one `UPDATE … WHERE … IS DISTINCT FROM sla_due_at`, so each goes once per due time (E-118). |
 | 0027 | C | `notifications.kind` CHECK | Two more kinds (15 in all): `case_overdue` (officer) and `case_overdue_admin` (every active admin). Kept equal to `inbox.KINDS` by the existing test. |
-| 0028 | E | `case_chat_messages` | One row per question: `id`, `case_id` → cases (cascade), `user_id` → users, `report_version`, `question` (**masked**, at most 500 characters), `answer` jsonb (sentences with citations; null for a fixed answer), `outcome` (`answered`, `fixed_text`, `refused`, `what_if`, `off`, `limited`), `retries`, `model`, `created_at`. Index on `(case_id, user_id, created_at)`. `app_rw` and `migrator`; **not** `report_ro` (the auditor never reads it). Deleted by the retention job after `CHAT_RETENTION_DAYS`. |
+| 0028 | E | `case_chat_messages` | One row per question: `id`, `case_id` → cases (cascade), `user_id` → users, `report_version`, `question` (**masked**, at most 500 characters as typed; the column allows 2000 because tokens can be longer than what they hide), `answer` jsonb (sentences with citations; null for a fixed answer), `outcome` (`answered`, `fixed_text`, `refused`, `what_if`, `off`, `limited`), `retries`, `model`, `created_at`. Index on `(case_id, user_id, created_at)`. `app_rw` and `migrator`; **not** `report_ro` (the auditor never reads it). Deleted by the retention job after `CHAT_RETENTION_DAYS`. |
+| 0028 | E | `ai_prompt_versions`, `ai_prompt_drafts` | Their `name` check gains `case_assistant`. Rolling 0028 back removes that prompt's rows. |
 
 Parts A and D add no migration (their data lives in `report_json`). Insights (Part B) reads existing tables plus the two 0026 columns; it creates no table. The export (Part C) writes only an audit row (`cases_exported`).
 

@@ -86,6 +86,10 @@ class Settings(BaseSettings):
     sla_working_days: int = 2
     sla_timezone: str = "Asia/Kolkata"  # the bank's calendar for working days and "due today"
     sla_check_minutes: int = 15  # 0 = never (tests call the check directly)
+    # "Ask this case" (Stage 12 Part E): a per-person limit that protects the free model tiers,
+    # and how long questions and answers are kept
+    chat_max_per_hour: int = 20
+    chat_retention_days: int = 90
     branch_contact_email: str = ""  # optional extra contact lines in customer messages
     branch_contact_phone: str = ""
 

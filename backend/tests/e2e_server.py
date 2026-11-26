@@ -12,11 +12,14 @@ already have it set up with the fixed keys below, so `frontend/e2e/helpers.js` c
 "E2E Second Admin" has not, so the browser test of the setup screen starts from scratch.
 """
 
+import json
 import signal
 import sys
 import tempfile
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import uvicorn
 from alembic import command
@@ -32,6 +35,7 @@ from app.core.config import Settings, get_settings
 from app.db.migrate import alembic_config
 from app.rag.index import reindex
 from app.rag.retrieve import PolicyRetriever
+from app.services import ai_config
 from tests.rag_helpers import fake_embed_passages, fake_rerank, fake_vector
 
 PASSWORD = "e2e-password-123"  # noqa: S105 - throwaway database only
@@ -40,6 +44,34 @@ TWO_STEP_KEYS = {
     "admin@example.test": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
     "auditor@example.test": "KRSXG5CTMVZGK5DTKRSXG5CTMVZGK5DT",
 }
+
+
+class ChatScript:
+    """A stand-in model for "Ask this case" only (the pipeline still runs with models off). It
+    cites a rule, a clause and a field that were really in the material it was given."""
+
+    primary_models: dict[str, str] = {}
+
+    def models(self) -> Any:  # the AI control switch is honoured, as with the real router
+        return self if ai_config.active().llm_enabled else None
+
+    async def acompletion(self, **kw: Any) -> Any:
+        user = kw["messages"][1]["content"]
+        case = json.loads(user.split("<case>\n", 1)[1].split("\n</case>", 1)[0])
+        rule = case["rules"][0]
+        employer = [f["id"] for f in case["fields"] if f["id"].startswith("payslip.employer")]
+        sentences = [{
+            "text": "The case records a result for this check.",
+            "citations": [{"kind": "rule", "id": rule["rule_id"]},
+                          {"kind": "clause", "id": case["clauses"][0]["clause_id"]}],
+        }]  # fmt: skip
+        if employer:
+            sentences.append({"text": "The payslip names the employer.",
+                              "citations": [{"kind": "field", "id": employer[0]}]})  # fmt: skip
+        reply = json.dumps({"answerable": True, "sentences": sentences})
+        message = SimpleNamespace(content=reply)
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)], model="e2e/chat",
+                               usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1))  # fmt: skip
 
 
 def main() -> None:
@@ -55,6 +87,12 @@ def main() -> None:
         _env_file=None,  # type: ignore[call-arg]
         jwt_secret=SecretStr("e2e-" + uuid.uuid4().hex),
         upload_dir=Path(tempfile.mkdtemp(prefix="lc_e2e_uploads_")),
+        # placeholders so the AI control page can save (the chat spec uses its switch); no provider
+        # is ever called: the pipeline has no router and the chat has the script below
+        gemini_api_key=SecretStr("e2e-not-a-key"),
+        groq_api_key=SecretStr("e2e-not-a-key"),
+        nvidia_api_key=SecretStr("e2e-not-a-key"),
+        openrouter_api_key=SecretStr("e2e-not-a-key"),
     )
     try:
         command.upgrade(alembic_config(url), "head")
@@ -106,6 +144,7 @@ def main() -> None:
                 )
             },
         )
+        app.state.chat_models = ChatScript()
         server = uvicorn.Server(
             uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
         )

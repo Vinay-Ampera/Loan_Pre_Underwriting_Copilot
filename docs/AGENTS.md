@@ -128,12 +128,14 @@ Source of truth: `backend/app/services/llm_models.yaml`. Agents ask for a role, 
 | KYC, Risk | Groq `openai/gpt-oss-20b` | NVIDIA `openai/gpt-oss-20b`, OpenRouter nemotron free |
 | Policy | NVIDIA `nvidia/nemotron-3-ultra-550b-a55b` | OpenRouter nemotron free, Gemini flash-lite |
 | Judge (evaluation) | Gemini `gemini-3.5-flash-lite` | NVIDIA `openai/gpt-oss-20b` |
-| Case assistant (Stage 12, planned) | Gemini `gemini-3.6-flash` | OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free`, Gemini `gemini-3.5-flash-lite` |
+| Case assistant (Stage 12) | Gemini `gemini-3.6-flash` | OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free`, Gemini `gemini-3.5-flash-lite` |
 
 Observed limits: Groq gpt-oss-20b 1,000 requests/day and **8,000 tokens/minute** (keep KYC and Risk prompts small); NVIDIA about 40 requests/minute shared across models; OpenRouter free 20 requests/minute and 50/day. Gemini 3.x preview models sometimes return 503 "high demand", which the router treats as a fallback trigger. `python -m app.services.llm_smoke --break-primary` proves every role completes through a fallback.
 
 
-## 8. Case assistant: "Ask this case" (Stage 12 Part E, planned 2026-11-25)
+## 8. Case assistant: "Ask this case" (Stage 12 Part E, built 2026-11-26)
+
+As built: the code-derived facts are kept on the report (`report_json.facts`, written after the summary; reports made before have only the rule evidence). A sentence is also refused when it holds a person's name or promises an outcome ("eligible for", "should approve").
 
 Not a pipeline agent: it runs only when a person asks a question about a case that already has a report, and it never changes the case.
 

@@ -17,6 +17,7 @@ DELEGATED: dict[str, tuple[str, str]] = {
     "cases.confirm_case": ("app.agents.graph", 'f"officer_{action}"'),
     "cases.override_case": ("app.agents.graph", 'f"officer_{action}"'),
     "ai_control.save_config": ("app.api.ai_control", '"ai_config_changed"'),
+    "chat.ask_case": ("app.api.chat", '"case_chat_asked"'),
     "ai_control.rollback_config": ("app.api.ai_control", '"ai_config_changed"'),
     "ai_control.publish_draft": ("app.api.ai_control", '"ai_prompt_published"'),
     "ai_control.rollback_prompt": ("app.api.ai_control", '"ai_prompt_published"'),

@@ -20,8 +20,11 @@ from app.agents.decision import Narrative
 from app.agents.explain import Explanations, check_explanations, invented_numbers
 from app.agents.guardrails import check_text
 from app.agents.supervisor import Briefing
+from app.chat.check import ChatAnswer, check_answer
+from app.chat.context import FieldRow, build_material
 from app.intake.llm_extract import LLMFields
-from app.rag.schemas import PolicyLLMOutput
+from app.rag.schemas import PolicyLLMOutput, RetrievedClause
+from app.scoring.models import RuleOutcome
 from app.services.llm import LLMOutputError, complete
 
 _KYC_ITEMS = [
@@ -128,11 +131,34 @@ def _extraction() -> Sample:
                   LLMFields, check)  # fmt: skip
 
 
+def _case_question() -> Sample:
+    report = {"recommendation_text": "Recommended: refer for manual review", "band": "refer",
+              "total_score": 72, "facts": {"case": {"foir": 41.0, "net_monthly_income": 60000}},
+              "stage_scores": [{"label": "Income and FOIR", "score": 18, "max": 30}]}  # fmt: skip
+    rules = [RuleOutcome(rule_id="CM-INC-10", stage="income", kind="soft", passed=False,
+                         points_awarded=6, points_max=12, clause_id="CM-INC-10",
+                         evidence={"field": "foir", "value": 41.0})]  # fmt: skip
+    clause = RetrievedClause(clause_id="CM-INC-10", title="Fixed obligations", source_tag="sample",
+                             text="FOIR of 40 percent or under earns full points.",
+                             doc_loan_type="common", doc_version="sample", relevance=1.0)  # fmt: skip
+    material = build_material(report, rules, [FieldRow("primary", "payslip", "employer",
+                              "Orchid Textiles Ltd")], [clause], names=[])  # fmt: skip
+
+    def check(o: ChatAnswer) -> list[str]:
+        out = check_answer(o, material)
+        if not o.answerable:
+            out.append("the sample question can be answered, but the reply said it cannot")
+        return out
+
+    return Sample(f"<case>\n{material.block()}\n</case>\n<question>\nWhy did Income and FOIR "
+                  "lose points?\n</question>", ChatAnswer, check)  # fmt: skip
+
+
 def sample_for(name: str) -> Sample:
     return {
         "supervisor": _briefing, "kyc": lambda: _explain(_KYC_ITEMS, "checks"),
         "risk": lambda: _explain(_RISK_ITEMS, "items"), "decision": _narrative,
-        "policy": _policy, "extraction": _extraction,
+        "policy": _policy, "extraction": _extraction, "case_assistant": _case_question,
     }[name]()  # fmt: skip
 
 

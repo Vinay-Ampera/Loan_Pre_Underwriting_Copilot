@@ -58,6 +58,7 @@ cd frontend && npm run e2e  # browser tests in Chrome
 make lint
 python -m app.eval.run --split dev      # agreement with the answer keys (the CI gate)
 python -m app.eval.judge --split dev    # the judge model grades stored reports (needs the keys)
+python -m app.chat.evaluate --split dev # the case chat golden set (add --no-llm without keys)
 ```
 
 ## How it is built

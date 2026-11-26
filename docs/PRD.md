@@ -440,7 +440,7 @@ Picked by the user from the project manager's and CEO's review. Built in parts A
 | API | FastAPI |
 | Agents | LangGraph (fixed routing, human-in-the-loop, Postgres checkpoints) |
 | LLM gateway | LiteLLM (fallback, token and cost logging) |
-| Models | Supervisor, Extraction, Decision: Gemini Flash. KYC and Risk: Groq gpt-oss-20b. Policy: NVIDIA Nemotron. Case assistant chat (Stage 12, planned): Gemini Flash. Fallback: another free NVIDIA or similar model. Verify exact model names and free limits at build time. |
+| Models | Supervisor, Extraction, Decision: Gemini Flash. KYC and Risk: Groq gpt-oss-20b. Policy: NVIDIA Nemotron. Case assistant chat (Stage 12): Gemini Flash. Fallback: another free NVIDIA or similar model. Verify exact model names and free limits at build time. |
 | Database | Neon hosted Postgres + pgvector (relational and vector data in one place) |
 | Embeddings and rerank | BGE-small (384 dimensions), local; local cross-encoder reranker |
 | RAG | Retrieval, rerank, grounding check (Self-RAG style) |
@@ -477,4 +477,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) and Stage 11 (hardening, Docker, demo) are built (2026-11-21); the real-model test-split run is left to the user. 2-step verification for the admin and the auditor is built (2026-11-24). Stage 12 (post-demo features, section 9.12) was planned on 2026-11-25; Parts A (counter-offer box), B (Insights), C (queue export and decision timers) and D (score breakdown chart) are built; Part E is not started. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) and Stage 11 (hardening, Docker, demo) are built (2026-11-21); the real-model test-split run is left to the user. 2-step verification for the admin and the auditor is built (2026-11-24). Stage 12 (post-demo features, section 9.12) was planned on 2026-11-25; Parts A (counter-offer box), B (Insights), C (queue export and decision timers), D (score breakdown chart) and E ("Ask this case") are built. Status is tracked in `PROGRESS.md`.

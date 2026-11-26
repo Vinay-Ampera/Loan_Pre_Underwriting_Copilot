@@ -37,6 +37,7 @@ const paths = {
   dot: 'M12 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5',
   copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   bell: 'M6 16v-5a6 6 0 1112 0v5l2 2H4zM10 21a2 2 0 004 0',
+  chat: 'M4 5h16v11H10l-5 4v-4H4zM8 9h8M8 12h5',
   inbox: 'M3 13h5l1.5 3h5L16 13h5M5 5h14l2 8v6H3v-6z',
   upload: 'M12 15V4M7.5 8.5L12 4l4.5 4.5M4 15v5h16v-5',
   // loan types and ways to start (New case page)

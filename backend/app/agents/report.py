@@ -113,6 +113,25 @@ class Report(BaseModel):
     counter_offer: CounterOffer | None = None
     # how the score was reached (Stage 12 Part D); None when a stage did not run
     score_breakdown: ScoreBreakdown | None = None
+    # figures worked out in code, kept for the case chat (Stage 12 Part E). Set after the summary
+    # is written; empty on older reports.
+    facts: dict[str, Any] = Field(default_factory=dict)
+
+
+CASE_FACTS = ("loan_amount", "tenure_months", "net_monthly_income", "new_emi", "existing_emi_total",
+              "foir", "dti_pct", "ltv_percent", "cibil_score", "bureau_dpd_max_12m", "enquiries_6m",
+              "cheque_nach_returns_12m", "annual_turnover", "business_vintage_months",
+              "stability_months", "total_experience_months", "repayment_years")  # fmt: skip
+PERSON_FACTS = ("role", "age_at_application", "age_at_maturity", "cibil_score")
+
+
+def code_facts(score: ScoreReport) -> dict[str, Any]:
+    """The engine's own figures (FOIR, EMI, LTV, CIBIL, ages). Only what was worked out."""
+    return {
+        "case": {k: score.case_facts[k] for k in CASE_FACTS if score.case_facts.get(k) is not None},
+        "persons": [{k: p[k] for k in PERSON_FACTS if p.get(k) is not None}
+                    for p in score.person_facts],
+    }  # fmt: skip
 
 
 def points_lost(row: StageScoreRow) -> float | None:

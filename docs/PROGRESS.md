@@ -23,7 +23,7 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 10b AI control for the admin | Built, committed (`f521e32`) | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 10c Knowledge base (policy documents and learnings) | Built, committed (`d484bff`) | Migration 0021; `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`, `api/knowledge.py`; admin Knowledge base page and officer Policies page. See "Knowledge base build notes". Run `python -m app.db.migrate` first |
 | 11 Hardening, Docker and demo | Built, committed (`61f34df`, `0d8b1e8`) | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), the demo script (moved out of the repo on 2026-11-23), README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
-| 12 Post-demo features | **Part A committed (`27fbe2f`), Part B committed (`df1747c`); Parts C and D built 2026-11-26 (migration 0027), committed (`7d68000`); Part E not started** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
+| 12 Post-demo features | **Part A committed (`27fbe2f`), Part B committed (`df1747c`); Parts C and D built 2026-11-26 (migration 0027), committed (`7d68000`); Part E built (2026-11-26, migration 0028), not committed** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
 
 In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
@@ -653,3 +653,19 @@ Display only: scores, bands and rules are unchanged; no migration.
 - **Screen:** `ScoreWaterfall` (inline SVG, theme tokens, text summary, "Show as a table") as the first card of a scored report.
 - **Checked in Chrome** on a throwaway database: light, dark, 1024 and a phone, and the PDF's table. One fix: the band labels were cut off at 1024, so the chart was narrowed and the labels wrap. The capped-with-bonus look was checked with a report edited by hand in that database.
 - **Tests (2026-11-26):** the affected backend files pass; the full frontend suite passes, with lint and build clean; the help, inbox, roles and loan-type browser specs pass (15 of 15); the whole backend suite was not run in one go; `ruff` and `mypy` clean; `python -m app.eval.run --split dev` 60 of 60 bands.
+
+## Stage 12 Part E build notes: "Ask this case" (2026-11-26)
+
+Read-only: scoring, statuses and decisions are untouched.
+
+- **Migration 0028** (`0028_case_chat.py`): `case_chat_messages`, and `case_assistant` allowed as a prompt name. Apply it with `python -m app.db.migrate`.
+- **Settings** (`.env.example`): `CHAT_MAX_PER_HOUR=20`, `CHAT_RETENTION_DAYS=90`.
+- **Code:** `app/chat/` (`context.py`, `check.py`, `service.py`, `evaluate.py`), `api/chat.py`, `prompts/case_assistant.md`, the role in `llm_models.yaml` and on the AI control page with a test sample, the retention job, `report_json.facts`, `llm_calls` stage `chat` (kept when a case is re-run).
+- **Screen:** `CaseChat`, the "Ask this case" tab for the officer and the admin; Help sections; the audit trail label.
+- **Differences from the plan:** `answerable: false` is final (no retry); the outcome-forcing injection pattern is ignored for text that begins as a question (E-132); chat questions get a stricter number mask (E-130); a saved AI configuration gains the new role (E-131).
+- **Test seam:** the browser-test server scripts the chat (`app.state.chat_models`) and has placeholder keys so the AI control switch can be used; the pipeline there still runs with no model.
+- **Golden set:** `data/eval/chat_dev.yaml`, 20 dev questions; `--no-llm` passes with no problem and is a CI step; `thresholds.json` gains `chat.citation_validity` 1.0. **No real-model run yet:** run `cd backend && ../.venv/bin/python -m app.chat.evaluate --split dev --write-baseline` with your keys; other floors wait for that baseline (OI-7).
+- **Looked at in Chrome:** light, dark, 1024 and a phone. Two fixes: the tab icon sat above its label, and the question box was too tall.
+- **Found, not changed:** the shared masker leaves a 9 to 18 digit number in place when a comma follows it, in any free text sent to a model (not only chat). The chat has its own pass; whether to change the shared masker is open.
+- **Checks (2026-11-26):** the chat tests and the other affected backend files pass (the whole backend suite was not run in one go); frontend 885 of 885, lint and build clean; browser specs chat, help, loan types and roles 15 of 15; `ruff` and `mypy` clean; `app.eval.run --split dev` 60 of 60 bands.
+- **Stage close, Docker:** the image builds and, on an empty local database, migrates to 0028, starts and passes `/api/health`. The full compose stack was not started (it reads `.env`).

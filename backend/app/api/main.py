@@ -30,6 +30,7 @@ from app.api import (
     auditor,
     auth,
     cases,
+    chat,
     export,
     insights,
     intake,
@@ -119,7 +120,8 @@ def create_app(
             if settings.retention_hours > 0:  # bureau data after six months, old staff email
                 keep_task = asyncio.get_running_loop().create_task(
                     retention.run_worker(eng, ruleset, settings.retention_hours,
-                                         settings.bureau_retention_months, settings.email_retention_days)
+                                         settings.bureau_retention_months, settings.email_retention_days,
+                                         settings.chat_retention_days)
                 )  # fmt: skip
                 stack.push_async_callback(_stop, keep_task)
             if settings.sla_check_minutes > 0:  # overdue reminders (Stage 12 Part C)
@@ -153,6 +155,7 @@ def create_app(
         intake.router,  # before cases: /cases/intake must not be read as a case id
         export.router,  # before cases: /cases/export.csv likewise
         cases.router,
+        chat.router,
         admin.router,
         admin_cases.router,
         ai_control.router,
