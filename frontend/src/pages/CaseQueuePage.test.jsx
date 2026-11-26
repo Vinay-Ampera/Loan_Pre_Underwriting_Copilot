@@ -1,9 +1,10 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import CaseQueuePage from './CaseQueuePage'
 import AdminHomePage from './AdminHomePage'
+import AdminOfficerPage from './AdminOfficerPage'
 import { api } from '../api/client'
 import { downloadFile } from '../lib/download'
 import { caseAge } from '../lib/format'
@@ -98,6 +99,33 @@ describe('the queue and the decision timer', () => {
     show(<AdminHomePage />, '/')
     await user.click(screen.getByRole('button', { name: 'Export all cases' }))
     expect(downloadFile).toHaveBeenCalledWith('/admin/cases/export.csv', expect.any(String))
+  })
+
+  it('exports only that officer’s cases from the admin’s officer page', async () => {
+    api.get.mockResolvedValue({
+      user: { name: 'Asha Officer', email: 'asha@example.test', role: 'officer', active: true },
+      cases_total: 0,
+      cases_by_status: {},
+      cases_by_band: {},
+      precedents_by_status: {},
+      confirmed: 0,
+      overridden: 0,
+      admin_corrected: 0,
+      cases: [],
+    })
+    const user = userEvent.setup()
+    show(
+      <Routes>
+        <Route path="/admin/users/:id" element={<AdminOfficerPage />} />
+      </Routes>,
+      '/admin/users/u-7',
+    )
+    await user.click(await screen.findByRole('button', { name: "Export this officer's cases" }))
+    expect(downloadFile).toHaveBeenCalledWith(
+      '/admin/cases/export.csv?officer=u-7',
+      expect.any(String),
+    )
+    expect(screen.queryByRole('button', { name: 'Export all cases' })).toBeNull()
   })
 })
 

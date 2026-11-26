@@ -575,8 +575,9 @@ function AdminGuide() {
             Reassigning a case keeps its due time. Nothing is assigned automatically.
           </li>
           <li>
-            <strong>Export all cases</strong> on Home or an officer page saves every case as CSV,
-            with no applicant names. Each download is recorded in the audit log.
+            <strong>Export all cases</strong> on Home saves every case as CSV;{' '}
+            <strong>Export this officer&apos;s cases</strong> on an officer page saves only theirs.
+            Neither holds applicant names. Each download is recorded in the audit log.
           </li>
         </ul>
       </HelpSection>

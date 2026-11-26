@@ -23,7 +23,7 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 10b AI control for the admin | Built, committed (`f521e32`) | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 10c Knowledge base (policy documents and learnings) | Built, committed (`d484bff`) | Migration 0021; `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`, `api/knowledge.py`; admin Knowledge base page and officer Policies page. See "Knowledge base build notes". Run `python -m app.db.migrate` first |
 | 11 Hardening, Docker and demo | Built, committed (`61f34df`, `0d8b1e8`) | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), the demo script (moved out of the repo on 2026-11-23), README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
-| 12 Post-demo features | **Part A committed (`27fbe2f`), Part B committed (`df1747c`); Parts C and D built 2026-11-26 (migration 0027), not committed; Part E not started** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
+| 12 Post-demo features | **Part A committed (`27fbe2f`), Part B committed (`df1747c`); Parts C and D built 2026-11-26 (migration 0027), committed (`7d68000`); Part E not started** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
 
 In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
@@ -641,8 +641,9 @@ Scoring is untouched; no model is called. The backend was started on 2026-11-25 
 - **Migration 0027** (`0027_decision_timer.py`): `cases.sla_due_at`, `sla_officer_notified_for`, `sla_admin_notified_for`, a partial index and the notice kinds `case_overdue` and `case_overdue_admin`. Apply it with `python -m app.db.migrate`.
 - **Settings** (`.env.example`): `SLA_WORKING_DAYS=2`, `SLA_TIMEZONE=Asia/Kolkata`, `SLA_CHECK_MINUTES=15`. `docker-compose.yml` reads `.env`, so it needs no change.
 - **Code:** `app/workflow/sla.py` (working-day maths, due state, the reminder check and its loop), `app/api/export.py` (the two CSV routes); `store.update_case` sets the due time; the queue, officer page and `/me/insights` carry the due state and the target.
-- **Screens:** Age column, "Due today" and "Overdue" badges, Due filter and "Export CSV" on Cases; the "Overdue" tile on Home; "Export all cases" on the admin's Home and officer page; Help sections for both roles.
-- **Choices to confirm:** "Export all cases" on an officer page exports every case, as the plan's wording says, not only that officer's (the API has the officer filter if a button is wanted). Cases already waiting when 0027 arrives get a due time but no old reminders (E-129).
+- **Screens:** Age column, "Due today" and "Overdue" badges, Due filter and "Export CSV" on Cases; the "Overdue" tile on Home; the export buttons on the admin's Home and officer page; Help sections for both roles.
+- **Changed by the user (2026-11-26):** the admin's officer page exports only that officer's cases ("Export this officer's cases"), not every case as the plan first worded it; Home keeps "Export all cases".
+- **Choice to confirm:** Cases already waiting when 0027 arrives get a due time but no old reminders (E-129).
 
 ## Stage 12 Part D build notes: score breakdown chart (2026-11-26)
 

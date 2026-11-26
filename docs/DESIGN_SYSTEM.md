@@ -409,7 +409,7 @@ Built with the existing tokens and components only (no new colour unless named b
   - Hovering the badge, or a screen reader, gives "Decision due 27 Nov 2026, 3:00 pm (2 working days after the report)".
   - There is no badge when the case is not timed (before submit, stopped for a fix, decided).
 - **Filter:** "Due" select (Any, Due today, Overdue) beside the status and loan filters.
-- **Export:** an "Export CSV" secondary button at the top right of the queue, with no dialog. The line under it reads "Exports the cases shown, with your filters. No applicant names." The admin's "Export all cases" sits on the admin officer page and on Home's recent-decisions card. Files are named `pramaan-cases-YYYY-MM-DD.csv`.
+- **Export:** an "Export CSV" secondary button at the top right of the queue, with no dialog. The line under it reads "Exports the cases shown, with your filters. No applicant names." The admin's "Export all cases" sits on Home's recent-decisions card, and "Export this officer's cases" on the admin officer page (user's choice, 2026-11-26). Files are named `pramaan-cases-YYYY-MM-DD.csv`.
 - **Home (officer):** two tiles in a second row under the case tiles, labelled "Your pace": "Your median time to decide" (built in Part B: for example "36 hours", hint "Report ready to your decision, last 30 days"; "No decisions yet" when empty; a figure, not a link) and "Overdue" (Part C: count, hint "Past the 2 working day target", opens the queue filtered).
 - **Notices (fixed text, no digits):**
   - Officer: title "A case is past its decision time", body "Open the case to make your decision."
@@ -417,7 +417,7 @@ Built with the existing tokens and components only (no new colour unless named b
   - Both open the case.
 - **Help:** officer and admin sections explaining the 2-working-day target, the badges and the export.
 
-- **As built:** the Age column replaces the old "N d" one and reads "under an hour", "5 hours" or "3 days". `DueBadge` and `ExportButton` are the two new components; the due filter is kept in the address (`?due=overdue`). The admin's "Export all cases" (Home and the officer page) takes no filters; the officer filter of the admin route has no control in the UI. The admin's inbox gains the "Decisions and cases" filter group.
+- **As built:** the Age column replaces the old "N d" one and reads "under an hour", "5 hours" or "3 days". `DueBadge` and `ExportButton` are the two new components; the due filter is kept in the address (`?due=overdue`). The admin's "Export all cases" (Home) takes no filters. The officer page passes that officer to the admin route; the page's own "Show" filter is not applied to the file. The admin's inbox gains the "Decisions and cases" filter group.
 
 ### 17.4 Score breakdown chart (Part D, built 2026-11-26)
 

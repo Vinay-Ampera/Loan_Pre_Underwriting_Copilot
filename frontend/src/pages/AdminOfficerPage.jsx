@@ -109,7 +109,9 @@ export default function AdminOfficerPage() {
           <section className="card officer-block">
             <div className="officer-cases-head">
               <h2>Cases</h2>
-              <ExportButton path="/admin/cases/export.csv">Export all cases</ExportButton>
+              <ExportButton path={`/admin/cases/export.csv?officer=${id}`}>
+                Export this officer&apos;s cases
+              </ExportButton>
               <div className="field officer-filter">
                 <label htmlFor="officer-status">Show</label>
                 <select
