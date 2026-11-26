@@ -669,3 +669,14 @@ Read-only: scoring, statuses and decisions are untouched.
 - **Shared masker (found during Part E, tightened the same day on the user's go):** it left a 9 to 18 digit number in place when a comma stood beside it. The masker and the leak check now hide it unless a digit is on the other side of the comma or point (E-130). Compared old and new on 692 dev-case, policy, rules and record texts: no difference there. The intake, chat, pipeline, agent, notification, knowledge base and API tests pass (287), with `ruff` and `mypy` clean. Not changed: the on-screen masker (`api/display.py`) has the same comma gap.
 - **Checks (2026-11-26):** the chat tests and the other affected backend files pass (the whole backend suite was not run in one go); frontend 885 of 885, lint and build clean; browser specs chat, help, loan types and roles 15 of 15; `ruff` and `mypy` clean; `app.eval.run --split dev` 60 of 60 bands.
 - **Stage close, Docker:** the image builds and, on an empty local database, migrates to 0028, starts and passes `/api/health`. The full compose stack was not started (it reads `.env`).
+
+## Stage 12: first real-model chat run and stack start (2026-11-26, run by the user)
+
+- **Neon:** `python -m app.db.migrate current` reports 0028 (head).
+- **Golden set with real models** (`docs/baselines/dev-chat.json`, 20 dev questions): citation validity 1.0, expected-citation recall 0.9167, refusal accuracy 1.0, what-if accuracy 1.0, fixed text on 1 of 12 answerable questions (0.0833).
+- **The one miss (a09, "Is the business old enough for this loan?"):** refused for "numbers not in the data (24)". The clause says "at least two years" and the rule result gives 20 months, but the rule's 24-month threshold is not in the material, so the model's converted figure was refused. The check worked as designed; giving the threshold to the chat is an open improvement.
+- **Speed, to look into:** the run took about 18 minutes for the 15 questions that reach a model, with about 31 Gemini attempts. The runner does not record retries, the answering model or time per question, so the cause is not known.
+- **Warning seen:** LiteLLM says `temperature` is deprecated for Gemini 3 and planned for removal (affects every Gemini role).
+- **Floors:** only `chat.citation_validity` 1.0 is set; floors for the other measures stay open (OI-7).
+- **Docker:** `docker compose up -d --build` built the image and started the stack; the app container is healthy and `/api/health` answers.
+

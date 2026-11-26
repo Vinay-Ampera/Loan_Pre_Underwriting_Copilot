@@ -1,0 +1,12 @@
+{
+  "rules_version": "2026.11.25-1",
+  "split": "dev",
+  "metrics": {
+    "questions": 20.0,
+    "citation_validity": 1.0,
+    "expected_citation_recall": 0.9167,
+    "refusal_accuracy": 1.0,
+    "what_if_accuracy": 1.0,
+    "fixed_text_rate_on_answerable": 0.0833
+  }
+}
