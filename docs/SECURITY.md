@@ -16,7 +16,7 @@ Decisions agreed in planning (A to E) plus the controls that follow from them.
 - Matching checks (name, PAN, DOB) run locally on unmasked values.
 - Optional later: direct PDF reading by a cloud model, only with approved data.
 - Test: a scan fails the build if any raw PAN, Aadhaar, GSTIN, email, phone or account number pattern appears in text sent to an LLM client, logs or traces.
-- **The guard at the LLM boundary** (`assert_masked`, run on every message by `app/services/llm.py`) refuses a call that still holds one of those patterns. Phone and account numbers were added on 2026-11-21; they count only when they stand alone (not inside a word, a hex id or a UUID), so a trace id never trips it, and anything the guard flags is something `mask` would have replaced. The policy format check uses the same patterns (`PERSONAL_DATA`).
+- **The guard at the LLM boundary** (`assert_masked`, run on every message by `app/services/llm.py`) refuses a call that still holds one of those patterns. Phone and account numbers were added on 2026-11-21; they count only when they stand alone (not inside a word, a hex id or a UUID), so a trace id never trips it, and anything the guard flags is something `mask` would have replaced. Tightened on 2026-11-26: a comma or point beside an account number no longer hides it from the masker or the guard unless a digit is on the other side (E-130). A number written in spaced groups is joined only in chat questions. The policy format check uses the same patterns (`PERSONAL_DATA`).
 - The judge model gets the same masked facts the Decision writer saw, never the raw report (fixed 2026-11-21: it was given the report JSON, which can hold names and document evidence).
 
 ## 3. Prompt injection

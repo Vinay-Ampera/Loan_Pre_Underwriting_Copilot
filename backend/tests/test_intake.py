@@ -94,6 +94,39 @@ def test_the_leak_check_finds_phone_and_account_numbers_but_not_ids_or_amounts()
         assert find_leaks(fine) == [], fine
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "account 50100234567891, then",
+        "account 50100234567891,",
+        "from account,50100234567891",
+        "A/c No.50100234567891",
+        "ac 50100234567891.",
+        "paid into 50100234567891, 2 returns",
+        '{"note":"x","ref":50100234567891,"n":1}',
+    ],
+)  # fmt: skip
+def test_a_number_beside_a_comma_or_point_is_hidden_and_the_guard_sees_it(text: str) -> None:
+    assert find_leaks(text) == ["ACCT"], text
+    masked = Masker().mask(text)
+    assert "50100234567891" not in masked and "<ACCT_1>" in masked
+    assert find_leaks(masked) == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "pay 1,23,456.00, net 12,00,000, EMI 14,014.",
+        "turnover 150000000.0, ratio 0.983333333",
+        '{"annual_turnover":150000000.0,"loan_amount":2800000.0,"cibil_score":742}',
+        "values 1,234567890 and 123456789,50",  # digits across the separator: one figure
+        "salary is ₹12500000.",
+    ],
+)
+def test_amounts_and_decimals_are_still_left_alone(text: str) -> None:
+    assert Masker().mask(text) == text and find_leaks(text) == []
+
+
 def test_assert_masked_and_safe_do_not_echo_values() -> None:
     with pytest.raises(MaskingError) as e:
         assert_masked("pan FIZPS3074G")

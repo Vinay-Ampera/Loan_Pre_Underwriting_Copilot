@@ -32,9 +32,9 @@ HIDDEN_FIELDS = frozenset(
 SEARCH_CLAUSES = 5  # reranked clauses added for the question, beside the report's cited ones
 MAX_VALUE = 200
 _TOKEN = re.compile(r"<[A-Z_]+(?:_\d+)?>")
-# A typed question is free text: the shared masker leaves a long number followed by a comma (so
-# it never eats an amount in a document), and misses a number written in groups. Here any run of
-# 9 to 18 digits, together or spaced, is hidden. Amounts written with commas are left alone.
+# A typed question is free text, and the shared masker does not join a number written in groups
+# (in a document that would swallow figures that sit side by side). Here any run of 9 to 18
+# digits, together or spaced, is hidden. Amounts written with commas are left alone.
 _LONG_NUMBER = re.compile(r"(?<![0-9A-Za-z.])\+?\d(?:[ -]?\d){8,17}(?![0-9A-Za-z])")
 
 
