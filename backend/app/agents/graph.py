@@ -352,7 +352,7 @@ def build_graph(ctx: AgentContext, checkpointer: BaseCheckpointSaver[str] | None
             )  # fmt: skip
             store.save_logs(conn, _case(state), all_calls, all_evals)
             store.save_report(conn, _case(state), run_no, report)
-            store.update_case(conn, _case(state), status, report)
+            store.update_case(conn, _case(state), status, report, sla=ctx.sla)
             store.audit(conn, "pipeline_finished", state["case_uuid"],
                         {"status": status, "recommendation": report.recommendation})  # fmt: skip
             inbox.notify_owner(conn, state["case_uuid"],

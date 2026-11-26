@@ -11,6 +11,7 @@ from app.core.config import get_settings
 os.environ.setdefault("LANGFUSE_ENABLED", "false")  # tests never send traces to the cloud
 os.environ.setdefault("EMAIL_WORKER_SECONDS", "0")  # tests send queued email by calling it
 os.environ.setdefault("RETENTION_HOURS", "0")  # tests call the retention job directly
+os.environ.setdefault("SLA_CHECK_MINUTES", "0")  # tests call the overdue check directly
 get_settings.cache_clear()
 
 

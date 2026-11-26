@@ -8,6 +8,7 @@ text is stored here; extracted values are stored masked (and locally, as the sch
 
 import json
 import mimetypes
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +22,7 @@ from app.agents.submission import Submission
 from app.intake.masker import Masker
 from app.observability import tracing
 from app.scoring.models import CaseInput
+from app.workflow.sla import SlaConfig
 
 SYSTEM_EMAIL = "pipeline@local.invalid"
 
@@ -205,14 +207,24 @@ def save_report(conn: Connection, case_id: UUID, run_no: int, report: Report) ->
     )  # fmt: skip
 
 
-def update_case(conn: Connection, case_id: UUID, status: str, report: Report | None = None) -> None:
+def update_case(
+    conn: Connection, case_id: UUID, status: str, report: Report | None = None,
+    *, sla: SlaConfig | None = None,
+) -> None:  # fmt: skip
+    """Write the run's outcome on the case. A report that waits for the officer sets the report-
+    ready time and, with `sla`, a new decision due time (the clock restarts; E-117)."""
     policy = (report.versions.get("policy") or {}) if report else {}
+    waiting = status == "awaiting_confirmation"
+    ready = datetime.now(UTC) if waiting else None
+    due = sla.due_at(ready) if sla and ready else None
     conn.execute(
         text("""UPDATE cases SET status = :st, stopped_stage = :ss, stop_class = :sc, total_score = :t,
                     band = :b, recommendation = :rec, policy_version = coalesce(:pv, policy_version),
                     rules_version = coalesce(:rv, rules_version), updated_at = now(),
-                    report_ready_at = CASE WHEN :st = 'awaiting_confirmation' THEN now()
-                                           ELSE report_ready_at END,
+                    report_ready_at = CASE WHEN :st = 'awaiting_confirmation'
+                                           THEN CAST(:ready AS timestamptz) ELSE report_ready_at END,
+                    sla_due_at = CASE WHEN :st = 'awaiting_confirmation'
+                                      THEN CAST(:due AS timestamptz) ELSE sla_due_at END,
                     -- the first run counts as submitted when no officer submit came first
                     -- (cases run from the command line); never moved afterwards (E-114)
                     submitted_at = CASE WHEN :st = 'running' THEN coalesce(submitted_at, now())
@@ -222,7 +234,7 @@ def update_case(conn: Connection, case_id: UUID, status: str, report: Report | N
          "sc": report.stop_class if report else None, "t": report.total_score if report else None,
          "b": report.band if report else None, "rec": report.recommendation if report else None,
          "pv": ",".join(f"{k}:{v}" for k, v in sorted(policy.items())) or None,
-         "rv": report.versions.get("rules") if report else None},
+         "rv": report.versions.get("rules") if report else None, "ready": ready, "due": due},
     )  # fmt: skip
 
 

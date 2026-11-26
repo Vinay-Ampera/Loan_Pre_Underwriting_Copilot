@@ -147,16 +147,24 @@ describe('officer Home', () => {
   const answer = (mine) => (url) => Promise.resolve(url === '/me/insights' ? mine : [])
 
   it('shows the officer’s own median time to decide', async () => {
-    api.get.mockImplementation(answer({ decided_30d: 2, median_decision_s: 36 * H }))
+    api.get.mockImplementation(
+      answer({ decided_30d: 2, median_decision_s: 36 * H, overdue: 3, sla_working_days: 2 }),
+    )
     show(<HomePage />)
     const pace = await screen.findByRole('list', { name: 'Your pace' })
     expect(within(pace).getByText('36 hours')).toBeInTheDocument()
     expect(within(pace).getByText('Your median time to decide')).toBeInTheDocument()
+    const overdue = within(pace).getByRole('link', { name: /Overdue/ })
+    expect(overdue).toHaveTextContent('3')
+    expect(overdue).toHaveTextContent('Past the 2 working day target')
+    expect(overdue).toHaveAttribute('href', '/cases?due=overdue')
     expect(api.get).toHaveBeenCalledWith('/me/insights')
   })
 
   it('says when there is no decision yet', async () => {
-    api.get.mockImplementation(answer({ decided_30d: 0, median_decision_s: null }))
+    api.get.mockImplementation(
+      answer({ decided_30d: 0, median_decision_s: null, overdue: 0, sla_working_days: 2 }),
+    )
     show(<HomePage />)
     expect(await screen.findByText('No decisions yet')).toBeInTheDocument()
   })

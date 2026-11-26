@@ -652,6 +652,49 @@ def test_counter_offer_box_is_in_the_report_and_the_officers_pdf(
         assert "Other amounts" not in " ".join(p.get_text() for p in doc)
 
 
+def test_an_older_report_gets_its_breakdown_on_read_and_the_pdf_dashes_an_unrun_stage(
+    client: TestClient, engine: Engine
+) -> None:
+    """Stage 12 Part D: nothing stored changes; a stopped case has no chart."""
+    h = login(client, "asha")
+    case_id = create(client, h, minimal())
+    old = stored_report(None) | {"stage_scores": [
+        {"stage": "kyc", "label": "KYC", "score": 18.0, "max": 20.0, "ran": True},
+        {"stage": "documents", "label": "Documents", "score": 15.0, "max": 15.0, "ran": True},
+        {"stage": "income", "label": "Income and FOIR", "score": 12.0, "max": 30.0, "ran": True},
+        {"stage": "credit", "label": "Credit and behaviour", "score": 19.0, "max": 25.0, "ran": True},
+        {"stage": "policy", "label": "Policy fit", "score": 8.0, "max": 10.0, "ran": True},
+    ], "total_score": 72.0, "band": "refer"}  # fmt: skip
+    stopped = old | {"total_score": None, "band": None, "stage_scores": [
+        *old["stage_scores"][:2],
+        {"stage": "income", "label": "Income and FOIR", "score": None, "max": 30.0, "ran": False},
+    ]}  # fmt: skip
+
+    def put(version: int, report: dict[str, Any]) -> tuple[Any, list[str]]:
+        with engine.begin() as c:
+            c.execute(text("INSERT INTO reports (case_id, version, report_json) VALUES (:c, :v, CAST(:r AS jsonb))"),
+                      {"c": case_id, "v": version, "r": json.dumps(report)})  # fmt: skip
+        got = client.get(f"/api/v1/cases/{case_id}/report", headers=h).json()["report"]
+        pdf = client.get(f"/api/v1/cases/{case_id}/report.pdf", headers=h)
+        with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
+            lines = [line.strip() for p in doc for line in p.get_text().splitlines()]
+        return got["score_breakdown"], lines
+
+    shown, lines = put(1, old)
+    assert [s["lost"] for s in shown["stages"]] == [2, 0, 18, 6, 2]
+    assert (shown["start"], shown["final"], shown["band"], shown["bonus"]) == (100, 72, "refer", 0)
+    assert (shown["approve_min"], shown["refer_min"], shown["cap_rule_ids"]) == (85, 60, [])
+    assert lines[lines.index("Income and FOIR") :][:3] == ["Income and FOIR", "12 / 30", "18"]
+    with engine.connect() as c:  # worked out on read, never written back
+        assert (
+            "score_breakdown" not in c.execute(text("SELECT report_json FROM reports")).scalar_one()
+        )
+
+    shown, lines = put(2, stopped)
+    assert shown is None
+    assert lines[lines.index("Income and FOIR") :][:3] == ["Income and FOIR", "not run", "–"]
+
+
 # --------------------------------------------------------------------------- whole cases
 def upload_all(client: TestClient, h: dict[str, str], case_id: str, case: str) -> None:
     detail = client.get(f"/api/v1/cases/{case_id}", headers=h).json()
@@ -774,6 +817,11 @@ def test_one_case_per_loan_type_runs_through_the_api_and_the_officer_confirms(
     )
     with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
         words = " ".join(p.get_text() for p in doc)
+    # Stage 12 Part D: the chart's numbers are on the report, and the PDF table prints the same
+    shown = detail["report"]["score_breakdown"]
+    if shown is not None:  # a scored case: every stage ran
+        assert round(shown["start"] - sum(s["lost"] for s in shown["stages"]) + shown["bonus"], 2) == shown["final"]  # fmt: skip
+    assert "Points lost" in words
     # policy clause text may say "approved plan"; the system itself must never claim an approval
     assert "Recommended" in words and not re.search(
         r"\b(is|was|been|are)\s+approved\b", words.lower()

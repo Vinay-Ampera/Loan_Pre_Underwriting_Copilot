@@ -28,6 +28,17 @@ export function formatDay(v) {
   return d ? d.toLocaleDateString('en-IN', DAY) : ''
 }
 
+/** How old a case is: "under an hour", "5 hours", "3 days" (the queue's Age column). */
+export function caseAge(createdAt, now = Date.now()) {
+  const d = valid(createdAt)
+  if (!d) return '–'
+  const hours = Math.floor((now - d.getTime()) / 3_600_000)
+  if (hours < 1) return 'under an hour'
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'}`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'}`
+}
+
 /** A span of seconds in words: "40 min", "13.5 hours", "1.3 days" (Insights). */
 export function duration(seconds) {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '–'

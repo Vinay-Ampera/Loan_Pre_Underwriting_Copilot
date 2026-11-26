@@ -30,6 +30,15 @@ function YourPace({ mine }) {
           <span className="tile-hint small muted">Report ready to your decision, last 30 days</span>
         </div>
       </li>
+      <li>
+        <Link to="/cases?due=overdue" className="tile card">
+          <span className="tile-count">{mine.overdue}</span>
+          <span className="tile-label">Overdue</span>
+          <span className="tile-hint small muted">
+            Past the {mine.sla_working_days} working day target
+          </span>
+        </Link>
+      </li>
     </ul>
   )
 }

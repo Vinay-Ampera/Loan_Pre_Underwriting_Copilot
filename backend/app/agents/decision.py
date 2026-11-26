@@ -17,11 +17,13 @@ from app.agents.report import (
     AWAITING,
     Report,
     ReportFinding,
+    cap_rules,
     citations_for,
     code_rejection_reason,
     code_summary,
     findings_from,
     group_sections,
+    score_breakdown,
     stage_rows,
     stop_text,
 )
@@ -217,6 +219,11 @@ async def run_decision(
                   "policy": version_info(conn, score.loan_type), "prompts": {**prompts, "decision": version},
                   "ai_config": ai_config.active().config_version,
                   "models": models},
+    )  # fmt: skip
+    report.score_breakdown = score_breakdown(
+        report.stage_scores, total=score.total_score, band=score.band,
+        bonus=score.precedent_bonus, cap_rule_ids=cap_rules((f.severity, f.rule_id) for f in findings),
+        bands=ctx.ruleset.scoring.bands,
     )  # fmt: skip
     meta = {"needs_judge": asked.output is not None and needs_judge(
         summary, [r.label for r in report.stage_scores]), "known_ids": sorted(known), "version": version,

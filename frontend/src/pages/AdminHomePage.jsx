@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import StatusChip from '../components/StatusChip'
+import ExportButton from '../components/ExportButton'
 import { loanLabel } from '../components/LoanTypePicker'
 import { EmptyState, ErrorState } from '../components/States'
 import '../components/CaseQueueTable.css'
@@ -25,6 +26,7 @@ function RecentDecisions() {
     <section className="recent">
       <div className="recent-head">
         <h2>Recently decided by officers</h2>
+        <ExportButton path="/admin/cases/export.csv">Export all cases</ExportButton>
       </div>
       {loading && <SectionLoader label="Loading recent decisions" />}
       {error && <ErrorState error={error} onRetry={reload} />}

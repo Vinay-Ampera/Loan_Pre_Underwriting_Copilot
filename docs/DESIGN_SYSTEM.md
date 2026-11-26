@@ -401,7 +401,7 @@ Built with the existing tokens and components only (no new colour unless named b
   - Phones: each table row becomes a small card with every cell named; a bar's name sits above its bar below 520 px (a `BarChart` change, so the auditor's Overview gains it too).
 - **`BarChart` additions** (optional, the auditor's Overview is unchanged): `max` fixes the scale (100 for shares), a row's `display` is the text shown for its value, `valueWidth` widens the number column, and each row repeats its label and value as a hover title.
 
-### 17.3 Case age, due badges, export and Home tiles (Part C)
+### 17.3 Case age, due badges, export and Home tiles (Part C, built 2026-11-26)
 
 - **Queue columns:** a new "Age" column ("3 days", "5 hours"), and a due badge beside the status chip:
   - **Due today:** the refer (amber) status tokens, a `clock` icon, the text "Due today".
@@ -417,7 +417,9 @@ Built with the existing tokens and components only (no new colour unless named b
   - Both open the case.
 - **Help:** officer and admin sections explaining the 2-working-day target, the badges and the export.
 
-### 17.4 Score breakdown chart (Part D)
+- **As built:** the Age column replaces the old "N d" one and reads "under an hour", "5 hours" or "3 days". `DueBadge` and `ExportButton` are the two new components; the due filter is kept in the address (`?due=overdue`). The admin's "Export all cases" (Home and the officer page) takes no filters; the officer filter of the admin route has no control in the UI. The admin's inbox gains the "Decisions and cases" filter group.
+
+### 17.4 Score breakdown chart (Part D, built 2026-11-26)
 
 - **Where:** the first card of the report for scored cases, titled "How the score was reached", with the line "Starts at 100. Each step is the points lost in a stage."
 - **Chart (`ScoreWaterfall`, inline SVG):**
@@ -433,6 +435,8 @@ Built with the existing tokens and components only (no new colour unless named b
 - **Accessibility:** the SVG is `role="img"` with an `aria-label` sentence ("Score breakdown: starts at 100; KYC lost 2, Documents lost 0, Income and FOIR lost 18, Credit lost 6, Policy fit lost 2; final score 72, refer"). A "Show as a table" toggle shows the table (Stage, Out of, Earned, Lost), which is always in the DOM for screen readers.
 - **Themes:** light, dark and system from tokens; no hard-coded colour.
 - **PDF:** no chart. The report PDF's "Stage scores" table gets a third column, "Points lost" (right-aligned, like the Score column), with a dash for a stage that did not run. The column headings read "Stage", "Score" and "Points lost".
+
+- **As built:** the stage names are the report's own ("Credit and behaviour"), broken onto two lines under the bar; the band-line labels wrap in a right margin. The chart is drawn 600 units wide and never narrower than 540 px, so it fits the case pane at 1024; on a phone the card scrolls sideways and the page does not. The cap tag shows only when the final band is refer, and the sentence under the chart only when the score also reaches the approve line.
 
 ### 17.5 "Ask this case" panel (Part E)
 

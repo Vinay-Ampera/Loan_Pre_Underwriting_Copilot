@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { CaseStatusChip } from './StatusChip'
+import DueBadge from './DueBadge'
+import { caseAge } from '../lib/format'
 import { loanLabel } from './LoanTypePicker'
 import './CaseQueueTable.css'
 
@@ -47,13 +49,20 @@ export default function CaseQueueTable({ cases }) {
                 {loanLabel(c.loan_type)} <span className="muted">{money(c.loan_amount)}</span>
               </td>
               <td data-label="Status">
-                <CaseStatusChip status={c.status} band={c.band} />
+                <span className="queue-chips">
+                  <CaseStatusChip status={c.status} band={c.band} />
+                  <DueBadge
+                    state={c.due_state}
+                    dueAt={c.sla_due_at}
+                    workingDays={c.sla_working_days}
+                  />
+                </span>
               </td>
               <td data-label="Score" className="num">
                 {c.total_score == null ? <span className="muted">–</span> : c.total_score}
               </td>
               <td data-label="Age" className="num">
-                {c.age_days === 0 ? 'today' : `${c.age_days} d`}
+                {caseAge(c.created_at)}
               </td>
               <td data-label="Officer">{c.officer}</td>
             </tr>

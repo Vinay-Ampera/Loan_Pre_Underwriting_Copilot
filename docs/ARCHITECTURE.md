@@ -99,7 +99,7 @@ None of these changes the graph order, the gates or a score.
   - The CSV routes reuse `auditlog.csv_response`.
   - `app/workflow/sla.py` (pure) does the working-day maths and the due state.
   - The clock starts where the Decision node sets `awaiting_confirmation` (it writes `report_ready_at` and `sla_due_at` in the same transaction) and stops in `Pipeline.officer_action`.
-  - A loop in the app (`run_sla_watch`, started like the retention job and the email worker, every `SLA_CHECK_MINUTES`, under an advisory lock) writes the overdue notices through `inbox.notify`, so they go in the same transaction as their audit row and follow the staff-email switch.
+  - A loop in the app (`workflow.sla.run_worker`, started like the retention job and the email worker, every `SLA_CHECK_MINUTES`, under an advisory lock) writes the overdue notices through `inbox.notify`, so they go in the same transaction as their audit row and follow the staff-email switch.
 - **Score breakdown (Part D).** `agents/report.py` adds `Report.score_breakdown` (per stage: max, earned, lost; bonus; cap; band lines) when every stage ran. The case API adds it to an older stored report from its own stage scores, using the same function. The UI draws only. The report PDF (`api/reportpdf.py`) adds a "Points lost" column to its stage table from the same numbers; the chart is not in the PDF.
 - **"Ask this case" (Part E).** `app/chat/` and `api/chat.py`, outside the graph:
 
@@ -181,7 +181,7 @@ All via `.env` and the rules file; nothing secret in git.
 | `FILE_STORE_PATH` | Local upload directory |
 | `RULES_PATH`, `POLICY_PATH` | Rule and policy files |
 | `JWT_SECRET` | Auth signing |
-| `SLA_WORKING_DAYS`, `SLA_TIMEZONE`, `SLA_CHECK_MINUTES` | Decision timer (Stage 12 Part C, planned): 2 working days, Asia/Kolkata, check every 15 minutes |
+| `SLA_WORKING_DAYS`, `SLA_TIMEZONE`, `SLA_CHECK_MINUTES` | Decision timer (Stage 12 Part C): 2 working days, Asia/Kolkata, check every 15 minutes |
 | `CHAT_MAX_PER_HOUR`, `CHAT_RETENTION_DAYS` | "Ask this case" (Stage 12 Part E, planned): 20 questions per person per hour, rows kept 90 days |
 
 ## 9. Deployment

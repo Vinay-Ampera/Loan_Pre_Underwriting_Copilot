@@ -363,7 +363,7 @@ What was built (details and measured results in `PROGRESS.md` "Stage 11 build no
 
 **Goal:** five features picked by the user from the project manager's and CEO's review. Each one is useful on its own: a counter-offer box on the report, an Insights page, a queue export with decision timers, a score breakdown chart, and a read-only "Ask this case" chat. **Scoring does not change:** weights, bands, hard rules, the rules engine and the human confirmation stay as they are. The dev replay still gives 60 of 60 bands and the CI evaluation gate stays green. The test split is never used for tuning.
 
-**Status:** Parts A and B built 2026-11-25 (see `PROGRESS.md`, "Stage 12 Part A build notes" and "Stage 12 Part B build notes"); Parts C to E not started. The decisions are in `PROGRESS.md` (decisions log, 2026-11-25); edge cases E-107 to E-127.
+**Status:** Parts A and B built 2026-11-25, Parts C and D built 2026-11-26 (see the "Stage 12 Part … build notes" in `PROGRESS.md`); Part E not started. The decisions are in `PROGRESS.md` (decisions log, 2026-11-25); edge cases E-107 to E-129.
 
 **How it is built:** one part at a time, in the order A → B → C → D → E. After each part: stop, report what changed and what was verified, give a commit message, and wait for the user to commit. Tests: only the tests related to the change, **one test job at a time** (pytest, Vitest and Playwright together ran out of memory on the 15 GB machine), using the local pgvector container `lc-test-pg` for database tests. Migrations are written and tested locally; the user applies them to Neon with `python -m app.db.migrate`.
 

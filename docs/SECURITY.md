@@ -165,7 +165,7 @@ A model answers questions about one case. The aim is that it can leak nothing, f
 - **Audit:** `case_chat_asked` with the outcome (answered, fixed text, refused, what-if, off, limited), the report version and citation counts. **Never the question or answer text.**
 - **Retention:** turns are deleted after `CHAT_RETENTION_DAYS` (90) by the daily retention job. That is well inside the six-month bureau limit, which matters because an answer may quote the credit score (section 7).
 
-## 4j. Counter-offer, Insights, export and decision timers (Stage 12 Parts A to C; A and B built 2026-11-25)
+## 4j. Counter-offer, Insights, export and decision timers (Stage 12 Parts A to C; A and B built 2026-11-25, C on 2026-11-26)
 
 - **Counter-offer box (Part A):**
   - It is worked out in code and stored with the report, and shown to the officer and the admin only (the report routes; the auditor still has none).
@@ -256,7 +256,7 @@ Observability (Stage 7): Langfuse and Tempo receive stage names, model names, to
 | A stolen admin or auditor password (2026-11-24) | 2-step verification: a code from the person's own phone after the password, each code once, shared lockout, recovery codes hashed, resets need a reason, a second click, another admin and an email to the person (section 4h) |
 | A key leaks through the AI control page (2026-11-18) | Keys stay in `.env`; the page shows set or missing only; the model test returns the error class only; no key in any response, audit row or log (tested) |
 | The case chat leaks personal data, answers from outside the case, or obeys an instruction in a question or document (Stage 12, planned) | Masked question and material; data tags and the locked prompt part; injection scan with a fixed answer; every sentence cited and checked in code (clauses, rules, fields, numbers, wording, raw identifiers); one retry then fixed text; read-only routes; owner and admin only; per-person limit; no text in logs, traces or the audit log (section 4i) |
-| An export leaks applicant names or carries a spreadsheet formula (Stage 12, planned) | No name or identifier columns; officer sees own cases only; formula-like cells written as text; audit row per download (section 4j) |
+| An export leaks applicant names or carries a spreadsheet formula (Stage 12) | No name or identifier columns; officer sees own cases only; formula-like cells written as text; audit row per download (section 4j) |
 | Insights let the auditor reach a case, or one officer see another's numbers (Stage 12 Part B, built) | Auditor answer has no case id, reference or link (tested by walking the JSON); officer route counts own cases only (tested with two officers) |
 | A counter-offer reaches the customer as an outcome hint (Stage 12, planned) | Shown to officer and admin only; not in prompts or the summary; the existing message check blocks its ₹ amount, FOIR and outcome words (tested) |
 

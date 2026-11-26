@@ -15,6 +15,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.agents.report import StageScoreRow, points_lost
 from app.scoring import counter_offer
 
 BAND_COLOUR = {"approve": "#1E7F4F", "refer": "#9A6200", "reject": "#B03A36"}
@@ -33,6 +34,12 @@ def _p(text: object, style: ParagraphStyle) -> Paragraph:
 
 def _score(v: float | None, mx: float) -> str:
     return "not run" if v is None else f"{v:g} / {mx:g}"
+
+
+def _lost(row: dict[str, Any]) -> str:
+    """Points lost, from the same function as the on-screen chart; a dash if it did not run."""
+    lost = points_lost(StageScoreRow.model_validate(row))
+    return "–" if lost is None else f"{lost:g}"
 
 
 def _counter_offer(
@@ -80,13 +87,13 @@ def build_report_pdf(case_no: str, report: dict[str, Any], officer: dict[str, An
     out += [Spacer(1, 4), _p(headline, ParagraphStyle("hl", parent=body, fontSize=11,
             textColor=colors.HexColor(BAND_COLOUR.get(band or "", "#52606D"))))]  # fmt: skip
 
-    rows = [["Stage", "Score"]] + [
-        [r["label"], _score(r["score"], r["max"])] for r in report["stage_scores"]
+    rows = [["Stage", "Score", "Points lost"]] + [
+        [r["label"], _score(r["score"], r["max"]), _lost(r)] for r in report["stage_scores"]
     ]
-    t = Table(rows, colWidths=[90 * mm, 40 * mm])
+    t = Table(rows, colWidths=[80 * mm, 35 * mm, 30 * mm])
     t.setStyle(TableStyle([("FONTSIZE", (0, 0), (-1, -1), 9), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EEF0F3")),
                            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D9DEE3")),
-                           ("ALIGN", (1, 0), (1, -1), "RIGHT")]))  # fmt: skip
+                           ("ALIGN", (1, 0), (-1, -1), "RIGHT")]))  # fmt: skip
     out += [_p("Stage scores", h2), t]
     out += _counter_offer(report.get("counter_offer"), h2, body, small)
     out += [_p("Summary", h2), _p(report["summary"], body)]

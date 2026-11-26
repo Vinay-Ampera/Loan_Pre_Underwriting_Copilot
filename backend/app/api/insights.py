@@ -60,6 +60,8 @@ def auditor_insights(
 
 @router.get("/me/insights")
 def my_insights(
-    user: User = Depends(officer_only), conn: Connection = Depends(get_conn)
+    request: Request, user: User = Depends(officer_only), conn: Connection = Depends(get_conn)
 ) -> dict[str, Any]:
-    return insights.officer_own(conn, user.id)
+    settings = request.app.state.settings
+    own = insights.officer_own(conn, user.id, settings.sla_timezone)
+    return {**own, "sla_working_days": settings.sla_working_days}

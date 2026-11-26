@@ -19,6 +19,7 @@ from sqlalchemy import Connection, text
 
 from app.scoring.evaluate import band_for
 from app.scoring.rules import RuleSet
+from app.workflow.sla import due_state_sql
 
 STAGE_LABEL = {"extraction": "Documents", "kyc": "KYC", "risk": "Income and credit",
                "policy": "Policy fit"}  # fmt: skip
@@ -232,8 +233,9 @@ def strip_refs(page: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def officer_own(conn: Connection, officer_id: Any) -> dict[str, Any]:
-    """An officer's own decisions in the last 30 days, for their Home page. Never anyone else's."""
+def officer_own(conn: Connection, officer_id: Any, sla_tz: str = "Asia/Kolkata") -> dict[str, Any]:
+    """An officer's own numbers for their Home page: decisions in the last 30 days (median time
+    from report ready) and cases past their decision time now. Never anyone else's."""
     r = conn.execute(
         text("""SELECT count(*) AS n, percentile_cont(0.5) WITHIN GROUP (
                     ORDER BY extract(epoch FROM o.created_at - c.report_ready_at)::float8) AS median
@@ -242,4 +244,9 @@ def officer_own(conn: Connection, officer_id: Any) -> dict[str, Any]:
                    AND c.report_ready_at IS NOT NULL"""),
         {"me": officer_id},
     ).one()  # fmt: skip
-    return {"decided_30d": r.n, "median_decision_s": _secs(r.median)}
+    state = due_state_sql()
+    overdue = conn.execute(
+        text(f"SELECT count(*) FROM cases c WHERE c.created_by = :me AND {state} = 'overdue'"),
+        {"me": officer_id, "sla_tz": sla_tz},
+    ).scalar_one()
+    return {"decided_30d": r.n, "median_decision_s": _secs(r.median), "overdue": overdue}

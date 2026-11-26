@@ -331,8 +331,9 @@ def test_the_auditor_gets_the_same_counts_and_no_way_into_a_case(client: TestCli
 def test_an_officer_sees_only_their_own_decisions(client: TestClient) -> None:
     asha = get(client, "asha", "/me/insights")
     ben = get(client, "ben", "/me/insights")
-    assert asha == {"decided_30d": 2, "median_decision_s": 36 * H}  # cases 1 and 2: 24 h, 48 h
-    assert ben == {"decided_30d": 2, "median_decision_s": 2 * H}  # cases 3 and 4: 3 h, 1 h
+    pace = {"decided_30d": 2, "overdue": 0, "sla_working_days": 2}
+    assert asha == {**pace, "median_decision_s": 36 * H}  # cases 1 and 2: 24 h, 48 h
+    assert ben == {**pace, "median_decision_s": 2 * H}  # cases 3 and 4: 3 h, 1 h
 
 
 # --- migration 0026 --------------------------------------------------------------------------

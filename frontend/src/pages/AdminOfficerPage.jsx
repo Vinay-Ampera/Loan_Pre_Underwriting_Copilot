@@ -2,6 +2,8 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import Breadcrumbs from '../components/Breadcrumbs'
+import DueBadge from '../components/DueBadge'
+import ExportButton from '../components/ExportButton'
 import StatusChip, { CaseStatusChip } from '../components/StatusChip'
 import { loanLabel } from '../components/LoanTypePicker'
 import { EmptyState, ErrorState } from '../components/States'
@@ -107,6 +109,7 @@ export default function AdminOfficerPage() {
           <section className="card officer-block">
             <div className="officer-cases-head">
               <h2>Cases</h2>
+              <ExportButton path="/admin/cases/export.csv">Export all cases</ExportButton>
               <div className="field officer-filter">
                 <label htmlFor="officer-status">Show</label>
                 <select
@@ -153,6 +156,11 @@ export default function AdminOfficerPage() {
                       </td>
                       <td data-label="Status">
                         <CaseStatusChip status={c.status} band={c.band} />{' '}
+                        <DueBadge
+                          state={c.due_state}
+                          dueAt={c.sla_due_at}
+                          workingDays={c.sla_working_days}
+                        />{' '}
                         {c.corrected && <StatusChip tone="refer">Changed by an admin</StatusChip>}
                       </td>
                       <td data-label="Updated">{when(c.updated_at)}</td>

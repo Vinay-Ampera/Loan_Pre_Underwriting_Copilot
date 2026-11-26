@@ -279,7 +279,7 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
 - Frontend: `InsightsPage.test.jsx` (admin panels, case and clause links; auditor same counts and no link; filters send local midnights and clear; a backwards period asks for nothing; the empty state; the officer Home tile and its empty text), `KnowledgeBasePage.test.jsx` (a link opens the policy at the clause; an unknown policy is ignored), `Sidebar.test.jsx`, and `format.test.js` (`duration`).
 - Looked at in Chrome (light and dark at 1440, the auditor at 1024, a phone at 390, the officer Home, the knowledge base link) on a throwaway database seeded with the same cases: no sideways scrolling, no cut labels after the phone fixes.
 
-**Part C, export and decision timers** (`backend/tests/test_sla.py`, `test_export.py`):
+**Part C, export and decision timers** (built 2026-11-26: `backend/tests/test_sla.py`, `test_export.py`; frontend `CaseQueuePage.test.jsx`):
 - **Working-day maths (pure):**
   - ready Monday 10:00 → due Wednesday 10:00;
   - Friday 15:00 → Tuesday 15:00;
@@ -309,7 +309,7 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
   - 403 for the auditor on both routes.
 - Frontend: the queue's age column and badges, the due filter, Export buttons (no second click: a download changes nothing).
 
-**Part D, score breakdown** (`test_report.py` additions, frontend `ScoreWaterfall.test.jsx`):
+**Part D, score breakdown** (built 2026-11-26: `backend/tests/test_score_breakdown.py`, `test_api.py`; frontend `ScoreWaterfall.test.jsx`, `tokens.test.js`):
 - **Backend:**
   - for every scored dev replay case, 100 minus the points lost plus the bonus equals the final score;
   - a stopped case has no breakdown;

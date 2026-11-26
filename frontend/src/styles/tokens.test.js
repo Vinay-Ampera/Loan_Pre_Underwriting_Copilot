@@ -96,6 +96,17 @@ describe.each([
   })
 })
 
+// bars of the score chart against the card they sit on (non-text contrast, 3:1)
+describe.each([
+  ['light', light],
+  ['dark', dark],
+])('%s theme chart marks', (_name, theme) => {
+  it.each(['--brand', '--muted', '--approve'])('%s stands out from the card (3:1)', (mark) => {
+    const ratio = contrast(resolve(theme, theme[mark]), resolve(theme, theme['--surface']))
+    expect(ratio, `${mark} = ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(3)
+  })
+})
+
 describe('tokens', () => {
   it('uses the planned button purple in the light theme', () => {
     expect(light['--brand-strong']).toBe('#5e4fa0')

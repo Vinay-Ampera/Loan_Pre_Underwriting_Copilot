@@ -74,3 +74,9 @@
   font-weight: 500;
   white-space: nowrap;
 }
+
+.queue-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}

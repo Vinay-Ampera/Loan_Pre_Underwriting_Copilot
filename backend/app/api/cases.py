@@ -8,7 +8,7 @@ endpoints return; it computes nothing (scores, bands and stop decisions come fro
 import json
 from datetime import date
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
 
 from app.agents import store
+from app.agents.report import with_breakdown
 from app.agents.state import DB_STAGES
 from app.agents.submission import DocumentRef, Submission
 from app.api import display, identity, ingest
@@ -41,6 +42,7 @@ from app.intake.upload import check_case_size, check_upload
 from app.observability import metrics
 from app.scoring.facts import applicable_requirements
 from app.scoring.rules import RuleSet
+from app.workflow import sla
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -209,12 +211,16 @@ def _stage_rows(conn: Connection, case_id: UUID) -> list[dict[str, Any]]:
     return [got[s] for s in DB_STAGES if s in got]
 
 
-def _latest_report(conn: Connection, case_id: UUID) -> tuple[int, dict[str, Any]] | None:
+def _latest_report(
+    conn: Connection, case_id: UUID, rs: RuleSet
+) -> tuple[int, dict[str, Any]] | None:  # fmt: skip
     row = conn.execute(
         text("SELECT version, report_json FROM reports WHERE case_id = :c ORDER BY version DESC LIMIT 1"),
         {"c": case_id})  # fmt: skip
     r = row.first()
-    return None if r is None else (r.version, r.report_json)
+    if r is None:
+        return None
+    return (r.version, with_breakdown(r.report_json, rs.scoring.bands))  # older reports too
 
 
 def _officer_action(conn: Connection, case_id: UUID) -> dict[str, Any] | None:
@@ -258,12 +264,14 @@ def _summary(row: Any) -> dict[str, Any]:
 # --------------------------------------------------------------------------- list, create, read
 @router.get("")
 def list_cases(
-    status: str | None = None, loan_type: str | None = None, q: str | None = None,
+    request: Request, status: str | None = None, loan_type: str | None = None,
+    q: str | None = None, due: Literal["due_today", "overdue"] | None = None,
     user: User = Depends(case_reader), conn: Connection = Depends(get_conn),
 ) -> list[dict[str, Any]]:  # fmt: skip
     everyone = user.role == "admin"
+    state = sla.due_state_sql()
     rows = conn.execute(
-        text("""SELECT c.*, u.name AS officer_name,
+        text(f"""SELECT c.*, u.name AS officer_name, {state} AS due_state,
                        (SELECT a.full_name FROM applicants a WHERE a.case_id = c.id AND a.role = 'primary') AS applicant,
                        EXISTS (SELECT 1 FROM admin_actions x WHERE x.case_id = c.id) AS corrected,
                        COALESCE(c.form_data ->> 'origin', 'officer') AS origin,
@@ -276,12 +284,16 @@ def list_cases(
                   AND (CAST(:q AS text) IS NULL OR c.case_no ILIKE '%' || :q || '%'
                        OR EXISTS (SELECT 1 FROM applicants a WHERE a.case_id = c.id
                                   AND a.full_name ILIKE '%' || :q || '%'))
+                  AND (CAST(:due AS text) IS NULL OR {state} = CAST(:due AS text))
                 ORDER BY c.updated_at DESC LIMIT 200"""),
-        {"u": user.id, "all": everyone, "st": status or None, "lt": loan_type or None, "q": (q or "").strip() or None},
+        {"u": user.id, "all": everyone, "st": status or None, "lt": loan_type or None, "q": (q or "").strip() or None,
+         "due": due, "sla_tz": request.app.state.settings.sla_timezone},
     )  # fmt: skip
     return [{**_summary(r), "applicant": r.applicant, "officer": r.officer_name,
              "age_days": r.age_days, "admin_corrected": r.corrected, "origin": r.origin,
-             "applicant_sent": r.applicant_sent} for r in rows]  # fmt: skip
+             "applicant_sent": r.applicant_sent, "due_state": r.due_state,
+             "sla_due_at": r.sla_due_at if r.due_state else None,
+             "sla_working_days": request.app.state.settings.sla_working_days} for r in rows]  # fmt: skip
 
 
 def _insert_applicants(conn: Connection, case_id: UUID, body: CaseIn) -> None:
@@ -412,7 +424,7 @@ def read_case(
     docs = _documents(conn, case_id)
     fields = _fields(conn, case_id)
     checklist = _checklist(_ruleset(request), row, docs)
-    report = _latest_report(conn, case_id)
+    report = _latest_report(conn, case_id, _ruleset(request))
     form = _case_form(row)
     emails = _emails(conn, case_id)
     intake_stage = not form.get("applicants")
@@ -730,10 +742,11 @@ async def resume_case(
 # --------------------------------------------------------------------------- report
 @router.get("/{case_id}/report")
 def case_report(
-    case_id: UUID, user: User = Depends(case_reader), conn: Connection = Depends(get_conn)
+    case_id: UUID, request: Request, user: User = Depends(case_reader),
+    conn: Connection = Depends(get_conn),
 ) -> dict[str, Any]:  # fmt: skip
     get_case(conn, case_id, user)
-    rep = _latest_report(conn, case_id)
+    rep = _latest_report(conn, case_id, _ruleset(request))
     if rep is None:
         raise HTTPException(404, "No report yet.")
     return {
@@ -746,10 +759,11 @@ def case_report(
 
 @router.get("/{case_id}/report.pdf")
 def case_report_pdf(
-    case_id: UUID, user: User = Depends(officer_only), conn: Connection = Depends(get_conn)
+    case_id: UUID, request: Request, user: User = Depends(officer_only),
+    conn: Connection = Depends(get_conn),
 ) -> Response:  # fmt: skip
     row = get_case(conn, case_id, user)
-    rep = _latest_report(conn, case_id)
+    rep = _latest_report(conn, case_id, _ruleset(request))
     if rep is None:
         raise HTTPException(404, "No report yet.")
     pdf = build_report_pdf(row.case_no, rep[1], _officer_action(conn, case_id))

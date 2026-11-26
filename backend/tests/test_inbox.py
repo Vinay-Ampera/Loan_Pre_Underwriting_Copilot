@@ -92,7 +92,7 @@ def applicant_sends(client: TestClient, h: dict[str, str]) -> tuple[dict[str, st
 
 # --------------------------------------------------------------------------- the table of kinds
 def test_every_text_in_the_table_is_clean_and_holds_no_number_or_outcome_word() -> None:
-    assert len(KINDS) == 13
+    assert len(KINDS) == 15  # 13 + the two overdue reminders (Stage 12 Part C)
     for kind in KINDS.values():
         titles = [kind.title, *(t for _, t in kind.variants)]
         for t in titles:
@@ -110,7 +110,7 @@ def test_every_kind_is_in_exactly_one_filter_group_and_each_role_sees_its_own_gr
     officer = [g["key"] for g in inbox.groups_for("officer")]
     admin = [g["key"] for g in inbox.groups_for("admin")]
     assert officer == ["applicant", "runs", "decisions", "precedents", "messages"]
-    assert admin == ["precedents", "messages"] and inbox.groups_for("auditor") == []
+    assert admin == ["decisions", "precedents", "messages"] and inbox.groups_for("auditor") == []
     assert (
         inbox.kinds_in("runs") == ["run_ready", "run_stopped_fix"] and inbox.kinds_in("x") is None
     )
@@ -504,7 +504,7 @@ def test_the_list_filters_by_group_and_case_number_on_the_callers_own_rows(
         assert client.get(f"{V1}/notifications?case={bad}", headers=asha).status_code == 422
     ada = login(client, "ada")
     assert [g["key"] for g in client.get(f"{V1}/notifications", headers=ada).json()["groups"]] == [
-        "precedents", "messages"]  # fmt: skip
+        "decisions", "precedents", "messages"]  # fmt: skip
 
 
 def test_the_auditor_gets_403_on_every_route_and_has_no_rows(

@@ -1,0 +1,93 @@
+.waterfall-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+/* the text keeps its size: a narrow screen scrolls the chart instead of shrinking it */
+.waterfall-scroll {
+  overflow-x: auto;
+}
+.waterfall svg {
+  display: block;
+  width: 100%;
+  min-width: 540px;
+  max-width: 760px;
+  height: auto;
+  font-size: var(--fs-12);
+  font-variant-numeric: tabular-nums;
+}
+.wf-total {
+  fill: var(--brand);
+}
+.wf-lost {
+  fill: var(--muted);
+}
+.wf-bonus {
+  fill: var(--approve);
+}
+.wf-band {
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.wf-axis {
+  stroke: var(--line-strong);
+}
+.wf-value {
+  fill: var(--ink);
+  font-weight: 500;
+  text-anchor: middle;
+}
+.wf-name {
+  fill: var(--muted);
+  text-anchor: middle;
+}
+.wf-note {
+  fill: var(--muted);
+}
+.wf-cap {
+  margin: 0;
+  text-align: right;
+}
+.wf-cap span {
+  display: inline-block;
+  padding: 0 var(--s-2);
+  border-radius: var(--radius-sm);
+  background: var(--refer-bg);
+  color: var(--refer);
+  font-family: var(--mono);
+  line-height: 22px;
+}
+.waterfall-table {
+  overflow-x: auto;
+}
+.waterfall-table table {
+  width: 100%;
+  max-width: 520px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.waterfall-table caption {
+  caption-side: bottom;
+  padding-top: var(--s-2);
+  text-align: left;
+  color: var(--muted);
+}
+.waterfall-table th,
+.waterfall-table td {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.waterfall-table th[scope='row'],
+.waterfall-table thead th:first-child {
+  text-align: left;
+}
+.waterfall-table th[scope='row'] {
+  font-weight: 500;
+}
+.waterfall-note {
+  color: var(--refer);
+}

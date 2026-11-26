@@ -7,15 +7,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.queue-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+/* sits with the buttons it explains, not as its own block */
+.export-note {
+  margin-top: calc(var(--s-3) * -1);
+  text-align: right;
 }
 .filters {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: var(--s-3);
 }
 @media (max-width: 720px) {
   .filters {
     grid-template-columns: 1fr;
+  }
+  .export-note {
+    text-align: left;
   }
 }
 .view-note {

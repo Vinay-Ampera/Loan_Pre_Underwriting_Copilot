@@ -4,6 +4,7 @@ narrative (`summary`, `rejection_reason`) is the only model-written text and is 
 Wording is "recommended"; the officer confirms every case.
 """
 
+from collections.abc import Iterable, Mapping
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -39,6 +40,29 @@ class StageScoreRow(BaseModel):
     score: float | None
     max: float
     ran: bool
+
+
+class BreakdownStage(BaseModel):
+    stage: str
+    label: str
+    max: float
+    earned: float
+    lost: float
+    level_after: float  # where the running total stands after this step
+
+
+class ScoreBreakdown(BaseModel):
+    """The numbers the score chart and the PDF's "Points lost" column draw (Stage 12 Part D).
+    Display only: every figure is read from the stored stage scores, nothing is scored here."""
+
+    start: float
+    stages: list[BreakdownStage]
+    bonus: float
+    final: float
+    band: str
+    approve_min: float
+    refer_min: float
+    cap_rule_ids: list[str]  # rules that hold the case at refer; empty when none does
 
 
 class ReportFinding(BaseModel):
@@ -87,6 +111,58 @@ class Report(BaseModel):
     # other amounts or tenures worked out in code (Stage 12 Part A); None when it would not help.
     # Added after the summary is written: never in a prompt, the summary or a customer message.
     counter_offer: CounterOffer | None = None
+    # how the score was reached (Stage 12 Part D); None when a stage did not run
+    score_breakdown: ScoreBreakdown | None = None
+
+
+def points_lost(row: StageScoreRow) -> float | None:
+    """What a stage lost; None for a stage that did not run."""
+    return None if row.score is None else round(row.max - row.score, 2)
+
+
+def cap_rules(findings: Iterable[tuple[str | None, str | None]]) -> list[str]:
+    """The rule ids that cap the band, from (severity, rule id) pairs."""
+    return sorted({rule_id for severity, rule_id in findings if severity == "cap" and rule_id})
+
+
+def score_breakdown(
+    rows: list[StageScoreRow], *, total: float | None, band: str | None, bonus: float,
+    cap_rule_ids: list[str], bands: Mapping[Any, float],
+) -> ScoreBreakdown | None:  # fmt: skip
+    """Only for a scored case in which every stage ran; a stopped case has no chart (E-120)."""
+    if total is None or band is None or not rows or any(r.score is None for r in rows):
+        return None
+    start = round(sum(r.max for r in rows), 2)
+    level = start
+    stages = []
+    for r in rows:
+        lost = points_lost(r) or 0.0
+        level = round(level - lost, 2)
+        stages.append(BreakdownStage(stage=r.stage, label=r.label, max=r.max,
+                                     earned=round(r.max - lost, 2), lost=lost, level_after=level))  # fmt: skip
+    return ScoreBreakdown(
+        start=start, stages=stages, bonus=bonus, final=total, band=band,
+        approve_min=bands["approve_min"], refer_min=bands["refer_min"], cap_rule_ids=cap_rule_ids,
+    )  # fmt: skip
+
+
+def with_breakdown(report: dict[str, Any], bands: Mapping[Any, float]) -> dict[str, Any]:
+    """A report stored before the chart existed gets its breakdown on read, from its own stage
+    scores and through the same function. Only the fields the chart draws are read, and the
+    stored row is not changed."""
+    if "score_breakdown" in report:
+        return report
+    built = None
+    if report.get("total_score") is not None:
+        built = score_breakdown(
+            [StageScoreRow.model_validate(r) for r in report.get("stage_scores") or []],
+            total=report["total_score"], band=report.get("band"),
+            bonus=report.get("precedent_bonus") or 0.0,
+            cap_rule_ids=cap_rules((f.get("severity"), f.get("rule_id"))
+                                   for f in report.get("findings") or []),
+            bands=bands,
+        )  # fmt: skip
+    return {**report, "score_breakdown": built.model_dump(mode="json") if built else None}
 
 
 FROM_DOCUMENT_NOTE = "from document, not an independent check"

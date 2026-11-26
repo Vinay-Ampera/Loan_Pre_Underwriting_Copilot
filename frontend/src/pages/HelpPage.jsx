@@ -55,6 +55,7 @@ const OFFICER = [
   ['stages', 'The five stages', 'cases'],
   ['report', 'Reading the report', 'precedent'],
   ['confirm', 'Confirm or override', 'shield'],
+  ['timer', 'Decision timer and export', 'clock'],
   ['contact', 'Contact the customer', 'mail'],
   ['inbox', 'Your inbox', 'bell'],
   ['problem', 'Report a problem', 'flag'],
@@ -69,6 +70,7 @@ const ADMIN = [
   ['two-step', '2-step verification', 'shield-check'],
   ['adm-case', 'Open and correct a case', 'cases'],
   ['adm-reassign', 'Reassign a case', 'users'],
+  ['adm-timer', 'Decision timer and export', 'clock'],
   ['adm-records', "Messages and a case's history", 'mail'],
   ['adm-inbox', 'Your inbox', 'bell'],
   ['issues', 'Read issue reports', 'flag'],
@@ -335,6 +337,25 @@ function OfficerGuide() {
         </Callout>
       </HelpSection>
 
+      <HelpSection id="timer" icon="clock" title="Decision timer and export">
+        <ul>
+          <li>
+            Decide within 2 working days (Monday to Friday; holidays are not counted) of the report
+            being ready. A new report starts the time again.
+          </li>
+          <li>
+            A case shows <strong>Due today</strong> or <strong>Overdue</strong> in your list and you
+            can filter by it. You get one notice when a case becomes overdue; the admin is told a
+            working day later.
+          </li>
+          <li>A case that is stopped for a fix, not yet submitted or decided is not timed.</li>
+          <li>
+            <strong>Export CSV</strong> on Cases saves the cases shown, with your filters. The file
+            has case references and no applicant names, and each download is recorded.
+          </li>
+        </ul>
+      </HelpSection>
+
       <HelpSection id="contact" icon="mail" title="Contact the customer">
         <ul>
           <li>
@@ -543,6 +564,23 @@ function AdminGuide() {
         </p>
       </HelpSection>
 
+      <HelpSection id="adm-timer" icon="clock" title="Decision timer and export">
+        <ul>
+          <li>
+            An officer should decide within 2 working days of the report being ready. The officer
+            page shows which of their cases are due today or overdue.
+          </li>
+          <li>
+            You get one notice when a case is still undecided a working day after its due time.
+            Reassigning a case keeps its due time. Nothing is assigned automatically.
+          </li>
+          <li>
+            <strong>Export all cases</strong> on Home or an officer page saves every case as CSV,
+            with no applicant names. Each download is recorded in the audit log.
+          </li>
+        </ul>
+      </HelpSection>
+
       <HelpSection id="adm-records" icon="mail" title="Messages and a case's history">
         <p>
           Messages lists the contact requests officers actually sent (no drafts), with filters for
@@ -554,11 +592,11 @@ function AdminGuide() {
 
       <HelpSection id="adm-inbox" icon="bell" title="Your inbox">
         <p>
-          The bell and Inbox tell you about three things only: a new issue report, a precedent
-          waiting for your review, and a precedent the code check held back. Every active admin gets
-          each notice. Overrides by officers and your own corrections do not send one. A notice
-          names the case and never holds applicant details; click it to open the Issues or
-          Precedents page, then use Mark read or Mark all read to clear the count.
+          The bell and Inbox tell you about four things only: a new issue report, a precedent
+          waiting for your review, a precedent the code check held back, and a case still waiting
+          for its officer. Every active admin gets each notice. Overrides by officers and your own
+          corrections do not send one. A notice names the case and never holds applicant details;
+          click it to open what it is about, then use Mark read or Mark all read to clear the count.
         </p>
       </HelpSection>
 

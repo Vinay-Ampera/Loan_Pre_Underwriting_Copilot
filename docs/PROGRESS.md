@@ -23,7 +23,7 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 10b AI control for the admin | Built, committed (`f521e32`) | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 10c Knowledge base (policy documents and learnings) | Built, committed (`d484bff`) | Migration 0021; `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`, `api/knowledge.py`; admin Knowledge base page and officer Policies page. See "Knowledge base build notes". Run `python -m app.db.migrate` first |
 | 11 Hardening, Docker and demo | Built, committed (`61f34df`, `0d8b1e8`) | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), the demo script (moved out of the repo on 2026-11-23), README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
-| 12 Post-demo features | **Part A committed (`27fbe2f`); Part B built (2026-11-25, migration 0026), not committed; Parts C to E not started** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
+| 12 Post-demo features | **Part A committed (`27fbe2f`), Part B committed (`df1747c`); Parts C and D built 2026-11-26 (migration 0027), not committed; Part E not started** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
 
 In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
@@ -633,3 +633,22 @@ Built after the user's go on 2026-11-25. Scoring is untouched; no model is calle
 - **Checked in Chrome** on a throwaway local database seeded with the test cases: light and dark at 1440, the auditor at 1024, a phone at 390, the officer Home and the knowledge base link. Three fixes came out of it: a cut funnel label, tables that squeezed on phones (now stacked cards), and the clause link that scrolled before the pane was sized.
 - **Tests:** `tests/test_insights.py` (16: every panel against a hand count with and without each filter, roles, the auditor's JSON walk, the officer's own numbers, no model, migration 0026 backfill and rollback, the times set once). Additions to `test_pipeline.py` and `test_api.py` (times on a real run, a fix stop and the officer's submit). `test_auditor.py`, `test_audit_coverage.py`, `test_migrations.py` and `test_fairness.py` pass. Frontend: `InsightsPage.test.jsx`, `KnowledgeBasePage.test.jsx`, `Sidebar.test.jsx`, `format.test.js`; the whole Vitest suite passes (843 before these additions).
 - **Not done here:** the officer's "Overdue" tile and the overdue counts come with Part C.
+
+## Stage 12 Part C build notes: queue export and decision timers (2026-11-26)
+
+Scoring is untouched; no model is called. The backend was started on 2026-11-25 or 26 and the session was cut off by the network; the screens, tests and docs were finished on 2026-11-26.
+
+- **Migration 0027** (`0027_decision_timer.py`): `cases.sla_due_at`, `sla_officer_notified_for`, `sla_admin_notified_for`, a partial index and the notice kinds `case_overdue` and `case_overdue_admin`. Apply it with `python -m app.db.migrate`.
+- **Settings** (`.env.example`): `SLA_WORKING_DAYS=2`, `SLA_TIMEZONE=Asia/Kolkata`, `SLA_CHECK_MINUTES=15`. `docker-compose.yml` reads `.env`, so it needs no change.
+- **Code:** `app/workflow/sla.py` (working-day maths, due state, the reminder check and its loop), `app/api/export.py` (the two CSV routes); `store.update_case` sets the due time; the queue, officer page and `/me/insights` carry the due state and the target.
+- **Screens:** Age column, "Due today" and "Overdue" badges, Due filter and "Export CSV" on Cases; the "Overdue" tile on Home; "Export all cases" on the admin's Home and officer page; Help sections for both roles.
+- **Choices to confirm:** "Export all cases" on an officer page exports every case, as the plan's wording says, not only that officer's (the API has the officer filter if a button is wanted). Cases already waiting when 0027 arrives get a due time but no old reminders (E-129).
+
+## Stage 12 Part D build notes: score breakdown chart (2026-11-26)
+
+Display only: scores, bands and rules are unchanged; no migration.
+
+- **Code:** `agents/report.py` (`ScoreBreakdown`, `score_breakdown`, `with_breakdown` for older reports), set by the Decision node after the summary is written, so no prompt sees it. `api/reportpdf.py` adds the "Points lost" column.
+- **Screen:** `ScoreWaterfall` (inline SVG, theme tokens, text summary, "Show as a table") as the first card of a scored report.
+- **Checked in Chrome** on a throwaway database: light, dark, 1024 and a phone, and the PDF's table. One fix: the band labels were cut off at 1024, so the chart was narrowed and the labels wrap. The capped-with-bonus look was checked with a report edited by hand in that database.
+- **Tests (2026-11-26):** the affected backend files pass; the full frontend suite passes, with lint and build clean; the help, inbox, roles and loan-type browser specs pass (15 of 15); the whole backend suite was not run in one go; `ruff` and `mypy` clean; `python -m app.eval.run --split dev` 60 of 60 bands.
