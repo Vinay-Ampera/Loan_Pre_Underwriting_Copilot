@@ -601,6 +601,100 @@ def test_admin_summary_counts(client: TestClient, engine: Engine) -> None:
     assert second["active_officers"] == 1 and second["disabled_accounts"] == 1
 
 
+# --------------------------------------------------------------------------- counter-offer box
+OFFER_TEXT = "Pramaan estimates ₹6.3L over 5 years would be recommended for refer (FOIR 40.0%)."
+
+
+def stored_report(box: dict[str, Any] | None) -> dict[str, Any]:
+    return {
+        "loan_type": "personal", "recommendation_text": "Recommended: reject",
+        "awaiting": "Awaiting your confirmation.", "stop_text": None, "total_score": 52.0,
+        "band": "reject", "summary": "Written by code from the rules engine results.",
+        "stage_scores": [{"stage": "income", "label": "Income and FOIR", "score": 13.0, "max": 30.0, "ran": True}],
+        "rejection_reason": None, "findings": [], "citations": [], "unverified": [],
+        "counter_offer": box,
+    }  # fmt: skip
+
+
+def test_counter_offer_box_is_in_the_report_and_the_officers_pdf(
+    client: TestClient, engine: Engine
+) -> None:
+    """Stage 12 Part A: the stored box reaches the officer and the admin as stored; the officer's
+    PDF prints the same sentences. The auditor's 403 on reports is in test_auditor.py."""
+    h = login(client, "asha")
+    case_id = create(client, h, minimal())
+    box = {"rules_version": "2026.11.25-1", "lines": [{
+        "kind": "amount", "loan_type": "personal", "amount": 630000.0, "tenure_months": 60,
+        "rate_pct": 12.0, "emi": 14014.0, "foir": 40.0, "band": "refer", "scored": True,
+        "extra_documents": [], "text": OFFER_TEXT, "tags": ["EMI ₹14,014"]}]}  # fmt: skip
+    with engine.begin() as c:
+        c.execute(text("INSERT INTO reports (case_id, version, report_json) VALUES (:c, 1, CAST(:r AS jsonb))"),
+                  {"c": case_id, "r": json.dumps(stored_report(box))})  # fmt: skip
+    for who in ("asha", "ada"):
+        got = client.get(f"/api/v1/cases/{case_id}/report", headers=login(client, who))
+        assert got.status_code == 200 and got.json()["report"]["counter_offer"] == box, who
+
+    pdf = client.get(f"/api/v1/cases/{case_id}/report.pdf", headers=h)
+    assert pdf.status_code == 200
+    with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
+        words = " ".join(" ".join(p.get_text().split()) for p in doc)
+    assert "Other amounts or tenures (estimate)" in words
+    assert "Rs 6.3L over 5 years would be recommended for refer (FOIR 40.0%)." in words
+    assert "EMI Rs 14,014" in words and "Not for customer messages" in words
+    assert "approved" not in words.lower()
+
+    # a report without a box (approve, or made before Stage 12) prints no heading
+    with engine.begin() as c:
+        c.execute(text("INSERT INTO reports (case_id, version, report_json) VALUES (:c, 2, CAST(:r AS jsonb))"),
+                  {"c": case_id, "r": json.dumps(stored_report(None))})  # fmt: skip
+    pdf = client.get(f"/api/v1/cases/{case_id}/report.pdf", headers=h)
+    with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
+        assert "Other amounts" not in " ".join(p.get_text() for p in doc)
+
+
+def test_an_older_report_gets_its_breakdown_on_read_and_the_pdf_dashes_an_unrun_stage(
+    client: TestClient, engine: Engine
+) -> None:
+    """Stage 12 Part D: nothing stored changes; a stopped case has no chart."""
+    h = login(client, "asha")
+    case_id = create(client, h, minimal())
+    old = stored_report(None) | {"stage_scores": [
+        {"stage": "kyc", "label": "KYC", "score": 18.0, "max": 20.0, "ran": True},
+        {"stage": "documents", "label": "Documents", "score": 15.0, "max": 15.0, "ran": True},
+        {"stage": "income", "label": "Income and FOIR", "score": 12.0, "max": 30.0, "ran": True},
+        {"stage": "credit", "label": "Credit and behaviour", "score": 19.0, "max": 25.0, "ran": True},
+        {"stage": "policy", "label": "Policy fit", "score": 8.0, "max": 10.0, "ran": True},
+    ], "total_score": 72.0, "band": "refer"}  # fmt: skip
+    stopped = old | {"total_score": None, "band": None, "stage_scores": [
+        *old["stage_scores"][:2],
+        {"stage": "income", "label": "Income and FOIR", "score": None, "max": 30.0, "ran": False},
+    ]}  # fmt: skip
+
+    def put(version: int, report: dict[str, Any]) -> tuple[Any, list[str]]:
+        with engine.begin() as c:
+            c.execute(text("INSERT INTO reports (case_id, version, report_json) VALUES (:c, :v, CAST(:r AS jsonb))"),
+                      {"c": case_id, "v": version, "r": json.dumps(report)})  # fmt: skip
+        got = client.get(f"/api/v1/cases/{case_id}/report", headers=h).json()["report"]
+        pdf = client.get(f"/api/v1/cases/{case_id}/report.pdf", headers=h)
+        with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
+            lines = [line.strip() for p in doc for line in p.get_text().splitlines()]
+        return got["score_breakdown"], lines
+
+    shown, lines = put(1, old)
+    assert [s["lost"] for s in shown["stages"]] == [2, 0, 18, 6, 2]
+    assert (shown["start"], shown["final"], shown["band"], shown["bonus"]) == (100, 72, "refer", 0)
+    assert (shown["approve_min"], shown["refer_min"], shown["cap_rule_ids"]) == (85, 60, [])
+    assert lines[lines.index("Income and FOIR") :][:3] == ["Income and FOIR", "12 / 30", "18"]
+    with engine.connect() as c:  # worked out on read, never written back
+        assert (
+            "score_breakdown" not in c.execute(text("SELECT report_json FROM reports")).scalar_one()
+        )
+
+    shown, lines = put(2, stopped)
+    assert shown is None
+    assert lines[lines.index("Income and FOIR") :][:3] == ["Income and FOIR", "not run", "–"]
+
+
 # --------------------------------------------------------------------------- whole cases
 def upload_all(client: TestClient, h: dict[str, str], case_id: str, case: str) -> None:
     detail = client.get(f"/api/v1/cases/{case_id}", headers=h).json()
@@ -668,6 +762,10 @@ def test_a_case_without_a_purpose_runs_and_a_failed_run_is_shown_to_the_officer(
     wait_for(client, h, case_id, {"awaiting_confirmation"})
     detail = client.get(f"/api/v1/cases/{case_id}", headers=h).json()
     assert detail["purpose"] is None and detail["last_failure"] is None
+    with engine.connect() as c:  # Insights: the officer's submit and the waiting report (0026)
+        times = c.execute(text("SELECT submitted_at, report_ready_at FROM cases WHERE id = :i"),
+                          {"i": case_id}).one()  # fmt: skip
+    assert times.submitted_at is not None and times.report_ready_at >= times.submitted_at
 
     # a run that fails puts the case back and the case view says what failed
     with engine.begin() as c:
@@ -719,6 +817,11 @@ def test_one_case_per_loan_type_runs_through_the_api_and_the_officer_confirms(
     )
     with pymupdf.open(stream=pdf.content, filetype="pdf") as doc:
         words = " ".join(p.get_text() for p in doc)
+    # Stage 12 Part D: the chart's numbers are on the report, and the PDF table prints the same
+    shown = detail["report"]["score_breakdown"]
+    if shown is not None:  # a scored case: every stage ran
+        assert round(shown["start"] - sum(s["lost"] for s in shown["stages"]) + shown["bonus"], 2) == shown["final"]  # fmt: skip
+    assert "Points lost" in words
     # policy clause text may say "approved plan"; the system itself must never claim an approval
     assert "Recommended" in words and not re.search(
         r"\b(is|was|been|are)\s+approved\b", words.lower()

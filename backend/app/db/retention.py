@@ -11,6 +11,8 @@
    for written reasons). Once the officer has decided, the run's LangGraph checkpoints, which
    hold the whole bureau record, are deleted and the case is stamped `bureau_removed_at`.
 2. **Staff email**, `EMAIL_RETENTION_DAYS` (90): `email_outbox` rows that are no longer queued.
+3. **Chat turns**, `CHAT_RETENTION_DAYS` (90): `case_chat_messages` rows (an answer may quote the
+   credit score, so they go well inside the bureau limit).
 
 Each run that changes something writes one `retention_run` audit row with counts only. Two app
 processes never run it at once (an advisory lock).
@@ -44,6 +46,7 @@ class RetentionReport:
     reports: int = 0
     checkpoints: int = 0
     emails: int = 0
+    chats: int = 0
 
     @property
     def changed(self) -> bool:
@@ -56,6 +59,11 @@ def bureau_rule_ids(rs: RuleSet) -> list[str]:
 
 def _clean_report(data: dict[str, Any], ids: set[str]) -> bool:
     changed = False
+    facts = data.get("facts") or {}  # the figures kept for the case chat
+    for block in [facts.get("case") or {}, *(facts.get("persons") or [])]:
+        for name in BUREAU_FIELDS & set(block):
+            del block[name]
+            changed = True
     for f in data.get("findings") or []:
         if f.get("rule_id") in ids and f.get("evidence") != {"removed": REMOVED}:
             f["evidence"] = {"removed": REMOVED}
@@ -123,8 +131,17 @@ def remove_old_email(
     report.emails += int(result.scalar_one()) if dry_run else result.rowcount
 
 
+def remove_old_chat(
+    conn: Connection, days: int, report: RetentionReport, *, dry_run: bool = False
+) -> None:
+    where = "created_at < now() - make_interval(days => :d)"
+    verb = "SELECT count(*)" if dry_run else "DELETE"
+    result = conn.execute(text(f"{verb} FROM case_chat_messages WHERE {where}"), {"d": days})  # noqa: S608
+    report.chats += int(result.scalar_one()) if dry_run else result.rowcount
+
+
 def run(engine: Engine, rs: RuleSet, *, months: int = 6, email_days: int = 90,
-        dry_run: bool = False) -> RetentionReport | None:  # fmt: skip
+        chat_days: int = 90, dry_run: bool = False) -> RetentionReport | None:  # fmt: skip
     """One pass. Returns None when another process holds the lock (it is running there)."""
     report = RetentionReport()
     with engine.begin() as conn:
@@ -132,18 +149,22 @@ def run(engine: Engine, rs: RuleSet, *, months: int = 6, email_days: int = 90,
             return None
         remove_bureau_data(conn, rs, months, report, dry_run=dry_run)
         remove_old_email(conn, email_days, report, dry_run=dry_run)
+        remove_old_chat(conn, chat_days, report, dry_run=dry_run)
         if report.changed and not dry_run:
-            after = {**asdict(report), "months": months, "email_days": email_days}
+            after = {**asdict(report), "months": months, "email_days": email_days,
+                     "chat_days": chat_days}  # fmt: skip
             write_audit(conn, None, "retention_run", "system", None, after=after)
     return report
 
 
 async def run_worker(engine: Engine, rs: RuleSet, every_hours: int, months: int,
-                     email_days: int) -> None:  # fmt: skip
+                     email_days: int, chat_days: int = 90) -> None:  # fmt: skip
     """The daily loop started with the app. A failure is logged and the loop goes on."""
     while True:
         try:
-            done = await asyncio.to_thread(run, engine, rs, months=months, email_days=email_days)
+            done = await asyncio.to_thread(
+                run, engine, rs, months=months, email_days=email_days, chat_days=chat_days
+            )
             if done is not None and done.changed:
                 log.info("retention run", extra={"retention": asdict(done)})
         except Exception as exc:  # noqa: BLE001 - the loop must survive a bad moment
@@ -161,7 +182,8 @@ def main() -> None:
     engine = create_engine(settings.sqlalchemy_url())
     try:
         out = run(engine, load_rules(), months=settings.bureau_retention_months,
-                  email_days=settings.email_retention_days, dry_run=args.dry_run)  # fmt: skip
+                  email_days=settings.email_retention_days,
+                  chat_days=settings.chat_retention_days, dry_run=args.dry_run)  # fmt: skip
     finally:
         engine.dispose()
     if out is None:

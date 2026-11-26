@@ -14,11 +14,11 @@ const ICON = {
 }
 
 /** Label + icon + colour, never colour alone (DESIGN_SYSTEM principle 2). */
-export default function StatusChip({ tone = 'neutral', children, title }) {
+export default function StatusChip({ tone = 'neutral', children, title, icon }) {
   return (
     <span className={`chip chip-${tone}`} title={title}>
       <span className={`chip-icon${tone === 'running' ? ' spin' : ''}`} aria-hidden="true">
-        <Icon name={ICON[tone] || 'dot'} size={14} />
+        <Icon name={icon || ICON[tone] || 'dot'} size={14} />
       </span>
       {children}
     </span>

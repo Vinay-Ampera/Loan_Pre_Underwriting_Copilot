@@ -89,6 +89,38 @@ zip / folder / files / applicant link
 
 Policy text lives in the database (`policy_documents.body`, one row per version with a lifecycle `status`); the files in `data/policy` are starting data imported by the re-index command when their label is new. `app/rag/policy_admin.py` is pure code (upload conversion, format check, auto-fix, comparison, rule-number drift, old-format import); `app/rag/policy_store.py` is the service behind `app/api/knowledge.py` (drafts in `policy_drafts`, staged and embedded when they pass, the retrieval check, publish, schedule, restore, retire, search, index health); `app/rag/versions.py` decides what is in force: it switches a scheduled version in when its date has come (on the next read, under an advisory lock, no scheduler) and gives the runner the set a new run binds (a context variable, like the AI configuration), which `PolicyRetriever` and the report's version stamp read. `app/learning/maintenance.py` pauses, confirms again and retires precedents and records their uses. The rules file is not reachable from the browser.
 
+## 3g. Post-demo features (Stage 12, planned 2026-11-25)
+
+None of these changes the graph order, the gates or a score.
+
+- **Counter-offer (Part A).** `app/scoring/counter_offer.py` is pure code beside the engine. The Decision node calls it after the one scoring run (and after the precedent rescore), with the run's own `case_input` and `ScoreReport` from the state and the rules file. It calls `score_case` again with only the amount and tenure changed. The result goes into `Report.counter_offer`, which is saved in `reports.report_json`; nothing is sent to a model. The box is added after the summary is written, and an unexpected error in it is logged and the report goes out without a box (display only). The sentences are written in code and shown as stored by `CounterOfferBox` and the officer's PDF. A re-run after a fix makes a new report version with its own box.
+- **Insights (Part B, built 2026-11-25).** `app/reporting/insights.py` builds every panel with SQL over `cases`, `reports`, `officer_actions`, `admin_actions`, `stage_runs`, `rule_results`, `precedent_uses` and the active policy's clause titles (`policy_chunks`). It lives in a new `app/reporting` package, not `app/monitoring`, so `app.monitoring` stays the isolated fairness view that no API module imports except to mount its router. `api/insights.py` serves it three ways: admin (with case references and officer ids for links), auditor (`strip_refs`: counts, rule and clause ids and officer names only), officer (`/me/insights`, own decisions). The band a precedent moved a case from is worked out by the scoring code's `band_for`. The browser sends the filter dates as instants (its own midnight), so the server needs no time zone setting. No model.
+- **Export and decision timers (Part C).**
+  - The CSV routes reuse `auditlog.csv_response`.
+  - `app/workflow/sla.py` (pure) does the working-day maths and the due state.
+  - The clock starts where the Decision node sets `awaiting_confirmation` (it writes `report_ready_at` and `sla_due_at` in the same transaction) and stops in `Pipeline.officer_action`.
+  - A loop in the app (`workflow.sla.run_worker`, started like the retention job and the email worker, every `SLA_CHECK_MINUTES`, under an advisory lock) writes the overdue notices through `inbox.notify`, so they go in the same transaction as their audit row and follow the staff-email switch.
+- **Score breakdown (Part D).** `agents/report.py` adds `Report.score_breakdown` (per stage: max, earned, lost; bonus; cap; band lines) when every stage ran. The case API adds it to an older stored report from its own stage scores, using the same function. The UI draws only. The report PDF (`api/reportpdf.py`) adds a "Points lost" column to its stage table from the same numbers; the chart is not in the PDF.
+- **"Ask this case" (Part E).** `app/chat/` and `api/chat.py`, outside the graph:
+
+```
+officer or admin question (POST /cases/{id}/chat)
+  -> access: case owner or admin (other officer 404, auditor 403); report must exist; rate limit per person
+  -> models off? -> "Chat is off" (no call)
+  -> mask the question (same masker; names tokenised) -> injection scan -> what-if check
+        hit -> fixed text, audit row, no model call
+  -> context (code): report facts, findings and rule evidence (masked), masked extracted fields,
+     clauses: the report's cited clauses + top reranked clauses for the question,
+     retrieved from the policy versions recorded on the report (bound like a run, E-91)
+  -> model (role case_assistant via the configured router; fallbacks as usual)
+  -> ChatAnswer schema -> code checks (citations exist, numbers match, wording, no raw identifiers)
+        fail -> one retry with the reasons -> fail again -> fixed text
+  -> store turn (case_chat_messages), llm_calls (stage chat), Langfuse span, audit row
+  -> answer with citation chips (a clause chip opens the clause, as in the report)
+```
+
+  The chat routes write only `case_chat_messages`, `llm_calls` and `audit_log`; no route there can change a case, a score or a decision.
+
 ## 4. Model routing
 
 | Agent | Primary | Why |
@@ -96,6 +128,7 @@ Policy text lives in the database (`policy_documents.body`, one row per version 
 | Supervisor, Extraction, Decision | Gemini Flash | Long context, document understanding, report writing |
 | KYC, Risk | Groq gpt-oss-20b | Fast, cheap reasoning on structured data |
 | Policy | NVIDIA Nemotron | Retrieval-grounded answering |
+| Case assistant chat (Stage 12) | Gemini Flash | Long context, cited answers in plain words; outside the pipeline |
 | Any (on 429 or error) | Fallback free model via LiteLLM | Keeps runs alive under free-tier limits |
 | Evaluation judge | A lighter model from a different family than the generator | Avoids self-grading |
 
@@ -148,6 +181,8 @@ All via `.env` and the rules file; nothing secret in git.
 | `FILE_STORE_PATH` | Local upload directory |
 | `RULES_PATH`, `POLICY_PATH` | Rule and policy files |
 | `JWT_SECRET` | Auth signing |
+| `SLA_WORKING_DAYS`, `SLA_TIMEZONE`, `SLA_CHECK_MINUTES` | Decision timer (Stage 12 Part C): 2 working days, Asia/Kolkata, check every 15 minutes |
+| `CHAT_MAX_PER_HOUR`, `CHAT_RETENTION_DAYS` | "Ask this case" (Stage 12 Part E): 20 questions per person per hour, rows kept 90 days |
 
 ## 9. Deployment
 

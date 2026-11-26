@@ -110,6 +110,11 @@
   margin-bottom: -1px;
   white-space: nowrap;
 }
+.tab-icon {
+  display: inline-block;
+  margin-right: var(--s-1);
+  vertical-align: -3px;
+}
 .tab:hover {
   color: var(--ink);
 }

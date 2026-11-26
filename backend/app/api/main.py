@@ -30,6 +30,9 @@ from app.api import (
     auditor,
     auth,
     cases,
+    chat,
+    export,
+    insights,
     intake,
     issues,
     knowledge,
@@ -52,6 +55,7 @@ from app.rag.embedder import embed_passages
 from app.rag.retrieve import PolicyRetriever
 from app.scoring.rules import load_rules
 from app.services import ai_config
+from app.workflow import sla
 
 log = logging.getLogger("loan_copilot")
 DIST = REPO_ROOT / "frontend" / "dist"
@@ -99,7 +103,7 @@ def create_app(
                 the_router = ConfiguredRouter()  # forwards to the router of the run's configuration
             ruleset = load_rules()
             ctx = AgentContext(ruleset=ruleset, engine=eng, router=the_router, services=Services.from_store(),
-                               **(ctx_kwargs or {}))  # fmt: skip
+                               sla=sla.SlaConfig.from_settings(settings), **(ctx_kwargs or {}))  # fmt: skip
             ai_config.reset()
             ai_config.refresh(eng, settings)  # the admin's saved models, prompts and settings
             runner = Runner(Pipeline(ctx, the_saver), eng, settings)
@@ -116,9 +120,17 @@ def create_app(
             if settings.retention_hours > 0:  # bureau data after six months, old staff email
                 keep_task = asyncio.get_running_loop().create_task(
                     retention.run_worker(eng, ruleset, settings.retention_hours,
-                                         settings.bureau_retention_months, settings.email_retention_days)
+                                         settings.bureau_retention_months, settings.email_retention_days,
+                                         settings.chat_retention_days)
                 )  # fmt: skip
                 stack.push_async_callback(_stop, keep_task)
+            if settings.sla_check_minutes > 0:  # overdue reminders (Stage 12 Part C)
+                sla_task = asyncio.get_running_loop().create_task(
+                    sla.run_worker(
+                        eng, sla.SlaConfig.from_settings(settings), settings.sla_check_minutes
+                    )
+                )
+                stack.push_async_callback(_stop, sla_task)
             if recover:
                 n = runner.recover()
                 if n:
@@ -141,13 +153,16 @@ def create_app(
     for r in (
         auth.router,
         intake.router,  # before cases: /cases/intake must not be read as a case id
+        export.router,  # before cases: /cases/export.csv likewise
         cases.router,
+        chat.router,
         admin.router,
         admin_cases.router,
         ai_control.router,
         knowledge.router,
         auditor.router,
         auditor_view.router,
+        insights.router,
         users.router,
         messages.router,
         issues.router,

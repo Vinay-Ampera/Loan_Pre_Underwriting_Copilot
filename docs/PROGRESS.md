@@ -22,17 +22,81 @@ Build notes for Stages 2 to 6 were moved here unchanged from `IMPLEMENTATION_PLA
 | 10 Intake desk and applicant upload link | Built, committed (A to C `d2bcae7`, D `f3c4a2c`) | Migrations 0014 to 0017; `intake/archive.py`, `readcache.py`, `inventory.py`, `prefill.py`, `bundle.py`; `api/ingest.py`, `intake.py`, `links.py`, `public.py`, `filestore.py`, `ratelimit.py`; desk, split screen, form tick, links page and applicant page in the UI. See "Stage 10 build notes" and "Stage 10 Part D build notes". Run `python -m app.db.migrate` first |
 | 10b AI control for the admin | Built, committed (`f521e32`) | Migration 0018; `services/ai_config.py`, `api/ai_control.py`, `agents/prompt_check.py`; models, keys (status only), prompts (editable part) and settings from the browser. See "AI control build notes". Run `python -m app.db.migrate` first |
 | 10c Knowledge base (policy documents and learnings) | Built, committed (`d484bff`) | Migration 0021; `rag/policy_admin.py`, `rag/policy_store.py`, `rag/versions.py`, `learning/maintenance.py`, `api/knowledge.py`; admin Knowledge base page and officer Policies page. See "Knowledge base build notes". Run `python -m app.db.migrate` first |
-| 11 Hardening, Docker and demo | **Built (2026-11-21; not committed)** | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), the demo script (moved out of the repo on 2026-11-23), README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
+| 11 Hardening, Docker and demo | Built, committed (`61f34df`, `0d8b1e8`) | Migrations 0023 (Part 3) and 0024; retention job, log guards, audit-coverage test, dashboards row 6, release manifest, judge runner, final test-split results (models off), the demo script (moved out of the repo on 2026-11-23), README, `requirements.lock`, `Dockerfile`, `docker-compose.yml`. See "Stage 11 build notes". The real-model test run is the user's |
+| 12 Post-demo features | **Part A committed (`27fbe2f`), Part B committed (`df1747c`); Parts C and D built 2026-11-26 (migration 0027), committed (`7d68000`); Part E built (2026-11-26, migration 0028), not committed** | Parts A to E: counter-offer and alternate product, Insights, export and decision timers, score breakdown chart, "Ask this case" chat. Migrations planned: 0026 (Part B), 0027 (Part C), 0028 (Part E). See `IMPLEMENTATION_PLAN.md` Stage 12 and the decisions log (2026-11-25) |
 
 In-app notifications Part 1 and Part 2 (email) are committed (`135b5b1`, `7b96d95`). The post-demo cleanup (2026-11-21, migration 0022) is committed (`319af64`); see "Post-demo cleanup" below.
 
-2-step verification for the admin and the auditor is built (2026-11-24, migration 0025, not committed); see "2-step verification build notes" and `SECURITY.md` 4h. Run `python -m app.db.migrate` first.
+2-step verification for the admin and the auditor is built and committed (2026-11-24, migration 0025, `4fecc6a`); see "2-step verification build notes" and `SECURITY.md` 4h. Run `python -m app.db.migrate` first.
 
 Notifications Part 3 (hardening and close-out) is built (2026-11-21, migration 0023); see "Notifications Part 3 build notes". Next: Stage 11 (hardening, Docker and demo), asked for by the user on 2026-11-21. Docker stays last.
 
 ---
 
 ## Decisions log
+
+### 2026-11-25: Stage 12 (post-demo features) planned; docs only, for the trainer's approval
+
+The user picked these from the project manager's and CEO's feature list of 2026-11-24 and asked for a plan in the docs before any code. No locked decision changes in substance. Two needed new wording: decision 11 (a new model role) and decision 18 ("Docker is always last", while Docker was built in Stage 11). The user chose the wording after Step 0, and CLAUDE.md now carries it (item 12).
+
+1. **What is built, in this order, one commit per part:**
+   - A: counter-offer and alternate product (one box);
+   - B: Insights (management dashboard and override insights);
+   - C: queue export and decision timers (SLA);
+   - D: score breakdown chart;
+   - E: "Ask this case" chat.
+
+   After each part Claude stops, reports, gives a commit message and waits for the user to commit.
+2. **Held for later** (PRD section 4): the policy impact simulator (#3), the one-click missing-documents request (#9; "Ask the applicant" mostly covers it), a report diff after a correction (#10), more loan types and a guarantor (#11), auto-assignment of cases (every case already has an owner from the start).
+3. **Counter-offer (Part A):**
+   - **When it shows.** Only when it helps: band reject or refer, points lost on rules that amount or tenure can move, a change really moves the band up, and the suggestion is at least 50% of the amount asked. Never on approve, on refer cases held by a cap rule aiming at approve, on KYC or fix-type stops, or on eligibility stops other than age.
+   - **How it is worked out.** Code only (`scoring/counter_offer.py`): it reuses `engine.score_case` and changes only the amount and the tenure. Everything else stays as checked, including the run's precedent bonus. The tenure stays within the product's rule and age 55 at maturity for every person.
+   - **What it shows.** At most two lines (same amount over a longer tenure; the largest smaller amount). An age stop gets a tenure line only, with no band. An alternate-product line appears when the purpose clearly fits another loan type (keywords in the rules file) and its FOIR is better; it is labelled "a new application, not scored".
+   - **Where it lives.** It is stored with the report and not in the LLM summary. Officer and admin only; never in a customer message.
+   - **Settings.** A new `counter_offer` block in `rules.yaml`, with no other rule change.
+4. **Can stored cases be rescored? (checked in Step 0).** Yes, at the moment that matters: the Decision node already holds the run's full `case_input` in the run state (it rescores with it today for the precedent bonus). So the box is computed there and stored in `report_json`, and no new storage is needed. Reports made before Stage 12 get no box. They are not backfilled, because the retention job removes the run checkpoints of decided cases after six months, so not every old case could be treated alike.
+5. **Insights (Part B).** SQL only, filters by date range and loan type. Access by role:
+   - **Admin:** the full page, with links.
+   - **Auditor:** the same counts with no case reference or link (decision 9).
+   - **Officer:** their own overdue count and median time to decide on Home.
+
+   Migration 0026 adds `cases.submitted_at` and `cases.report_ready_at`. "Documents complete" in the funnel is the first submit, the moment the officer says the file is ready.
+6. **Export (Part C).** CSV (with a byte-order mark for Excel) and no applicant names. Officers export their own queue with their filters; the admin exports all cases. Every download is audited, and formula-like cells are written as text.
+7. **Decision timer (Part C).**
+   - **Target and settings.** 2 working days (Monday to Friday, holidays out of scope) from report ready to the officer's decision. One business setting, `SLA_WORKING_DAYS`, in config and `.env.example`, plus `SLA_TIMEZONE` (Asia/Kolkata) and `SLA_CHECK_MINUTES`. It is not a scoring rule, so it stays out of the rules file.
+   - **Clock rules.** Each new report restarts the clock; fix-type stops and cases waiting on the applicant are not timed; reassignment keeps the due date; the decision stops it.
+   - **Reminders.** One to the officer at overdue and one to every active admin a working day later, each once. The check runs in the app under an advisory lock, like the retention job.
+   - **Migration and assignment.** Migration 0027 adds the timer columns and two notification kinds. No auto-assignment.
+8. **Score breakdown (Part D).** Display only. The backend report carries the points lost per stage and the UI only draws them. Stopped cases show no chart. The chart is on screen only; the report PDF's stage table gains a "Points lost" column from the same numbers (item 12).
+9. **"Ask this case" (Part E).**
+   - **Sources and flow.** Retrieval plus a model, read-only. Sources are the report, the masked extracted fields and the policy clauses in the versions the run used; no precedents in the first version. The question is masked and treated as data.
+   - **Checks.** Every sentence cites a rule, a clause or a document field. Code checks every ID and number, retries once, then gives a fixed text. "What if" points to the counter-offer box.
+   - **Access.** Officer (own case) and admin only.
+   - **Records and limits.** Stored and retained, logged in `llm_calls` (stage `chat`), traced and audited. A per-user limit applies, and there is a "chat is off" state.
+   - **Model, migration and golden set.** New role `case_assistant` (Gemini Flash) on the AI control page. Migration 0028. A golden set of about 20 dev questions.
+10. **Ground rules for the build:**
+    - scoring unchanged, so the dev replay still gives 60 of 60 bands and the CI gate stays green;
+    - never tune on the test split;
+    - Docker kept working;
+    - one test job at a time (the machine has about 15 GB of RAM);
+    - database tests on the local `lc-test-pg` container;
+    - migrations are not applied to Neon by Claude;
+    - the presentation folder is not touched.
+11. **Defaults taken in the plan** (the user may change any; each is in the plan and the edge cases):
+    - the officer's "average" decision time is the median, like the admin's;
+    - line (a) uses the shortest longer whole-year tenure;
+    - line (b) is shown only when it says more than (a);
+    - the alternate-product line appears only inside a box that already shows a line (confirmed by the user, item 12);
+    - the overdue reminders are keyed to the due time (one per case in practice; a new report can restart them);
+    - each person sees their own chat questions on a case;
+    - chat questions are stored masked;
+    - a question that matches the injection patterns gets the fixed answer;
+    - chat rows are kept 90 days.
+12. **The user's answers to the Step 0 questions (2026-11-25):**
+    - **Decision 18:** option A. Stage 11 built Docker; Stage 12 comes after it, adds no service, and keeps the `Dockerfile` and `docker-compose.yml` building and starting, with every new setting in `.env.example`. CLAUDE.md updated with this wording.
+    - **Decision 11:** adds "Case assistant chat (Stage 12): Gemini Flash, with the Decision fallbacks." CLAUDE.md updated.
+    - **PDF (Part D):** the stage table gets a "Points lost" column; no chart in the PDF.
+    - **Alternate product (Part A):** only inside a box that already shows an amount or tenure line, never on its own (the planned default, kept).
 
 ### 2026-11-24: 2-step verification for the admin and the auditor (adds to locked decision 9)
 
@@ -546,3 +610,81 @@ UI only, at the user's request; no API, role, wording-rule or scoring change. De
 - The 2-step screens, Help, the reset email and the docs say "your authenticator app (for example Google Authenticator or Microsoft Authenticator)" instead of naming Microsoft only (the user tests with Google Authenticator).
 - Checked with a scratch browser audit at 1920, 1440, 1280, 1024, 820 and 390 px wide on every officer, admin and auditor screen: text staying inside its box, no side scrolling, and the page not scrolling where panes are used.
 
+
+## Stage 12 Part A build notes: counter-offer box (2026-11-25)
+
+Built after the user's go on 2026-11-25. Scoring, weights, bands and hard rules are unchanged; no migration.
+
+- **Code:** `app/scoring/counter_offer.py` (pure code; reuses `engine.score_case` with only `loan_amount` and `tenure_months` changed, and the run's applied precedent bonus passed through). Tenure limits are read from the product's own tenure rule (`tenure_months` or `repayment_years`, the vehicle kind picking VL-POL-10A, B or C) and `age.max_age_at_maturity`. The Decision node (`agents/graph.py`) adds the box to `Report.counter_offer` after the summary is written; an unexpected error in it is logged and the report goes out without a box. `api/reportpdf.py` prints it after the stage scores table. Frontend: `CounterOfferBox` under "At a glance", new `clock` icon.
+- **Rules file:** new `counter_offer` block (bands, `min_share` 0.5, `amount_step` 10,000, `tenure_step_months` 12, `min_tenure_months` 12, `moves_fields`, `alternate_products` with keywords and employment types), checked by the loader (an unknown `moves_fields` entry is refused). `rules_version` is now **2026.11.25-1** because the file changed. Record it in the database with `python -m app.db.seed --only rules` (or `python -m app.rag.reindex`).
+- **Worked example, measured:** ₹10L over 36 months gives EMI 33,214 and FOIR 72.0%; 60 months gives 22,244 and 53.7% (still 0 points, so no line (a)); ₹7L over 60 months gives 15,571 and 42.6% (6 points, still reject). **Line (b) is ₹6.3L over 60 months, EMI 14,014, FOIR 40.0%, refer**, not the ₹6.2L (39.7%) of the brief: FOIR is rounded to one decimal before the tier, so 40.02% earns the 40% tier, and ₹6.3L is the largest ₹10,000 step that reaches refer (E-128). ₹6.2L also reaches refer. The vehicle line for the purpose "car" is ₹10L over 84 months at 9.5%, EMI 16,344, FOIR 43.9%, with the dealer invoice as the extra document.
+- **Dev split:** 5 of 60 cases get a box (SYN-PL-D04 a longer tenure to refer; SYN-HL-D04 and SYN-BL-D04 a smaller amount to refer; SYN-HL-D11 and SYN-VL-D11 the age-stop tenure line), each worked out in under 50 ms. No dev purpose matches an alternate product.
+- **Unchanged scores:** `app.scoring.replay --split dev --verbose` output is byte-identical to a `git archive` of HEAD (band 60 of 60, exact 59 of 60, the known SYN-BL-D13); `app.eval.run --split dev` passes the gate. The test split was not run.
+- **Tests:** `tests/test_counter_offer.py` (31 tests, pure: the worked example, each "never shown" rule including the three cap rules, tenure and age caps with an education parent near 55, the age stop with no rescoring, the alternate-product rules, the precedent bonus passed through, the same box each time, the message check blocking every line kind, the rules-file check); `test_pipeline.py` (the box stored in `report_json` for SYN-PL-D04 and absent from every model message and the summary; none on a clean approve); `test_api.py` (the box in the report response for the officer and the admin and in the officer's PDF; no heading without one); `CounterOfferBox.test.jsx` and a `ReportPanel.test.jsx` case. Database tests ran on a local pgvector container (`lc-test-pg`, recreated on 127.0.0.1:55432).
+- **Differences from the plan text:** the PDF writes "Rs" for "₹" (its built-in font has no rupee sign); the admin sees the box on screen only, since the PDF export was already officer-only; the sentences are written by code and stored, so the screen and PDF match. `margin_ok` stays in `moves_fields` as the brief listed ED-POL-12, but the margin does not depend on the loan amount in code, so ED-POL-12 alone never produces a line (rescoring decides).
+
+## Stage 12 Part B build notes: Insights (2026-11-25)
+
+Built after the user's go on 2026-11-25. Scoring is untouched; no model is called.
+
+- **Migration 0026** (`0026_case_times.py`): `cases.submitted_at` and `cases.report_ready_at`, backfilled. `submitted_at` comes from the first `case_submitted` audit row, or the case's first report when there is none (cases run from the command line). `report_ready_at` comes from the newest stored report that waits for the officer. Going forward, the submit route sets `submitted_at` once; `store.update_case` sets it at the first run (command-line cases) and sets `report_ready_at` whenever a report waits for the officer, never on a fix-type stop (E-114). Apply it with `python -m app.db.migrate`.
+- **Code:** `app/reporting/insights.py` (SQL panels: time to decide, funnel and open cases, officer agreement with admin corrections apart, rules in changed decisions with direction and clause, stop reasons from every report version, precedent use with the bands worked out by `band_for`). It is a new `app/reporting` package rather than `app/monitoring` as planned, so `app.monitoring` stays the isolated fairness view that no API module imports except to mount its router. `app/api/insights.py`: `/admin/insights` (full), `/auditor/insights` (`strip_refs`: no case ids, references or officer ids), `/me/insights` (the officer's own decisions in the last 30 days). The browser sends its own midnights as instants, so no time zone setting was needed; Part C's `SLA_TIMEZONE` stays as planned.
+- **Screens:** `InsightsPage` for the admin and the auditor (sidebar "Insights", new `trend` icon), the officer's "Your median time to decide" tile on Home, and the knowledge base opening a linked clause (`?doc=&clause=`, scrolled to and outlined). `BarChart` gained optional `max`, `display`, `valueWidth`, a hover title per row, and names above bars below 520 px. The `dataviz` skill was loaded first: one hue for single-series bars, shares on a fixed 100 scale, stat tiles with proportional figures, filters in one row above everything, a refetch dims the last numbers instead of flashing a loader, status colours not reused.
+- **Checked in Chrome** on a throwaway local database seeded with the test cases: light and dark at 1440, the auditor at 1024, a phone at 390, the officer Home and the knowledge base link. Three fixes came out of it: a cut funnel label, tables that squeezed on phones (now stacked cards), and the clause link that scrolled before the pane was sized.
+- **Tests:** `tests/test_insights.py` (16: every panel against a hand count with and without each filter, roles, the auditor's JSON walk, the officer's own numbers, no model, migration 0026 backfill and rollback, the times set once). Additions to `test_pipeline.py` and `test_api.py` (times on a real run, a fix stop and the officer's submit). `test_auditor.py`, `test_audit_coverage.py`, `test_migrations.py` and `test_fairness.py` pass. Frontend: `InsightsPage.test.jsx`, `KnowledgeBasePage.test.jsx`, `Sidebar.test.jsx`, `format.test.js`; the whole Vitest suite passes (843 before these additions).
+- **Not done here:** the officer's "Overdue" tile and the overdue counts come with Part C.
+
+## Stage 12 Part C build notes: queue export and decision timers (2026-11-26)
+
+Scoring is untouched; no model is called. The backend was started on 2026-11-25 or 26 and the session was cut off by the network; the screens, tests and docs were finished on 2026-11-26.
+
+- **Migration 0027** (`0027_decision_timer.py`): `cases.sla_due_at`, `sla_officer_notified_for`, `sla_admin_notified_for`, a partial index and the notice kinds `case_overdue` and `case_overdue_admin`. Apply it with `python -m app.db.migrate`.
+- **Settings** (`.env.example`): `SLA_WORKING_DAYS=2`, `SLA_TIMEZONE=Asia/Kolkata`, `SLA_CHECK_MINUTES=15`. `docker-compose.yml` reads `.env`, so it needs no change.
+- **Code:** `app/workflow/sla.py` (working-day maths, due state, the reminder check and its loop), `app/api/export.py` (the two CSV routes); `store.update_case` sets the due time; the queue, officer page and `/me/insights` carry the due state and the target.
+- **Screens:** Age column, "Due today" and "Overdue" badges, Due filter and "Export CSV" on Cases; the "Overdue" tile on Home; the export buttons on the admin's Home and officer page; Help sections for both roles.
+- **Changed by the user (2026-11-26):** the admin's officer page exports only that officer's cases ("Export this officer's cases"), not every case as the plan first worded it; Home keeps "Export all cases".
+- **Choice to confirm:** Cases already waiting when 0027 arrives get a due time but no old reminders (E-129).
+
+## Stage 12 Part D build notes: score breakdown chart (2026-11-26)
+
+Display only: scores, bands and rules are unchanged; no migration.
+
+- **Code:** `agents/report.py` (`ScoreBreakdown`, `score_breakdown`, `with_breakdown` for older reports), set by the Decision node after the summary is written, so no prompt sees it. `api/reportpdf.py` adds the "Points lost" column.
+- **Screen:** `ScoreWaterfall` (inline SVG, theme tokens, text summary, "Show as a table") as the first card of a scored report.
+- **Checked in Chrome** on a throwaway database: light, dark, 1024 and a phone, and the PDF's table. One fix: the band labels were cut off at 1024, so the chart was narrowed and the labels wrap. The capped-with-bonus look was checked with a report edited by hand in that database.
+- **Tests (2026-11-26):** the affected backend files pass; the full frontend suite passes, with lint and build clean; the help, inbox, roles and loan-type browser specs pass (15 of 15); the whole backend suite was not run in one go; `ruff` and `mypy` clean; `python -m app.eval.run --split dev` 60 of 60 bands.
+
+## Stage 12 Part E build notes: "Ask this case" (2026-11-26)
+
+Read-only: scoring, statuses and decisions are untouched.
+
+- **Migration 0028** (`0028_case_chat.py`): `case_chat_messages`, and `case_assistant` allowed as a prompt name. Apply it with `python -m app.db.migrate`.
+- **Settings** (`.env.example`): `CHAT_MAX_PER_HOUR=20`, `CHAT_RETENTION_DAYS=90`.
+- **Code:** `app/chat/` (`context.py`, `check.py`, `service.py`, `evaluate.py`), `api/chat.py`, `prompts/case_assistant.md`, the role in `llm_models.yaml` and on the AI control page with a test sample, the retention job, `report_json.facts`, `llm_calls` stage `chat` (kept when a case is re-run).
+- **Screen:** `CaseChat`, the "Ask this case" tab for the officer and the admin; Help sections; the audit trail label.
+- **Differences from the plan:** `answerable: false` is final (no retry); the outcome-forcing injection pattern is ignored for text that begins as a question (E-132); chat questions get a stricter number mask (E-130); a saved AI configuration gains the new role (E-131).
+- **Test seam:** the browser-test server scripts the chat (`app.state.chat_models`) and has placeholder keys so the AI control switch can be used; the pipeline there still runs with no model.
+- **Golden set:** `data/eval/chat_dev.yaml`, 20 dev questions; `--no-llm` passes with no problem and is a CI step; `thresholds.json` gains `chat.citation_validity` 1.0. **No real-model run yet:** run `cd backend && ../.venv/bin/python -m app.chat.evaluate --split dev --write-baseline` with your keys; other floors wait for that baseline (OI-7).
+- **Looked at in Chrome:** light, dark, 1024 and a phone. Two fixes: the tab icon sat above its label, and the question box was too tall.
+- **Shared masker (found during Part E, tightened the same day on the user's go):** it left a 9 to 18 digit number in place when a comma stood beside it. The masker and the leak check now hide it unless a digit is on the other side of the comma or point (E-130). Compared old and new on 692 dev-case, policy, rules and record texts: no difference there. The intake, chat, pipeline, agent, notification, knowledge base and API tests pass (287), with `ruff` and `mypy` clean. Not changed: the on-screen masker (`api/display.py`) has the same comma gap.
+- **Checks (2026-11-26):** the chat tests and the other affected backend files pass (the whole backend suite was not run in one go); frontend 885 of 885, lint and build clean; browser specs chat, help, loan types and roles 15 of 15; `ruff` and `mypy` clean; `app.eval.run --split dev` 60 of 60 bands.
+- **Stage close, Docker:** the image builds and, on an empty local database, migrates to 0028, starts and passes `/api/health`. The full compose stack was not started (it reads `.env`).
+
+## Stage 12: first real-model chat run and stack start (2026-11-26, run by the user)
+
+- **Neon:** `python -m app.db.migrate current` reports 0028 (head).
+- **Golden set with real models** (`docs/baselines/dev-chat.json`, 20 dev questions): citation validity 1.0, expected-citation recall 0.9167, refusal accuracy 1.0, what-if accuracy 1.0, fixed text on 1 of 12 answerable questions (0.0833).
+- **The one miss (a09, "Is the business old enough for this loan?"):** refused for "numbers not in the data (24)". The clause says "at least two years" and the rule result gives 20 months, but the rule's 24-month threshold is not in the material, so the model's converted figure was refused. The check worked as designed; giving the threshold to the chat is an open improvement.
+- **Speed, to look into:** the run took about 18 minutes for the 15 questions that reach a model, with about 31 Gemini attempts. The runner does not record retries, the answering model or time per question, so the cause is not known.
+- **Warning seen:** LiteLLM says `temperature` is deprecated for Gemini 3 and planned for removal (affects every Gemini role).
+- **Floors:** only `chat.citation_validity` 1.0 is set; floors for the other measures stay open (OI-7).
+- **Docker:** `docker compose up -d --build` built the image and started the stack; the app container is healthy and `/api/health` answers.
+
+## Time figures keep their unit (2026-11-26)
+
+Asked by the user after the refused question a09. Scoring was checked first and is consistent: every time-based rule matches its clause (24 months and "two years", 12 months and "one year", 360 months and "30 years"), education repayment is converted from months to years, ages are in years.
+
+- **Found:** the number check ignored units, so "The business vintage is 20 years" passed for 20 months, and "at least 24 months" was refused.
+- **Fixed (E-133):** `agents/timespans.py`; chat sentences must match the time figures of what they cite; report summary and explanations are refused for a wrong unit; the chat is given rule thresholds.
+- **Checks:** 196 chat, agent, pipeline, AI control and scoring tests pass, `ruff` and `mypy` clean, golden set (no model) 0 problems, evaluation gate unchanged. **Not rerun with real models.**
+- **Open, not asked for:** the month boxes on the form accept years typed by mistake (5 is read as five months); report text does not catch a figure borrowed from another rule; the policy findings' grounding check was not changed.

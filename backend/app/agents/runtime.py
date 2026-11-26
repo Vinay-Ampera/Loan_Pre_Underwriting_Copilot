@@ -26,6 +26,7 @@ from app.services.mock_services import (
     IdentityService,
     RecordStore,
 )
+from app.workflow.sla import SlaConfig
 
 
 def prompt_text(name: str) -> tuple[str, int]:
@@ -58,6 +59,7 @@ class AgentContext:
     intake_slots: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(4))
     judge_inconclusive: bool = True
     intake_cache: Path | None = None  # dev speed-up for repeated evaluation runs; off by default
+    sla: SlaConfig = field(default_factory=SlaConfig)  # decision timer (Stage 12 Part C)
 
     def models(self) -> Router | None:
         """The model router, or None when models are off (no router, or the admin switched them

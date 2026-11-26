@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import FitPanes from '../components/FitPanes'
@@ -12,6 +13,7 @@ import PolicySearch from '../components/PolicySearch'
 import { SectionLoader } from '../components/Loading'
 import { ErrorState } from '../components/States'
 import { day, policyLabel } from '../lib/policy'
+import { LOAN_TYPES } from '../components/LoanTypePicker'
 import './KnowledgeBasePage.css'
 
 const TABS = [
@@ -45,7 +47,7 @@ function Tabs({ items, value, onChange, label, marks = {} }) {
   )
 }
 
-function PolicyPanel({ loanType, onListChanged }) {
+function PolicyPanel({ loanType, onListChanged, focusClause }) {
   const [view, setView] = useState('read')
   const { data, error, loading, reload } = useAsync(
     () => api.get(`/knowledge/policies/${loanType}`),
@@ -76,7 +78,7 @@ function PolicyPanel({ loanType, onListChanged }) {
       )}
       {/* on wide screens only this part scrolls; the tabs above stay in place */}
       <div className="kb-panel-body fit-scroll" key={view}>
-        {view === 'read' && <PolicyReader version={data.active} admin />}
+        {view === 'read' && <PolicyReader version={data.active} admin focusClause={focusClause} />}
         {view === 'change' && (
           <PolicyEditor loanType={loanType} detail={data} onChanged={changed} />
         )}
@@ -87,9 +89,15 @@ function PolicyPanel({ loanType, onListChanged }) {
 }
 
 /** Admin: the policy documents behind the Policy agent, the learnings, and the index tools. */
+// a link from Insights opens one policy at one clause: ?doc=personal&clause=PL-ELIG-03
+const DOCS = new Set(['common', ...LOAN_TYPES.map((t) => t.id)])
+
 export default function KnowledgeBasePage() {
+  const [params] = useSearchParams()
+  const linked = DOCS.has(params.get('doc')) ? params.get('doc') : null
   const [tab, setTab] = useState('policies')
-  const [loanType, setLoanType] = useState('common')
+  const [loanType, setLoanType] = useState(linked ?? 'common')
+  const focusClause = linked === loanType ? params.get('clause') : null
   const list = useAsync(() => api.get('/knowledge/policies'), [])
   return (
     <div className="kb-page">
@@ -111,7 +119,12 @@ export default function KnowledgeBasePage() {
               <PolicyList policies={list.data} selected={loanType} onSelect={setLoanType} />
             </div>
           )}
-          <PolicyPanel key={loanType} loanType={loanType} onListChanged={list.reload} />
+          <PolicyPanel
+            key={loanType}
+            loanType={loanType}
+            onListChanged={list.reload}
+            focusClause={focusClause}
+          />
         </FitPanes>
       )}
       {tab === 'learnings' && <LearningsPanel />}

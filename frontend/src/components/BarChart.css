@@ -20,7 +20,7 @@
 }
 .bar-chart li {
   display: grid;
-  grid-template-columns: minmax(80px, 36%) 1fr 4ch;
+  grid-template-columns: minmax(80px, 36%) 1fr var(--bar-value-w, 4ch);
   align-items: center;
   gap: var(--s-3);
   font-size: var(--fs-13);
@@ -58,6 +58,7 @@
 }
 .bar-value {
   text-align: right;
+  white-space: nowrap;
   font-family: var(--mono);
   font-size: var(--fs-12);
   font-variant-numeric: tabular-nums;
@@ -70,4 +71,19 @@
 
 .bar-foot {
   margin: 0;
+}
+
+/* narrow: the name sits over its bar so it is never cut short */
+@media (max-width: 520px) {
+  .bar-chart li {
+    grid-template-columns: minmax(0, 1fr) var(--bar-value-w, 4ch);
+    row-gap: var(--s-1);
+  }
+  .bar-chart .bar-label {
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+  .bar-chart li.bar-note {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

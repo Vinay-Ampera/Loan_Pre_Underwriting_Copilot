@@ -163,11 +163,14 @@ def test_clean_case_runs_every_stage_and_waits_for_the_officer(engine: Engine) -
         "Awaiting"
     )
     assert [s["ran"] for s in rep["stage_scores"]] == [True] * 5
+    assert rep["counter_offer"] is None  # approve: no box (Stage 12 Part A)
     with engine.connect() as c:
         stages = {r[0] for r in c.execute(text("SELECT stage FROM stage_runs"))}
         assert stages == {"extraction", "kyc", "policy", "risk", "decision"}
         assert c.execute(text("SELECT count(*) FROM rule_results")).scalar_one() > 10
         assert c.execute(text("SELECT status FROM cases")).scalar_one() == "awaiting_confirmation"
+        times = c.execute(text("SELECT submitted_at, report_ready_at FROM cases")).one()
+        assert times.submitted_at is not None and times.report_ready_at >= times.submitted_at
         assert c.execute(text("SELECT count(*) FROM reports")).scalar_one() == 1
         assert c.execute(text("SELECT count(*) FROM eval_scores")).scalar_one() >= 10
 
@@ -184,6 +187,8 @@ def test_fix_type_stop_makes_a_short_report_and_waits_for_a_correction(engine: E
     with engine.connect() as c:
         stages = {r[0] for r in c.execute(text("SELECT stage FROM stage_runs"))}
         assert stages == {"extraction", "kyc", "decision"}  # Policy and Risk never ran
+        times = c.execute(text("SELECT submitted_at, report_ready_at FROM cases")).one()
+        assert times.submitted_at is not None and times.report_ready_at is None  # E-114
 
 
 def test_eligibility_stop_recommends_reject_with_a_written_reason(engine: Engine) -> None:
@@ -254,6 +259,25 @@ def test_model_text_is_used_logged_and_masked(engine: Engine) -> None:
     assert all(r.stage and r.role for r in rows)
     assert {r.stage for r in rows if r.stage_run_id is None} == {"supervisor"}
     assert ("supervisor", "supervisor") in {(r.stage, r.role) for r in rows}
+
+
+def test_counter_offer_is_stored_with_the_report_and_never_shown_to_a_model(engine: Engine) -> None:
+    """Stage 12 Part A: SYN-PL-D04 is a reject that a longer tenure moves to refer. The box is
+    computed in code after the summary is written, so no prompt and no summary carries it."""
+    router = ScriptedRouter("good")
+    rep = one_shot(engine, "SYN-PL-D04", router)["report"]
+    box = rep["counter_offer"]
+    assert box and box["lines"][0]["kind"] == "tenure" and box["lines"][0]["band"] == "refer"
+    assert box["rules_version"] == rep["versions"]["rules"]
+    assert "Pramaan estimates" not in rep["summary"]
+    assert router.seen, "the scripted model was never called"
+    for messages in router.seen:
+        for m in messages:
+            assert "Pramaan estimates" not in m["content"]
+            assert "Other amounts or tenures" not in m["content"]
+    with engine.connect() as c:
+        stored = c.execute(text("SELECT report_json FROM reports")).scalar_one()
+    assert stored["counter_offer"] == box
 
 
 def test_the_judge_models_calls_are_logged_beside_its_score(engine: Engine) -> None:

@@ -12,13 +12,16 @@ import re
 from dataclasses import dataclass, field
 
 # Order matters: longer / more specific patterns first so a GSTIN is not eaten as a PAN.
+# An account number is 9 to 18 digits standing alone. A comma or a point beside it only makes it
+# part of an amount when a digit is on the other side ("1,234", "0.5"); no grouped amount has a
+# run of 9 digits, so "account 50100234567891, then" and "No.50100234567891" are hidden too.
 _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("EMAIL", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
     ("GSTIN", re.compile(r"\b\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b")),
     ("AADHAAR", re.compile(r"(?<!\d)[2-9]\d{3}[ -]?\d{4}[ -]?\d{4}(?!\d)")),
     ("PAN", re.compile(r"\b[A-Z]{5}\d{4}[A-Z]\b")),
     ("PHONE", re.compile(r"(?<!\d)(?:\+91[ -]?|0)?[6-9]\d{9}(?!\d)")),
-    ("ACCT", re.compile(r"(?<![\d,.])\d{9,18}(?![\d,]|\.\d)")),
+    ("ACCT", re.compile(r"(?<!\d)(?<!\d[,.])\d{9,18}(?!\d|[,.]\d)")),
 )
 # What must never reach an LLM: used by the guard and by the CI leak test. Phone and account
 # numbers are checked only when they stand alone (not inside a word, a hex id or a UUID), so the
@@ -29,7 +32,7 @@ _LEAK_PATTERNS = (
     _PATTERNS[3],
     _PATTERNS[0],
     ("PHONE", re.compile(r"(?<![0-9A-Za-z])(?:\+91[ -]?|0)?[6-9]\d{9}(?![0-9A-Za-z])")),
-    ("ACCT", re.compile(r"(?<![0-9A-Za-z,.-])\d{9,18}(?![0-9A-Za-z,]|\.\d)")),
+    ("ACCT", re.compile(r"(?<![0-9A-Za-z-])(?<!\d[,.])\d{9,18}(?![0-9A-Za-z]|[,.]\d)")),
 )
 _TOKEN = re.compile(r"<([A-Z]+)_(\d+)>")
 

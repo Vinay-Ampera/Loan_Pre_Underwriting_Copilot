@@ -1,6 +1,6 @@
 # AGENTS
 
-Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.md` section 3 for the graph and `PRD.md` section 8 for the summary.
+Six agents on LangGraph. Fixed order, gate after each stage. See `ARCHITECTURE.md` section 3 for the graph and `PRD.md` section 8 for the summary. Stage 12 (planned) adds a read-only **case assistant** that answers questions about one finished case; it sits outside the graph and never scores or decides (section 8).
 
 ## Ground rules for every agent
 
@@ -128,6 +128,42 @@ Source of truth: `backend/app/services/llm_models.yaml`. Agents ask for a role, 
 | KYC, Risk | Groq `openai/gpt-oss-20b` | NVIDIA `openai/gpt-oss-20b`, OpenRouter nemotron free |
 | Policy | NVIDIA `nvidia/nemotron-3-ultra-550b-a55b` | OpenRouter nemotron free, Gemini flash-lite |
 | Judge (evaluation) | Gemini `gemini-3.5-flash-lite` | NVIDIA `openai/gpt-oss-20b` |
+| Case assistant (Stage 12) | Gemini `gemini-3.6-flash` | OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free`, Gemini `gemini-3.5-flash-lite` |
 
 Observed limits: Groq gpt-oss-20b 1,000 requests/day and **8,000 tokens/minute** (keep KYC and Risk prompts small); NVIDIA about 40 requests/minute shared across models; OpenRouter free 20 requests/minute and 50/day. Gemini 3.x preview models sometimes return 503 "high demand", which the router treats as a fallback trigger. `python -m app.services.llm_smoke --break-primary` proves every role completes through a fallback.
 
+
+## 8. Case assistant: "Ask this case" (Stage 12 Part E, built 2026-11-26)
+
+Time figures keep their unit (E-133): a chat sentence's "N months" or "N years" must match what it cites, months and years compared in code; report text is refused for a wrong unit. As built: the code-derived facts are kept on the report (`report_json.facts`, written after the summary; reports made before have only the rule evidence). A sentence is also refused when it holds a person's name or promises an outcome ("eligible for", "should approve").
+
+Not a pipeline agent: it runs only when a person asks a question about a case that already has a report, and it never changes the case.
+
+- **Model:** role `case_assistant`, Gemini Flash by default with the same fallbacks as Decision (table in section 7). It appears on the AI control page like the other roles: models, temperature and length, and a prompt (`prompts/case_assistant.md`) with an editable part and a locked part, tested on a fixed synthetic sample before publishing.
+- **Who can ask:** the officer who owns the case and the admin. Another officer gets 404, the auditor 403. Each person sees their own questions.
+- **Material it gets, and nothing else** (built in code by `app/chat/context.py`, all masked, all inside data tags):
+  - the report: recommendation wording, stage scores, findings with rule IDs and their evidence values, the code-derived facts (FOIR, EMI, LTV, CIBIL, age at maturity, income);
+  - the masked extracted document fields: document type, field name and masked value (never raw page text, never a raw PAN, Aadhaar, phone or account number);
+  - policy clauses for the case's loan type and the common policy, **in the versions the run used** (the report records them; E-91): the top reranked clauses for the question from `rag/retrieve.py`, plus the clauses the report already cites.
+
+  No internet, no other cases, no general knowledge and no precedents in this version.
+- **Before the model:**
+  - the question is masked with the same masker as every other model input (`assert_masked` still guards the call);
+  - the question is scanned with the injection patterns of `intake/injection.py`: a hit gets the fixed answer with no model call and an audit row;
+  - a "what if" question (another amount, tenure or product) gets a fixed pointer to the counter-offer box with no model call.
+- **Output:** `ChatAnswer { answerable: bool, sentences: [{text, citations: [{kind: rule | clause | field, id}]}] }`. Extra fields are refused, and every sentence needs at least one citation. No score, no decision and no arithmetic: numbers in the text must be copied from the material.
+- **Code checks** (`app/chat/check.py`):
+  - every clause ID is in the clauses given;
+  - every rule ID is one of the case's rule results;
+  - every field reference is a field given;
+  - every number in the text appears in the material (the existing invented-number guardrail);
+  - the wording guardrails (no "approved", protected attributes or instruction-like text);
+  - no raw identifier pattern in the answer.
+
+  A failure is sent back once with the reasons; a second failure, or `answerable: false`, gives the fixed text "I can't answer that from this case's documents and policy."
+- **Limits:**
+  - `CHAT_MAX_PER_HOUR` per person (20);
+  - with `LLM_ENABLED=false` or the AI control switch off, the panel says chat is off and nothing is called;
+  - the chat routes write only `case_chat_messages` and the audit log.
+- **Records:** each turn in `case_chat_messages` (masked question, answer with citations, outcome, report version); each model call in `llm_calls` with `stage = chat`, `role = case_assistant` and a null `stage_run_id`; a Langfuse generation on the case's trace (metadata only); an audit row `case_chat_asked` with the outcome, never the text. The retention job deletes turns after `CHAT_RETENTION_DAYS` (90).
+- **Evaluation:** a dev golden set (`data/eval/chat_dev.yaml`, about 20 questions with expected citations, refusals and "what if" questions) run by `python -m app.chat.evaluate --split dev`. Its `--no-llm` mode runs in CI; the real-model run needs the keys and is run by the user (`TESTING.md` 7l).

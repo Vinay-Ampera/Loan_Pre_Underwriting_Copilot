@@ -55,6 +55,8 @@ const OFFICER = [
   ['stages', 'The five stages', 'cases'],
   ['report', 'Reading the report', 'precedent'],
   ['confirm', 'Confirm or override', 'shield'],
+  ['timer', 'Decision timer and export', 'clock'],
+  ['ask', 'Ask this case', 'chat'],
   ['contact', 'Contact the customer', 'mail'],
   ['inbox', 'Your inbox', 'bell'],
   ['problem', 'Report a problem', 'flag'],
@@ -69,6 +71,8 @@ const ADMIN = [
   ['two-step', '2-step verification', 'shield-check'],
   ['adm-case', 'Open and correct a case', 'cases'],
   ['adm-reassign', 'Reassign a case', 'users'],
+  ['adm-timer', 'Decision timer and export', 'clock'],
+  ['adm-ask', 'Ask this case', 'chat'],
   ['adm-records', "Messages and a case's history", 'mail'],
   ['adm-inbox', 'Your inbox', 'bell'],
   ['issues', 'Read issue reports', 'flag'],
@@ -335,6 +339,50 @@ function OfficerGuide() {
         </Callout>
       </HelpSection>
 
+      <HelpSection id="timer" icon="clock" title="Decision timer and export">
+        <ul>
+          <li>
+            Decide within 2 working days (Monday to Friday; holidays are not counted) of the report
+            being ready. A new report starts the time again.
+          </li>
+          <li>
+            A case shows <strong>Due today</strong> or <strong>Overdue</strong> in your list and you
+            can filter by it. You get one notice when a case becomes overdue; the admin is told a
+            working day later.
+          </li>
+          <li>A case that is stopped for a fix, not yet submitted or decided is not timed.</li>
+          <li>
+            <strong>Export CSV</strong> on Cases saves the cases shown, with your filters. The file
+            has case references and no applicant names, and each download is recorded.
+          </li>
+        </ul>
+      </HelpSection>
+
+      <HelpSection id="ask" icon="chat" title="Ask this case">
+        <ul>
+          <li>
+            On a case with a report, open <strong>Ask this case</strong> and type a question.
+          </li>
+          <li>
+            It reads only this case: the report, its documents with personal numbers hidden, and the
+            policy that was in force when the case was checked.
+          </li>
+          <li>
+            Every sentence shows the rule, clause or document field it rests on. Open a clause from
+            its tag and check it before you rely on the answer.
+          </li>
+          <li>
+            You get <em>I can&apos;t answer that</em> when the case does not hold the answer, or
+            when a check on the answer failed. For another amount or tenure, see{' '}
+            <em>Other amounts or tenures</em> on the report.
+          </li>
+          <li>
+            Chat cannot change a score, a status or your decision. You can ask 20 questions in an
+            hour, and your questions are deleted after 90 days.
+          </li>
+        </ul>
+      </HelpSection>
+
       <HelpSection id="contact" icon="mail" title="Contact the customer">
         <ul>
           <li>
@@ -543,6 +591,33 @@ function AdminGuide() {
         </p>
       </HelpSection>
 
+      <HelpSection id="adm-timer" icon="clock" title="Decision timer and export">
+        <ul>
+          <li>
+            An officer should decide within 2 working days of the report being ready. The officer
+            page shows which of their cases are due today or overdue.
+          </li>
+          <li>
+            You get one notice when a case is still undecided a working day after its due time.
+            Reassigning a case keeps its due time. Nothing is assigned automatically.
+          </li>
+          <li>
+            <strong>Export all cases</strong> on Home saves every case as CSV;{' '}
+            <strong>Export this officer&apos;s cases</strong> on an officer page saves only theirs.
+            Neither holds applicant names. Each download is recorded in the audit log.
+          </li>
+        </ul>
+      </HelpSection>
+
+      <HelpSection id="adm-ask" icon="chat" title="Ask this case">
+        <p>
+          You can ask questions on any case with a report. The answers come only from that case and
+          its policy, and cite what they rest on. You see your own questions, not the
+          officer&apos;s. The audit trail records that a question was asked, never its words. Choose
+          the model, or switch all models off, in AI control.
+        </p>
+      </HelpSection>
+
       <HelpSection id="adm-records" icon="mail" title="Messages and a case's history">
         <p>
           Messages lists the contact requests officers actually sent (no drafts), with filters for
@@ -554,11 +629,11 @@ function AdminGuide() {
 
       <HelpSection id="adm-inbox" icon="bell" title="Your inbox">
         <p>
-          The bell and Inbox tell you about three things only: a new issue report, a precedent
-          waiting for your review, and a precedent the code check held back. Every active admin gets
-          each notice. Overrides by officers and your own corrections do not send one. A notice
-          names the case and never holds applicant details; click it to open the Issues or
-          Precedents page, then use Mark read or Mark all read to clear the count.
+          The bell and Inbox tell you about four things only: a new issue report, a precedent
+          waiting for your review, a precedent the code check held back, and a case still waiting
+          for its officer. Every active admin gets each notice. Overrides by officers and your own
+          corrections do not send one. A notice names the case and never holds applicant details;
+          click it to open what it is about, then use Mark read or Mark all read to clear the count.
         </p>
       </HelpSection>
 

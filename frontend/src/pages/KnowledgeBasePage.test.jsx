@@ -386,3 +386,31 @@ describe('Policies for officers', () => {
     )
   })
 })
+
+describe('Knowledge base: opened from Insights', () => {
+  it('opens the linked policy at the linked clause', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/knowledge?doc=home&clause=HL-PROD-01']}>
+        <KnowledgeBasePage />
+      </MemoryRouter>,
+    )
+    const clauseItem = (await screen.findByText('Tenure')).closest('li')
+    expect(clauseItem).toHaveAttribute('id', 'clause-HL-PROD-01')
+    expect(clauseItem).toHaveAttribute('aria-current', 'true')
+    expect(clauseItem).toHaveClass('pr-focus')
+    expect(api.get).toHaveBeenCalledWith('/knowledge/policies/home')
+    const other = screen.getByText('Credit score').closest('li')
+    expect(other).not.toHaveAttribute('aria-current')
+  })
+
+  it('ignores a link to a policy that does not exist', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/knowledge?doc=nope&clause=HL-PROD-01']}>
+        <KnowledgeBasePage />
+      </MemoryRouter>,
+    )
+    await screen.findByText('Tenure')
+    expect(api.get).toHaveBeenCalledWith('/knowledge/policies/common')
+    expect(document.querySelector('.pr-focus')).toBeNull()
+  })
+})

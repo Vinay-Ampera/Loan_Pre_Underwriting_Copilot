@@ -1,0 +1,44 @@
+/* An estimate, not a result: a plain card with no status colour (DESIGN_SYSTEM 17.1). */
+.offer .offer-lines {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+}
+.offer-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-top: 1px solid var(--line);
+}
+.offer-line:first-child {
+  border-top: 0;
+}
+.offer-icon {
+  color: var(--muted);
+  align-self: center;
+}
+.offer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  justify-content: flex-end;
+}
+.offer-tag {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-13);
+  color: var(--muted);
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .offer-line {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .offer-tags {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}

@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import CaseQueueTable from '../components/CaseQueueTable'
 import { EmptyState, ErrorState } from '../components/States'
 import { VIEWS, tileCounts } from '../lib/views'
+import { duration } from '../lib/format'
 import './HomePage.css'
 import { SectionLoader } from '../components/Loading'
 
@@ -15,8 +16,36 @@ const HINT = {
   progress: 'Draft, uploaded or being assessed',
 }
 
+/** The officer's own pace (Stage 12 Part B, `/me/insights`); never another officer's numbers. */
+function YourPace({ mine }) {
+  const decided = mine.decided_30d > 0
+  return (
+    <ul className="tiles" aria-label="Your pace">
+      <li>
+        <div className="tile tile-static card">
+          <span className={decided ? 'tile-count tile-time' : 'tile-empty'}>
+            {decided ? duration(mine.median_decision_s) : 'No decisions yet'}
+          </span>
+          <span className="tile-label">Your median time to decide</span>
+          <span className="tile-hint small muted">Report ready to your decision, last 30 days</span>
+        </div>
+      </li>
+      <li>
+        <Link to="/cases?due=overdue" className="tile card">
+          <span className="tile-count">{mine.overdue}</span>
+          <span className="tile-label">Overdue</span>
+          <span className="tile-hint small muted">
+            Past the {mine.sla_working_days} working day target
+          </span>
+        </Link>
+      </li>
+    </ul>
+  )
+}
+
 export default function HomePage() {
   const { data, error, loading, reload } = useAsync(() => api.get('/cases'), [])
+  const mine = useAsync(() => api.get('/me/insights'), [])
   const counts = data ? tileCounts(data) : null
   return (
     <div className="home">
@@ -60,6 +89,7 @@ export default function HomePage() {
               </li>
             ))}
           </ul>
+          {mine.data && <YourPace mine={mine.data} />}
           <section className="recent">
             <div className="recent-head">
               <h2>Recent cases</h2>

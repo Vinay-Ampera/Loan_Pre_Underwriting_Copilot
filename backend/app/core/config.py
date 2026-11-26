@@ -81,6 +81,15 @@ class Settings(BaseSettings):
     retention_hours: int = 24  # how often the retention job runs in the app; 0 = never (tests)
     bureau_retention_months: int = 6  # bureau-derived data is kept this long (SECURITY.md 7)
     email_retention_days: int = 90  # sent, held or failed staff email rows are kept this long
+    # decision timer (Stage 12 Part C): the officer decides within this many working days
+    # (Monday to Friday) of the report being ready; the check runs in the app every few minutes
+    sla_working_days: int = 2
+    sla_timezone: str = "Asia/Kolkata"  # the bank's calendar for working days and "due today"
+    sla_check_minutes: int = 15  # 0 = never (tests call the check directly)
+    # "Ask this case" (Stage 12 Part E): a per-person limit that protects the free model tiers,
+    # and how long questions and answers are kept
+    chat_max_per_hour: int = 20
+    chat_retention_days: int = 90
     branch_contact_email: str = ""  # optional extra contact lines in customer messages
     branch_contact_phone: str = ""
 

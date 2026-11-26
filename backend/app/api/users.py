@@ -16,7 +16,7 @@ import string
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import Connection, text
 from sqlalchemy.exc import IntegrityError
 
@@ -25,6 +25,7 @@ from app.api.schemas import MfaResetIn, UserCreateIn
 from app.api.security import hash_password
 from app.core.config import Settings
 from app.notifications import mailer
+from app.workflow import sla
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 _ALPHABET = string.ascii_letters + string.digits
@@ -97,7 +98,8 @@ def summary(
 
 @router.get("/users/{user_id}/activity")
 def user_activity(
-    user_id: UUID, _: User = Depends(admin_only), conn: Connection = Depends(get_conn)
+    user_id: UUID, request: Request, _: User = Depends(admin_only),
+    conn: Connection = Depends(get_conn),
 ) -> dict[str, Any]:  # fmt: skip
     """An officer profile for the admin: counts, and every case the officer owns."""
     user = _target(conn, user_id)
@@ -119,13 +121,13 @@ def user_activity(
         {"u": user_id},
     ).scalar_one()
     cases = conn.execute(
-        text("""SELECT c.id, c.case_no, c.loan_type, c.status, c.band, c.recommendation,
-                       c.updated_at, c.loan_amount,
+        text(f"""SELECT c.id, c.case_no, c.loan_type, c.status, c.band, c.recommendation,
+                       c.updated_at, c.loan_amount, c.sla_due_at, {sla.due_state_sql()} AS due_state,
                        (SELECT a.full_name FROM applicants a
                          WHERE a.case_id = c.id AND a.role = 'primary') AS applicant,
                        EXISTS (SELECT 1 FROM admin_actions x WHERE x.case_id = c.id) AS corrected
                 FROM cases c WHERE c.created_by = :u ORDER BY c.updated_at DESC LIMIT 300"""),
-        {"u": user_id},
+        {"u": user_id, "sla_tz": request.app.state.settings.sla_timezone},
     )
     last_login = conn.execute(
         text("SELECT max(at) FROM audit_log WHERE actor_id = :u AND action = 'login'"),
@@ -139,7 +141,9 @@ def user_activity(
         "cases": [{"id": r.id, "case_no": r.case_no, "loan_type": r.loan_type, "status": r.status,
                    "band": r.band, "recommendation": r.recommendation, "applicant": r.applicant,
                    "loan_amount": None if r.loan_amount is None else float(r.loan_amount), "corrected": r.corrected,
-                   "updated_at": r.updated_at} for r in cases],
+                   "updated_at": r.updated_at, "due_state": r.due_state,
+                   "sla_due_at": r.sla_due_at if r.due_state else None,
+                   "sla_working_days": request.app.state.settings.sla_working_days} for r in cases],
     }  # fmt: skip
 
 

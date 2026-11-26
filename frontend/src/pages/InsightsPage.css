@@ -1,0 +1,166 @@
+.insights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+/* one row of filters above everything they scope */
+.ins-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-3);
+  padding: var(--s-4);
+}
+.ins-filters .field {
+  min-width: 150px;
+}
+.ins-filter-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.ins-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-8);
+  transition: opacity var(--t-fast) var(--ease);
+}
+/* a refetch keeps the last numbers on screen, dimmed, instead of flashing a loader */
+.ins-stale {
+  opacity: 0.55;
+}
+.ins-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ins-panel h2 {
+  font-size: var(--fs-20);
+}
+
+.ins-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+.ins-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-5);
+}
+.ins-stat-label {
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--muted);
+}
+/* proportional figures on a standalone value; the same sans as the rest */
+.ins-stat-value {
+  font-size: var(--fs-32);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.ins-wrap {
+  overflow-x: auto;
+}
+.ins-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ins-table th,
+.ins-table td {
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.ins-table th {
+  color: var(--muted);
+  font-size: var(--fs-12);
+  font-weight: 500;
+}
+.ins-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ins-table td:last-child,
+.ins-table th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ins-title {
+  display: block;
+  margin-bottom: var(--s-1);
+}
+
+.ins-cases summary {
+  cursor: pointer;
+  color: var(--primary);
+}
+.ins-cases ul {
+  margin-top: var(--s-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+@media (max-width: 1000px) {
+  .ins-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.insights .charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+@media (max-width: 1000px) {
+  .insights .charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* phones: each table row becomes a small card, every cell named */
+@media (max-width: 700px) {
+  .ins-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .ins-table,
+  .ins-table tbody,
+  .ins-table tr,
+  .ins-table td {
+    display: block;
+  }
+  .ins-table tr {
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .ins-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .ins-table td,
+  .ins-table tbody tr:last-child td {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: var(--s-3);
+    padding: var(--s-1) 0;
+    border-bottom: 0;
+  }
+  .ins-table td:last-child {
+    text-align: left;
+  }
+  .ins-table td > * {
+    justify-self: start;
+  }
+  .ins-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: var(--fs-12);
+  }
+}

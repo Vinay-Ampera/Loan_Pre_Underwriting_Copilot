@@ -1,0 +1,97 @@
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 0;
+}
+/* in the fitted case layout the conversation scrolls and the input stays at the bottom */
+.fit-on .fit-column > .tab-body.chat-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.fit-on .chat-body > .chat {
+  flex: 1 1 auto;
+}
+.fit-on .chat > .chat-log {
+  flex: 1 1 auto;
+}
+.chat-turns {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.chat-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.chat-question {
+  align-self: flex-start;
+  max-width: 90%;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-card);
+  background: var(--brand-soft);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.chat-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.chat-sentences {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.chat-cites {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  vertical-align: baseline;
+}
+.chat-clause-chip {
+  cursor: pointer;
+  color: var(--primary);
+  text-decoration: underline;
+}
+.chat-field {
+  display: inline-block;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: var(--fs-12);
+}
+.chat-clause {
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+}
+.chat-off {
+  padding: var(--s-3);
+  border-radius: var(--radius-input);
+  background: var(--stopped-bg);
+  color: var(--stopped);
+}
+.chat-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+/* two rows, so the conversation keeps the height */
+.chat-input .textarea {
+  min-height: 0;
+}
+.chat-send {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+}

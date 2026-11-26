@@ -28,9 +28,9 @@ The users are **bank staff**, not applicants. Applicants never log in and have n
 
 | Role | What they do |
 |---|---|
-| Loan officer | Creates a case, picks the loan type, fills the application form, uploads documents (all at once or one by one), clicks "Submit for assessment", reads the report, confirms or overrides (with a reason). Reads the policy in force (read-only Policies page, Stage 10c) |
-| Auditor | Read-only (added 2026-11-03, reshaped the same day). Exactly one account, created only from the command line. Sees how many cases there are and in which state, not what a loan is: the Overview charts, a static Cases table with filters and CSV export (no applicant, document, report or message content, no case page), the audit log (masked, filters, CSV) and the users list. Changes nothing |
-| Admin | Sits above the loan officers. Manages users (any number of officers) in a Users screen (create, disable, reset password; Stage 8), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits the rules file, changes the policy documents and manages the learnings in the knowledge base (Stage 10c, 2026-11-21), triggers re-indexing. Since 2026-11-03: opens any officer's case (documents, report, audit trail), **corrects** a decision after the officer has decided it (reason, second click, a separate record beside the officer's, never over a hard rule, never a precedent), **reassigns** a case the officer has not decided, reads the messages officers sent (no drafts) and each case's own audit tab. The system-wide audit log is the auditor's alone |
+| Loan officer | Creates a case, picks the loan type, fills the application form, uploads documents (all at once or one by one), clicks "Submit for assessment", reads the report, confirms or overrides (with a reason). Reads the policy in force (read-only Policies page, Stage 10c). From Stage 12 (planned): sees a counter-offer box on reports where it helps, asks read-only questions about their own case ("Ask this case"), exports their own queue as CSV, and sees their own decision timers and median time to decide |
+| Auditor | Read-only (added 2026-11-03, reshaped the same day). Exactly one account, created only from the command line. Sees how many cases there are and in which state, not what a loan is: the Overview charts, a static Cases table with filters and CSV export (no applicant, document, report or message content, no case page), the audit log (masked, filters, CSV) and the users list. From Stage 12 (planned) also the Insights page, counts only, with no case reference or link. Changes nothing |
+| Admin | Sits above the loan officers. Manages users (any number of officers) in a Users screen (create, disable, reset password; Stage 8), approves or rejects each proposed precedent, approves any change that touches a hard rule, edits the rules file, changes the policy documents and manages the learnings in the knowledge base (Stage 10c, 2026-11-21), triggers re-indexing. Since 2026-11-03: opens any officer's case (documents, report, audit trail), **corrects** a decision after the officer has decided it (reason, second click, a separate record beside the officer's, never over a hard rule, never a precedent), **reassigns** a case the officer has not decided, reads the messages officers sent (no drafts) and each case's own audit tab. The system-wide audit log is the auditor's alone. From Stage 12 (planned): the Insights page with links to cases and clauses, the export of all cases, the overdue reminders one working day after an officer's, and "Ask this case" on any case |
 
 (Earlier we discussed a separate underwriter and a reviewer. For v1 the loan officer plays the underwriter, and the admin plays the reviewer. Three roles: admin, loan officer and, from 2026-11-03, one read-only auditor.)
 
@@ -51,6 +51,14 @@ The users are **bank staff**, not applicants. Applicants never log in and have n
 - Intake desk (Stage 10): upload a zip, folder or many files at once; the system reads and classifies each file once, shows what is received, missing, extra, unrecognised and duplicate, and fills the identity fields of the form from the PAN and Aadhaar cards for the officer to confirm. A single PDF holding several documents is split by page (built last, switchable).
 - Applicant upload link (Stage 10): a 7-day, revocable, one-case link on which the applicant states the request and uploads documents; the case lands in the chosen officer's queue as "From applicant".
 - Synthetic data only. Docker Compose at the final stage (Stage 11).
+- Post-demo features (Stage 12, planned 2026-11-25, section 9.12):
+  - a counter-offer and alternate-product box on the report, shown only when it helps;
+  - an Insights page (time to decide, funnel, officer agreement, override insights, stop reasons, precedent use);
+  - a queue export (CSV, no names) and decision timers (2 working days) with reminders;
+  - a score breakdown chart;
+  - a read-only "Ask this case" chat grounded in the case and its policy.
+
+  Scoring does not change.
 
 **Out of v1**
 
@@ -66,6 +74,15 @@ The users are **bank staff**, not applicants. Applicants never log in and have n
 - Celery and Redis (not needed for v1; can be added later).
 - Hosted file storage (local disk in v1).
 - ~~Admin UI for policy upload~~: built as the knowledge base in Stage 10c (2026-11-21, decision 12 changed by the user, see 9.5). Editing the rules file from the browser stays out: scoring numbers change only in the file, with a golden-set rerun.
+
+**Later (held by the user on 2026-11-25; not in Stage 12)**
+
+- A policy impact simulator: replay cases against a changed copy of the rules file to see what would move.
+- A one-click "request the missing documents" action. "Ask the applicant" on the intake desk mostly covers it.
+- A report diff after a correction (what changed between report versions).
+- More loan types (gold loan, loan against property) and a guarantor.
+- Auto-assignment of cases. Every case already has an owner from the start (the officer who made it, or the officer an upload link belongs to); the admin reassigns undecided cases by hand.
+- Precedents as a source for the "Ask this case" chat (left out of its first version).
 
 ## 5. End-to-end workflow
 
@@ -300,6 +317,85 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 - FR-51 (built) Staff email is queued in the transaction of its event and sent after the commit by a loop in the app (no Celery or Redis), three tries, then failed. Every outcome is in the audit log with a masked address.
 - FR-59 (built, Notifications Part 3, 2026-11-21) Hardening: staff email is sent one per transaction (one bad email can never cause another to be sent twice), a failed email waits 1 and then 5 minutes before the next try, the SMTP sender refuses a malformed address before connecting, and email outcomes are counted for the dashboards. A browser test covers the inbox and the email choice. A real send to Resend stays a manual check by the user.
 
+### 9.12 Post-demo features (Stage 12, planned 2026-11-25)
+
+Picked by the user from the project manager's and CEO's review. Built in parts A to E (`IMPLEMENTATION_PLAN.md` Stage 12); scoring, weights, bands and hard rules do not change.
+
+**Part A: counter-offer and alternate product**
+
+- FR-60 A report may carry one small **counter-offer box**, shown only when **all** of these hold:
+  - the band is reject or refer;
+  - the run did not stop on a fix-type rule, or on an eligibility rule other than age at maturity;
+  - points were lost on rules that amount or tenure can move (FOIR, tenure, amount, LTV, loan-to-turnover, education repayment, collateral and margin);
+  - a changed amount or tenure really moves the band up;
+  - the suggested amount is at least half of the amount asked.
+
+  It is never shown on approve cases, on refer cases held by a cap rule (PL-CIBIL-02, CM-FRD-01, BL-CRD-20) when the line would aim at approve, on KYC or fix-type stops, or on eligibility stops other than age.
+- FR-61 The box is worked out **in code** (`scoring/counter_offer.py`), never by a model.
+  - It rescores the case's own checked input with the normal rules engine, changing only the loan amount and the tenure; everything else (including a precedent bonus the run got) stays as checked.
+  - EMI is at the rules-file rate.
+  - The tenure never passes the product's tenure rule or age 55 at maturity for any applicant or co-applicant.
+  - At most two lines: (a) the same amount over the shortest longer tenure that alone moves the band; (b) the largest smaller amount (₹10,000 steps, at least 50% of the amount asked) at the longest allowed tenure that moves the band further than (a), or at all when there is no (a).
+  - Each line gives the amount, tenure, EMI, FOIR and the band it would get.
+- FR-62 When the run stopped only because an applicant would be over 55 at maturity, income was never checked, so no band is given. The box shows at most "a tenure up to N months keeps every applicant at 55 or under at maturity" (for education N includes the moratorium).
+- FR-63 When the purpose clearly fits **another** of the five loan types, the box adds one line for it. "Clearly fits" means exactly one product's keyword list in the rules file matches, and that product accepts the applicant's employment type. The line gives:
+  - the indicative EMI and FOIR at that product's rate and longest tenure;
+  - the extra documents a new application needs, from the rules file.
+
+  It is labelled "a new application, not scored" and is shown only if its FOIR is better than the case's, and only inside a box that already shows an amount or tenure line (never on its own).
+- FR-64 The box is computed when the report is made and stored with it (audited, the same every time). It is shown on the report screen to the officer and the admin, and in the officer's report PDF (the admin view has no PDF export). It is not part of the model-written summary or any prompt, and it never reaches a customer message: the existing message check blocks its text. Wording: "Pramaan estimates ₹6.2L over 5 years would be recommended for refer (FOIR 39.7%)". Never "approved" or "eligible for".
+
+**Part B: Insights**
+
+- FR-65 An **Insights** page, counted by code (SQL) from the database with no AI. Filters: a date range (cases created in it) and a loan type. It shows:
+  - **time to decide:** created → report ready → officer decision; median and slowest; per loan type and per officer;
+  - **the funnel:** created → documents complete (submitted) → report ready → decided (confirmed, overridden), and where open cases are stuck;
+  - **officer agreement with the recommendation:** confirmed against overridden, by loan type and band; admin corrections counted separately;
+  - **override insights:** the rules that failed in overridden cases, with the direction (for example refer → approve) and the rule's policy clause;
+  - **top stop reasons**, for example "12 cases stopped at KYC for CM-KYC-03";
+  - **precedent use:** how many cases an approved precedent's bonus reached, and how many it moved to another band.
+- FR-66 **Access.** The admin sees the full page with links to the cases and to the clauses. The auditor sees the same charts and counts with no case reference or link (decision 9). An officer sees only their own numbers, on Home: their overdue count and their median time to decide. They never see another officer's numbers.
+
+**Part C: queue export and decision timers**
+
+- FR-67 **Queue export as CSV** (opens in Excel; no new package).
+  - Officers export their own queue with the filters they have set; the admin exports all cases.
+  - Columns: case reference, loan type, status, band, score, officer, created, updated, officer decision, SLA due, overdue. No applicant names.
+  - Cells that a spreadsheet would run as a formula are written as text.
+  - Every download is in the audit log.
+- FR-68 **Decision timer (SLA).**
+  - The officer should decide within **2 working days** (Monday to Friday; holidays out of scope) of the report being ready. `SLA_WORKING_DAYS` is one setting.
+  - Each new report restarts the clock. Fix-type stops and cases waiting on the applicant are not timed. Reassignment keeps the due time. The officer's decision stops the clock.
+  - The queue shows each case's age and "Due today" and "Overdue" badges.
+- FR-69 **Reminders.** One in-app notice goes to the officer when a case becomes overdue, and one to the admins one working day later, each once per case. Staff emails follow the existing per-person switch and carry no case data. The check runs inside the app like the retention job (no Celery, no Redis). There is no auto-assignment.
+
+**Part D: score breakdown**
+
+- FR-70 For scored cases the report starts with a **waterfall chart**:
+  - it starts at 100 and steps down by the points lost in each stage to the final score;
+  - the 85 and 60 band lines are marked, a precedent bonus shows as a step up, and a cap is marked with its rule;
+  - the backend sends the numbers and the screen only draws them;
+  - it works in light, dark and system themes and has a text and table alternative for screen readers.
+
+  A stopped case, with stages that did not run, shows no chart. The chart is on screen only; the report PDF's stage table gains a "Points lost" column from the same numbers.
+
+**Part E: "Ask this case"**
+
+- FR-71 The case's officer and the admin can **ask questions about one case** in plain words.
+  - Retrieval finds the material and the model writes the answer from that material only. The sources are:
+    - the case report (findings, rule IDs, stage scores, code-derived facts such as FOIR, EMI, LTV, CIBIL and age at maturity);
+    - the masked extracted document fields;
+    - the policy clauses for that loan type in the versions the run used, plus the clauses the report cites.
+  - Nothing else is used: no internet, no other cases, no general knowledge, no precedents in this version.
+  - Role `case_assistant`, Gemini Flash by default with the existing fallbacks, on the AI control page.
+- FR-72 Every answer is a validated schema in which **every sentence cites** a rule ID, a clause ID or a document field.
+  - Code checks that each clause was retrieved, each rule is the case's, each field exists, each number matches the case's own material, the wording rules hold and no raw identifier is present.
+  - A failed check is retried once; then the answer is the fixed text "I can't answer that from this case's documents and policy."
+  - The model does no arithmetic. A "what if" question points to the counter-offer box.
+  - Citations open the clause, like the report's.
+- FR-73 The chat is **read-only**: it cannot change a score, a status or a decision. Access is the case's officer and the admin only (another officer 404, the auditor 403). The question is masked and treated as data, never as instructions. A per-user hourly limit protects the free model tiers. With models off (`LLM_ENABLED=false` or the AI control switch) the page says that chat is off.
+- FR-74 Questions and answers are stored per case and person (masked) and deleted by the retention job after `CHAT_RETENTION_DAYS`. Each model call is logged in `llm_calls` (stage `chat`) and traced in Langfuse (metadata only), and each question is in the audit log (never its text).
+
 ## 10. Evaluation
 
 - **Online (every agent):** cheap code checks first. LLM judge only if the code checks are inconclusive. Failed check means one retry, then unverified.
@@ -344,7 +440,7 @@ Supervisor → Extraction → KYC & Compliance → (Policy ‖ Risk) → Decisio
 | API | FastAPI |
 | Agents | LangGraph (fixed routing, human-in-the-loop, Postgres checkpoints) |
 | LLM gateway | LiteLLM (fallback, token and cost logging) |
-| Models | Supervisor, Extraction, Decision: Gemini Flash. KYC and Risk: Groq gpt-oss-20b. Policy: NVIDIA Nemotron. Fallback: another free NVIDIA or similar model. Verify exact model names and free limits at build time. |
+| Models | Supervisor, Extraction, Decision: Gemini Flash. KYC and Risk: Groq gpt-oss-20b. Policy: NVIDIA Nemotron. Case assistant chat (Stage 12): Gemini Flash. Fallback: another free NVIDIA or similar model. Verify exact model names and free limits at build time. |
 | Database | Neon hosted Postgres + pgvector (relational and vector data in one place) |
 | Embeddings and rerank | BGE-small (384 dimensions), local; local cross-encoder reranker |
 | RAG | Retrieval, rerank, grounding check (Self-RAG style) |
@@ -381,4 +477,4 @@ Detail is in `ARCHITECTURE.md`.
 
 ## 16. Not done yet (by design)
 
-Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) and Stage 11 (hardening, Docker, demo) are built (2026-11-21); the real-model test-split run is left to the user. Status is tracked in `PROGRESS.md`.
+Stages 1 to 9 are built. Stage 10 (intake desk, identity from the cards, applicant upload link, several documents in one PDF) is built; the AI control page for the admin (Stage 10b, 2026-11-18) is built. In-app notifications Part 1 (inbox for officers and admins) and Part 2 (real email over SMTP) are built (2026-11-19); the knowledge base (Stage 10c: policy versions, drafts, checks, learnings) is built (2026-11-21); notifications Part 3 (hardening and close-out) and Stage 11 (hardening, Docker, demo) are built (2026-11-21); the real-model test-split run is left to the user. 2-step verification for the admin and the auditor is built (2026-11-24). Stage 12 (post-demo features, section 9.12) was planned on 2026-11-25; Parts A (counter-offer box), B (Insights), C (queue export and decision timers), D (score breakdown chart) and E ("Ask this case") are built. Status is tracked in `PROGRESS.md`.

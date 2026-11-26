@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import StatusChip from './StatusChip'
 import { day, originLabel, ruleText, versionTone, when } from '../lib/policy'
 import './PolicyReader.css'
@@ -6,7 +7,16 @@ import './PolicyReader.css'
  * One policy version, clause by clause, with the rules from the rules file that point at each
  * clause. `admin` adds who published it, why, and how often each clause was cited lately.
  */
-export default function PolicyReader({ version, admin = false }) {
+export default function PolicyReader({ version, admin = false, focusClause = null }) {
+  // opened from a link (Insights): bring the clause into view and mark it. A short wait lets
+  // FitPanes size the scrolling pane first (it does so on the next animation frame).
+  useEffect(() => {
+    if (!version || !focusClause) return undefined
+    const t = setTimeout(() => {
+      document.getElementById(`clause-${focusClause}`)?.scrollIntoView?.({ block: 'center' })
+    }, 150)
+    return () => clearTimeout(t)
+  }, [version, focusClause])
   if (!version) return null
   const [tone, label] = versionTone(version.status)
   return (
@@ -33,7 +43,12 @@ export default function PolicyReader({ version, admin = false }) {
       {version.intro && <p className="pr-intro">{version.intro}</p>}
       <ol className="pr-clauses">
         {version.clause_list.map((c) => (
-          <li key={c.clause_id} className="pr-clause" id={`clause-${c.clause_id}`}>
+          <li
+            key={c.clause_id}
+            className={`pr-clause${c.clause_id === focusClause ? ' pr-focus' : ''}`}
+            id={`clause-${c.clause_id}`}
+            aria-current={c.clause_id === focusClause ? 'true' : undefined}
+          >
             <div className="pr-clause-head">
               <span className="mono ref-id">{c.clause_id}</span>
               <strong>{c.title}</strong>

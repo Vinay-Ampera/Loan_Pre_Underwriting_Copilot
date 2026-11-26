@@ -199,7 +199,14 @@ async def rollback_config(
     if row is None:
         raise HTTPException(404, "That version does not exist.")
     return await _save_config(
-        request, conn, user, settings, row.config, reason, "rollback", body.version
+        request,
+        conn,
+        user,
+        settings,
+        ai.with_new_roles(row.config),
+        reason,
+        "rollback",
+        body.version,
     )
 
 

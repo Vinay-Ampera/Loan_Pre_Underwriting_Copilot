@@ -92,3 +92,21 @@
 .home > .corrected-note + .corrected-note {
   margin-top: calc(var(--s-6) * -1);
 }
+
+/* a figure, not a link: no hover (Your pace, Stage 12) */
+.tile-static:hover {
+  border-color: var(--line);
+  background: var(--surface);
+}
+.tile-time {
+  font-variant-numeric: normal;
+}
+.tile-empty {
+  margin: var(--s-1) 0;
+  font-size: var(--fs-16);
+  font-weight: 500;
+  color: var(--muted);
+}
+.home > .tiles + .tiles {
+  margin-top: calc(var(--s-6) * -1);
+}

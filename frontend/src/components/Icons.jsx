@@ -37,10 +37,13 @@ const paths = {
   dot: 'M12 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5',
   copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   bell: 'M6 16v-5a6 6 0 1112 0v5l2 2H4zM10 21a2 2 0 004 0',
+  chat: 'M4 5h16v11H10l-5 4v-4H4zM8 9h8M8 12h5',
   inbox: 'M3 13h5l1.5 3h5L16 13h5M5 5h14l2 8v6H3v-6z',
   upload: 'M12 15V4M7.5 8.5L12 4l4.5 4.5M4 15v5h16v-5',
   // loan types and ways to start (New case page)
   wallet: 'M4 7V6a2 2 0 012-2h10v3M4 7h15a1 1 0 011 1v11a1 1 0 01-1 1H5a1 1 0 01-1-1zM16 13.5h.01',
+  clock: 'M12 21a9 9 0 100-18 9 9 0 000 18M12 7.5V12l3 2',
+  trend: 'M3 20h18M5 16l4.5-5 4 3L20 6.5M15.5 6.5H20V11',
   cap: 'M2.5 9L12 4.5 21.5 9 12 13.5zM6.5 11v4.5c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3V11M21.5 9v5',
   briefcase: 'M3.5 8h17v11.5h-17zM8.5 8V5h7v3M3.5 13h17',
   car: 'M3.5 16.5V12l2.2-5h12.6l2.2 5v4.5zM3.5 12h17M7 16.5V19M17 16.5V19M7.5 14.2h.01M16.5 14.2h.01',

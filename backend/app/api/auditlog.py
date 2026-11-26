@@ -79,8 +79,14 @@ def _cell(value: object) -> str:
     return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s
 
 
-def csv_response(name: str, header: Sequence[str], rows: Iterable[Sequence[object]]) -> Response:
+def csv_response(
+    name: str, header: Sequence[str], rows: Iterable[Sequence[object]], *, bom: bool = False
+) -> Response:  # fmt: skip
+    """`bom` starts the file with a UTF-8 byte-order mark so Excel reads it as UTF-8 (the queue
+    export, E-119); the auditor's files are unchanged."""
     out = io.StringIO()
+    if bom:
+        out.write("\ufeff")
     w = csv.writer(out)
     w.writerow(header)
     for r in rows:

@@ -4,6 +4,8 @@ import StageCard from './StageCard'
 import FindingList from './FindingList'
 import CreditStrip from './CreditStrip'
 import AtAGlance from './AtAGlance'
+import CounterOfferBox from './CounterOfferBox'
+import ScoreWaterfall from './ScoreWaterfall'
 import TypedText from './TypedText'
 import { conditionsFrom } from '../lib/conditions'
 import { filterCitations } from '../lib/glance'
@@ -123,7 +125,11 @@ export default function ReportPanel({
         <p className="stop-note">{report.stop_text}</p>
       )}
 
+      <ScoreWaterfall data={report.score_breakdown} />
+
       <AtAGlance report={report} decided={Boolean(officerAction)} />
+
+      <CounterOfferBox box={report.counter_offer} />
 
       {Object.keys(report.identity_from_documents || {}).length > 0 && (
         <aside

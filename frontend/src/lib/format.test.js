@@ -44,3 +44,16 @@ describe('format', () => {
     expect(tidySummary(s, { decided: true })).not.toContain('Awaiting')
   })
 })
+
+describe('duration', () => {
+  it('reads minutes, hours or days', async () => {
+    const { duration } = await import('./format')
+    expect(duration(30)).toBe('1 min')
+    expect(duration(40 * 60)).toBe('40 min')
+    expect(duration(3600)).toBe('1 hour')
+    expect(duration(13.5 * 3600)).toBe('13.5 hours')
+    expect(duration(36 * 3600)).toBe('36 hours')
+    expect(duration(4.2 * 86400)).toBe('4.2 days')
+    expect(duration(null)).toBe('–')
+  })
+})

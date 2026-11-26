@@ -105,4 +105,24 @@ describe('ReportPanel', () => {
     )
     expect(screen.queryByLabelText('Score 72')).not.toBeInTheDocument()
   })
+
+  it('shows the counter-offer box only when the report carries one', () => {
+    const name = 'Other amounts or tenures (estimate)'
+    const { rerender } = render(<ReportPanel caseId="c1" caseNo="CASE-2026-0001" report={report} />)
+    expect(screen.queryByRole('region', { name })).not.toBeInTheDocument()
+    const line = {
+      kind: 'tenure',
+      loan_type: 'personal',
+      text: 'Pramaan estimates ₹7L over 4 years would be recommended for refer (FOIR 47.4%).',
+      tags: ['EMI ₹18,434'],
+    }
+    rerender(
+      <ReportPanel
+        caseId="c1"
+        caseNo="CASE-2026-0001"
+        report={{ ...report, counter_offer: { lines: [line] } }}
+      />,
+    )
+    expect(screen.getByRole('region', { name })).toHaveTextContent(line.text)
+  })
 })

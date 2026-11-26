@@ -111,6 +111,25 @@ class Pricing(BaseModel):
     rate_pct: dict[LoanType, float]
 
 
+class AlternateProduct(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    keywords: list[str] = Field(min_length=1)
+    employment: list[Literal["salaried", "self_employed"]] = Field(min_length=1)
+
+
+class CounterOfferRules(BaseModel):
+    """The counter-offer box (Stage 12 Part A). Display only; no score or band depends on it."""
+
+    model_config = ConfigDict(extra="forbid")
+    bands: list[Literal["reject", "refer"]]
+    min_share: float = Field(gt=0, le=1)
+    amount_step: float = Field(gt=0)
+    tenure_step_months: int = Field(gt=0)
+    min_tenure_months: int = Field(gt=0)
+    moves_fields: list[str] = Field(min_length=1)
+    alternate_products: dict[LoanType, AlternateProduct]
+
+
 class AmountBand(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str
@@ -174,6 +193,7 @@ class RuleSet(BaseModel):
     age: AgeRules
     precedent: PrecedentRules
     pricing: Pricing
+    counter_offer: CounterOfferRules
     params: Params
     documents: dict[str, list[DocRequirement]]
     rules: list[Rule]
@@ -214,6 +234,10 @@ class RuleSet(BaseModel):
             for stage, weight in self.scoring.stage_weights.items():
                 if got.get(stage, 0) != weight:
                     raise ValueError(f"{loan}/{stage}: rule points {got.get(stage, 0)} != {weight}")
+        fields = {r.field for r in self.rules}
+        unknown = sorted(set(self.counter_offer.moves_fields) - fields)
+        if unknown:
+            raise ValueError(f"counter_offer.moves_fields not read by any rule: {unknown}")
         return self
 
 

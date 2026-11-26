@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import CaseQueueTable from '../components/CaseQueueTable'
+import ExportButton from '../components/ExportButton'
+import { queryOf } from '../lib/download'
 import { EmptyState, ErrorState } from '../components/States'
 import { LOAN_TYPES } from '../components/LoanTypePicker'
 import { VIEWS, matchesView } from '../lib/views'
@@ -21,29 +23,49 @@ const STATUSES = [
   ['overridden', 'Overridden'],
 ]
 
+const DUE = [
+  ['', 'Any'],
+  ['due_today', 'Due today'],
+  ['overdue', 'Overdue'],
+]
+
 export default function CaseQueuePage() {
   const [params, setParams] = useSearchParams()
   const view = VIEWS[params.get('view')] ? params.get('view') : ''
+  // the due filter lives in the address, so Home's Overdue tile can open the queue filtered
+  const due = DUE.some(([v]) => v === params.get('due')) ? params.get('due') : ''
+  const setDue = (value) => {
+    const next = new URLSearchParams(params)
+    if (value) next.set('due', value)
+    else next.delete('due')
+    setParams(next)
+  }
   const [status, setStatus] = useState('')
   const [loan, setLoan] = useState('')
   const [q, setQ] = useState('')
-  const { data, error, loading, reload } = useAsync(() => {
-    const p = new URLSearchParams()
-    if (status) p.set('status', status)
-    if (loan) p.set('loan_type', loan)
-    if (q.trim()) p.set('q', q.trim())
-    return api.get(`/cases?${p}`)
-  }, [status, loan, q])
+  const filters = { status, loan_type: loan, q: q.trim(), due }
+  const { data, error, loading, reload } = useAsync(
+    () => api.get(`/cases?${queryOf(filters)}`),
+    [status, loan, q, due],
+  )
 
   const shown = data ? data.filter((c) => matchesView(c, view)) : null
   return (
     <div className="queue-page">
       <div className="queue-head">
         <h1>Cases</h1>
-        <Link to="/cases/new" className="btn btn-primary">
-          New case
-        </Link>
+        <div className="queue-actions">
+          <ExportButton path={`/cases/export.csv?${queryOf(filters, { view })}`}>
+            Export CSV
+          </ExportButton>
+          <Link to="/cases/new" className="btn btn-primary">
+            New case
+          </Link>
+        </div>
       </div>
+      <p className="export-note small muted">
+        Exports the cases shown, with your filters. No applicant names.
+      </p>
       <div className="filters" role="search">
         <div className="field">
           <label htmlFor="q">Search</label>
@@ -77,6 +99,16 @@ export default function CaseQueuePage() {
             {LOAN_TYPES.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="fd">Due</label>
+          <select id="fd" className="select" value={due} onChange={(e) => setDue(e.target.value)}>
+            {DUE.map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
               </option>
             ))}
           </select>

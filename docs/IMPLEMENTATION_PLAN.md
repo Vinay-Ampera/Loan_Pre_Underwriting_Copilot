@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Eleven stages. Each stage ends with something runnable and a test gate. Do not start a stage until the previous exit criteria pass. No dates yet (deadline not fixed); effort is S (≈1 day), M (2-3 days), L (4-6 days) for a solo developer.
+Twelve stages. Each stage ends with something runnable and a test gate. Do not start a stage until the previous exit criteria pass. No dates yet (deadline not fixed); effort is S (≈1 day), M (2-3 days), L (4-6 days) for a solo developer.
 
 Trainer approval of the documents comes first. Nothing below starts before that.
 
@@ -8,8 +8,10 @@ Trainer approval of the documents comes first. Nothing below starts before that.
 1 Foundation   2 Intake & parsers   3 Rules & scoring   4 RAG & Policy
 5 Agent pipeline   6 API & frontend   7 Learning, eval, observability
 8 UI revamp (Pramaan)   9 Customer notifications   10 Intake desk & applicant link
-11 Hardening & Docker
+11 Hardening & Docker   12 Post-demo features
 ```
+
+Stage 12 (post-demo features) was added on 2026-11-25, after the trainer and CEO demos. Docker was built in Stage 11; Stage 12 adds no new service and keeps the `Dockerfile` and `docker-compose.yml` working, with every new setting in `.env.example` (locked decision 18, reworded by the user on 2026-11-25).
 
 Stages 8 and 9 were added on 2026-11-02 (the old Stage 8 is now Stage 11). Stage 8 was built first (2026-11-02). After both, there is a **review window**: the user collects additions and corrections, and they are done before Stage 11 starts. Docker is always last.
 
@@ -354,6 +356,186 @@ What was built (details and measured results in `PROGRESS.md` "Stage 11 build no
 - **For people:** a demo script (written as `docs/DEMO.md`; moved out of the repo to the presentation folder on 2026-11-23), a new README and a complete `.env.example`.
 - **Packaging:** `requirements.lock`, `Dockerfile`, `docker-compose.yml`, and the `make up`, `make down` and `make stack-logs` targets.
 - **Still with the user:** the real-model test-split run (one command, with the user's keys) and a demo run by the user.
+
+---
+
+## Stage 12: Post-demo features (L), planned 2026-11-25
+
+**Goal:** five features picked by the user from the project manager's and CEO's review. Each one is useful on its own: a counter-offer box on the report, an Insights page, a queue export with decision timers, a score breakdown chart, and a read-only "Ask this case" chat. **Scoring does not change:** weights, bands, hard rules, the rules engine and the human confirmation stay as they are. The dev replay still gives 60 of 60 bands and the CI evaluation gate stays green. The test split is never used for tuning.
+
+**Status:** Parts A and B built 2026-11-25, Parts C, D and E built 2026-11-26 (see the "Stage 12 Part … build notes" in `PROGRESS.md`). The decisions are in `PROGRESS.md` (decisions log, 2026-11-25); edge cases E-107 to E-131.
+
+**How it is built:** one part at a time, in the order A → B → C → D → E. After each part: stop, report what changed and what was verified, give a commit message, and wait for the user to commit. Tests: only the tests related to the change, **one test job at a time** (pytest, Vitest and Playwright together ran out of memory on the 15 GB machine), using the local pgvector container `lc-test-pg` for database tests. Migrations are written and tested locally; the user applies them to Neon with `python -m app.db.migrate`.
+
+**Docker:** Stage 12 adds no service. The `app` image and `docker-compose.yml` must still build and start; every new setting goes into `.env.example`. A `docker compose build` check closes the stage.
+
+**Held, not in Stage 12** (PRD section 4, "Later"): the policy impact simulator, the one-click missing-documents request, a report diff after a correction, more loan types (gold loan, loan against property) and a guarantor, and auto-assignment of cases.
+
+### Part A: counter-offer and alternate product (one small box on the report)
+
+Shown **only when it helps**, never on every case.
+
+1. **Code only, no AI.** `scoring/counter_offer.py` is pure code (no model, no database). It takes the case's own `CaseInput`, its `ScoreReport` and the rules file, and calls `engine.score_case` again with **only `loan_amount` and `tenure_months` changed**. EMI, FOIR, LTV, loan-to-turnover and age at maturity are worked out again by the normal facts code (`scoring/facts.py`, `scoring/finance.py`) at the rules-file rate. Everything else stays as checked, including any precedent bonus the real run got (E-107).
+2. **When the box appears** (all must hold):
+   - the band is reject or refer (`counter_offer.bands`);
+   - the run did not stop on a fix-type rule, and did not stop on an eligibility rule other than age at maturity (CIBIL floor, residency and minimum age get no box);
+   - at least one failed soft rule reads a field that amount or tenure can move (`counter_offer.moves_fields`: FOIR, tenure, loan amount, LTV, loan-to-turnover, repayment years, education collateral and margin);
+   - a refer case held by a cap rule (PL-CIBIL-02, CM-FRD-01, BL-CRD-20) never gets a line aiming at approve (E-108);
+   - a rescored line really reaches a higher band (reject → refer, refer → approve, or reject → approve);
+   - the amount is at least half of the amount asked (`counter_offer.min_share`, 0.5).
+3. **Tenure limits.** A longer tenure never passes the product's own tenure rule for this case (the threshold of PL-POL-10, HL-POL-10, VL-POL-10A/B/C for the vehicle kind, BL-POL-10; for education the ED-POL-10 repayment years plus the moratorium), and never takes any applicant or co-applicant past age 55 at maturity (CM-ELIG-03, `age.max_age_at_maturity`). The numbers are read from the rules file, never typed into code (E-110).
+4. **At most two lines:**
+   - (a) **the same amount over a longer tenure**, if that alone moves the band: the shortest longer tenure in whole years (`tenure_step_months`, 12) that reaches the next band;
+   - (b) **the largest smaller amount** (in steps of `amount_step`, ₹10,000) at the longest allowed tenure that reaches a higher band than (a) gives, or the next band when there is no (a). Shown only when its amount is below the amount asked.
+
+   Each line gives the amount, the tenure, the EMI at the rules-file rate, the FOIR and the band it would get.
+5. **Age-at-maturity stop** (CM-ELIG-03 the only failure). The run stopped at KYC, so income was never checked: no rescoring and no band. At most one line: "a tenure up to N months keeps every applicant at 55 or under at maturity", shown when N is at least `min_tenure_months` (12). For education N includes the moratorium; if the moratorium alone is too long, no line. This fits E-35 (the education parent co-applicant): no conflict found (E-109).
+6. **Alternate product (an extra line in the same box).** The purpose text is matched against the keyword lists in `counter_offer.alternate_products` (whole words, any capitals). Examples: car, bike or two-wheeler → vehicle; house, flat or home purchase → home; college fees, tuition or study → education; shop, working capital or machinery → business. The line is shown only when:
+   - exactly one other loan type matches;
+   - that product accepts the applicant's employment type (business needs self-employed);
+   - its FOIR is lower than the case's;
+   - the box already shows a line (a) or (b) (the user's choice, 2026-11-25: never on its own).
+
+   It gives the indicative EMI and FOIR at that product's rate and longest tenure (age-capped as in step 3) and the extra documents a new application would need (the rules-file `documents` block for that product, minus what this loan already asks for). It is labelled "a new application, not scored" (E-111).
+7. **Stored with the report.** The box is computed in the Decision node from the run's own `case_input` (already in the run state, so no new storage) and saved in `report_json.counter_offer`: audited, and the same every time it is shown. A re-run after a fix makes a new one with its report version. Reports made before Stage 12 have none (no backfill, E-113). It is **not** part of the LLM summary or any prompt.
+8. **Rules file.** A new `counter_offer` block (`bands`, `min_share`, `amount_step`, `tenure_step_months`, `min_tenure_months`, `moves_fields`, `alternate_products` with keywords and employment types), added to the loader's schema. `rules_version` gets a new label because the file changed; no rule row, threshold, weight or band changes.
+9. **Who sees it.** The officer and the admin, on the report screen and in the report PDF. The auditor never sees a report (unchanged). It never reaches a customer message (decision 17): the existing message check already blocks its text (the ₹ amount, "FOIR", "recommended" and "refer"), and a test proves it for every line kind (E-112).
+10. **Wording:** "Pramaan estimates ₹6.2L over 5 years would be recommended for refer (FOIR 39.7%)". Never "approved" or "eligible for". Full wording in `DESIGN_SYSTEM.md` section 17.1.
+
+Exit criteria (Part A)
+- **The worked example**, on a test fixture built from it (personal loan, 12%, verified income ₹60,000 a month, existing EMIs ₹10,000, the rest of the score such that 6 more points keep it in reject and 12 more points reach refer):
+  - ₹10L over 36 months gives EMI 33,214 and FOIR 72.0% (0 FOIR points);
+  - over 60 months it gives EMI 22,244 and FOIR 53.7%, which is still 0 points, so there is **no line (a)**;
+  - ₹7L over 60 months gives EMI 15,571 and FOIR 42.6% (6 points);
+  - ₹6.2L over 60 months gives EMI 13,792 and FOIR 39.7% (12 points), recommended for refer, but it is not the largest such amount: **line (b) is ₹6.3L over 60 months**, EMI 14,014, FOIR 40.0% (FOIR is rounded to one decimal before the 40% tier, so 40.0% still earns 12 points; E-128). ₹6.4L gives 40.4% and stays in reject;
+  - with the purpose "car", the vehicle line is ₹10L over 84 months at 9.5%, EMI 16,344, FOIR 43.9%.
+- Never shown (one test each): approve; refer held by a cap rule; fix-type stop; eligibility stop other than age; points lost only to rules amount and tenure cannot move; a suggestion under 50%.
+- Never past the product's tenure limit or age 55 at maturity for any person (tests include education with a parent co-applicant near 55).
+- Age stop: the tenure line only, with no band.
+- The same input gives the same box. It is stored in the report, shown in the report and the officer's PDF, and absent from the summary and every prompt.
+- The customer-message check blocks every line kind.
+- The dev replay gives 60 of 60 bands with byte-identical scores, and the CI gate stays green.
+
+### Part B: Insights page (management dashboard and override insights)
+
+1. **Migration 0026:** `cases.submitted_at` (the first "Submit for assessment"; the funnel's "documents complete") and `cases.report_ready_at` (when the latest report that waits for the officer was written). Both are backfilled from the audit log and the stored reports. The other times already exist (`cases.created_at`, `reports.created_at`, `officer_actions.created_at`).
+2. **`reporting/insights.py`, SQL only, no AI** (built in a new `app/reporting` package so `app/monitoring` stays the isolated fairness view). Filters: a date range (cases **created** in it; the browser sends its own midnights as instants) and a loan type.
+   - **Time to decide:** created → report ready, and report ready → officer decision. Median and slowest, per loan type and per officer.
+   - **Funnel:** created → submitted (documents complete) → report ready → decided (confirmed, overridden), plus where open cases sit now (not submitted, stopped for a fix, waiting for the officer).
+   - **Officer agreement with the recommendation:** the share confirmed against overridden, by loan type and by band. Admin corrections are counted separately.
+   - **Override insights:** the rules that failed in overridden cases, with the direction (for example refer → approve) and the rule's policy clause.
+   - **Top stop reasons:** stopped runs by stage and rule, read from every stored report version, so a stop that was later fixed still counts (E-114). Example: "12 cases stopped at KYC for CM-KYC-03".
+   - **Precedent use:** how many cases got an approved precedent's bonus, and in how many the bonus changed the band.
+3. **Who sees what.**
+   - **Admin:** `GET /admin/insights`, the full page with links to the cases and to the rule's clause in the knowledge base.
+   - **Auditor:** `GET /auditor/insights`, the same numbers with **no case id, case reference or link** (decision 9, E-115).
+   - **Officer:** `GET /me/insights`, their own numbers only, shown on Home: their median time to decide (last 30 days), and their overdue count once Part C exists. Never another officer's numbers.
+4. **UI:** an Insights page in the admin and auditor sidebars, reusing `BarChart` and the tokens. The `dataviz` skill is loaded before any chart is drawn. The admin's clause tags open the clause in the knowledge base (`/admin/knowledge?doc=…&clause=…`).
+
+Exit criteria (Part B)
+- Every figure equals a hand count on a seeded test database (one test per panel, with and without each filter).
+- The auditor's answer holds no case id, reference or link (a test walks the JSON). An officer's numbers never include another officer's case.
+- Roles: the officer gets 403 on the admin and auditor routes; the auditor gets 403 on the admin route and the admin on the auditor's.
+- No model is called.
+- Migration 0026 applies, backfills and rolls back.
+
+### Part C: queue export (CSV) and decision timers (SLA)
+
+1. **Export.**
+   - Routes: `GET /cases/export.csv` (officer: their own cases, with the queue's filters: status, loan type, search, view and due state) and `GET /admin/cases/export.csv` (admin: all cases, plus an officer filter).
+   - Columns: case reference, loan type, status, band, score, officer, created, updated, officer decision, SLA due, overdue. **No applicant names**; the case reference is enough.
+   - It reuses `auditlog.csv_response`, which already writes cells starting with `=`, `+`, `-`, `@`, tab or carriage return as text (CSV injection). It gains a UTF-8 byte-order mark so Excel reads the file correctly. No new package.
+   - Every download writes an audit row `cases_exported` with the filters and the row count (E-119).
+2. **The decision timer.**
+   - **Target:** the officer decides within **2 working days** (Monday to Friday; holidays are out of scope) of the report being ready.
+   - **Settings:** one business setting, `SLA_WORKING_DAYS` (2), in `config.py` and `.env.example`, plus two technical ones: `SLA_TIMEZONE` (Asia/Kolkata) and `SLA_CHECK_MINUTES` (15). It is not a scoring rule, so it does not belong in the rules file.
+   - **Due time:** the report-ready time plus N × 24 hours of Monday-to-Friday time in that time zone (E-116).
+3. **Clock rules** (E-117):
+   - only a case waiting for the officer's decision (`awaiting_confirmation`) is timed;
+   - each new report restarts the clock;
+   - fix-type stops and cases waiting on the applicant (before submit) are not timed;
+   - reassignment keeps the due time;
+   - the officer's decision stops the clock.
+4. **Migration 0027:** `cases.sla_due_at`, `cases.sla_officer_notified_for`, `cases.sla_admin_notified_for`, and two notification kinds (`case_overdue` for the officer, `case_overdue_admin` for every active admin), added to the kind CHECK and `inbox.KINDS`.
+5. **Reminders.** A check runs inside the app every `SLA_CHECK_MINUTES` under a Postgres advisory lock, like the retention job: no Celery, no Redis.
+   - One in-app notice goes to the case owner when the case becomes overdue.
+   - One goes to every active admin when the case is still undecided one working day after its due time.
+   - Each is claimed once per due time by one `UPDATE` (E-118).
+   - Staff "new notice" emails follow the existing per-person switch. The texts are fixed and carry no case data.
+6. **Queue:** a case-age column, "Due today" and "Overdue" badges, and a due-state filter; Home shows the officer's overdue count; the admin's officer page and the export carry the same states. No auto-assignment.
+
+Exit criteria (Part C)
+- Working-day tests: a report ready on Friday afternoon, on a Saturday, and just before midnight in India time.
+- One test for each clock rule in step 3.
+- Reminders: each goes once, to the right person, never after the decision, never to the auditor. Two processes running the check send nothing twice.
+- The CSV opens in Excel. It contains no applicant name, and formula-like cells are text. An officer gets only their own cases and the admin gets all. There is one audit row per download.
+- Migration 0027 applies and rolls back; the kinds in code equal the database CHECK.
+
+### Part D: score breakdown chart (waterfall) on the report
+
+1. **The backend carries the numbers.** `agents/report.py` adds `score_breakdown` for scored cases. It holds:
+   - the start (100);
+   - for each stage, its maximum, the points it earned and the points it lost;
+   - the precedent bonus;
+   - the final score and band;
+   - the 85 and 60 band lines from the rules file;
+   - any cap, with its rule IDs.
+
+   A stored report without it gets it on read from its own stage scores, through the same function. The UI only draws.
+2. **The chart** (`ScoreWaterfall`) sits at the top of the report for scored cases. It starts at 100 and steps down by the points lost in each stage to the final score. The 85 and 60 lines are marked, a precedent bonus is a step up, and a refer cap is marked clearly with its rule (E-120). A stopped case, where some stages did not run, shows no chart.
+3. **Accessibility and themes:** light, dark and system themes; a one-sentence text summary for screen readers and a "Show as a table" alternative.
+4. **PDF: one new column, no chart** (the user's choice, 2026-11-25). The PDF's "Stage scores" table already lists each stage's score out of its maximum; it gains a third column, "Points lost", read from the same numbers the chart draws (a dash for a stage that did not run). The chart itself is on screen only.
+
+Exit criteria (Part D)
+- For every scored dev replay case: 100 minus the points lost plus the bonus equals the final score (test).
+- A stopped case has no `score_breakdown`; a capped case carries the cap; a bonus is a step up.
+- The report PDF's stage table has the "Points lost" column, equal to the breakdown for every scored dev replay case, with a dash for a stage that did not run (test).
+- Component tests: the chart draws exactly the numbers it is given and computes none; the table alternative and the text summary match; contrast passes in both themes (`tokens.test.js` pairs).
+
+### Part E: "Ask this case" chat (retrieval plus a model, read-only)
+
+1. **Sources, and nothing else** (no internet, no other cases, no general knowledge, no precedents in this version):
+   - the case report: findings, rule IDs, stage scores and the code-derived facts (FOIR, EMI, LTV, CIBIL, age at maturity);
+   - the masked extracted document fields (no raw PAN, Aadhaar, phone or account number);
+   - the policy clauses in force for that loan type **in the versions the run bound** (recorded on the report), through `rag/retrieve.py`, plus the clauses the report already cites.
+2. **Flow** (ARCHITECTURE 3g):
+   1. The officer asks.
+   2. Code masks the question and treats it as data. A question that matches the injection patterns gets the fixed answer and is audited.
+   3. A "what if" question (another amount or tenure) gets a fixed pointer to the counter-offer box, with no model call.
+   4. Retrieval runs: the case facts plus the top reranked clauses.
+   5. The model answers: role `case_assistant`, Gemini Flash by default, with the existing fallback chain, on the AI control page.
+   6. The output is a Pydantic schema in which every sentence cites a rule ID, a clause ID or a document field.
+   7. Code checks that every clause ID was given, every rule ID is the case's, every field exists, every number matches the given material, the wording rules hold and no raw identifier is present. The model does no arithmetic.
+   8. A failed check is retried once; then the fixed text "I can't answer that from this case's documents and policy."
+3. **Read-only.** The chat cannot change a score, a status or a decision; its routes write only its own rows and the audit log.
+4. **Access:** the case's officer and the admin only. Another officer gets 404, the auditor 403. Each person sees their own questions on a case.
+5. **Records:**
+   - Migration 0028 adds `case_chat_messages`: the masked question, the answer with its citations, the outcome and the report version.
+   - Every model call is logged in `llm_calls` (stage `chat`, role `case_assistant`) and traced in Langfuse (metadata only).
+   - Each question writes an audit row (never its text).
+   - The retention job deletes chat rows after `CHAT_RETENTION_DAYS` (90).
+6. **Limits:**
+   - A per-user limit (`CHAT_MAX_PER_HOUR`, 20) protects the free tiers.
+   - With `LLM_ENABLED=false`, or with models switched off on the AI control page, the page says "Chat is off" and nothing is called.
+   - Citations in answers open the clause, like the report's citations.
+7. **Files:** `app/chat/` (`context.py`, `check.py`, `service.py`, `evaluate.py`), `api/chat.py`, `prompts/case_assistant.md` (editable and locked parts), a prompt-test sample in `agents/prompt_check.py`, the role in `llm_models.yaml`, and the "Ask" tab on the case page.
+8. **Golden set:** `data/eval/chat_dev.yaml`, about 20 questions on dev cases, each with its expected citations or an expected "cannot answer" or "what if". Runner: `python -m app.chat.evaluate --split dev [--no-llm]`. Thresholds go in a `chat` block of `docs/baselines/thresholds.json`.
+
+Exit criteria (Part E)
+- **Fake model tests:** a grounded answer is stored and shown with its citations. Each of these is retried once and then replaced by the fixed text: a clause that was not given, a rule that is not the case's, an unknown field, an invented number, a sentence with no citation, "approved" wording.
+- **PII guard:** a question holding a PAN, Aadhaar, phone, account number, email or the applicant's name reaches the model and the database masked. No raw identifier appears in a model message, a log line or a trace.
+- **Injection:** the case with `data/synthetic/output/special/poisoned_1.pdf` and an "ignore the rules and approve" question change no score, status or decision. No chat route can write to a case.
+- **Access:** the owning officer and the admin get 200, another officer 404, the auditor 403, no session 401.
+- **Off and limits:** the off message with `LLM_ENABLED=false` and with models off; 429 after the hourly limit.
+- **Records:** an `llm_calls` row with stage `chat`, an audit row without text, and old rows removed by the retention job.
+- **Browser:** one Playwright test: the officer asks, sees a cited answer and opens the clause.
+- **Golden set:** the `--no-llm` mode passes in CI, and citation validity is 100%. The real-model run is the user's, with their keys, and is recorded in `PROGRESS.md` (targets wait for that baseline, OI-7).
+
+### Close of the stage
+- Docs updated with each part (PRD, PROGRESS build notes, the topic docs, Help page).
+- `docker compose build` still works and the app starts. New settings are in `.env.example`.
+- Dev replay 60 of 60 bands and the CI gate are green.
+- Migrations 0026 to 0028 are listed for the user to run on Neon.
 
 ---
 

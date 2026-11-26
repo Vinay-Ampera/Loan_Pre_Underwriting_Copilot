@@ -13,6 +13,8 @@ import IntakeDesk from '../components/IntakeDesk'
 import AdminChanges from '../components/AdminChanges'
 import AdminCorrection from '../components/AdminCorrection'
 import AuditTimeline from '../components/AuditTimeline'
+import CaseChat from '../components/CaseChat'
+import Icon from '../components/Icons'
 import CaseStepper from '../components/CaseStepper'
 import ConfirmBar from '../components/ConfirmBar'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -35,6 +37,7 @@ const TABS = [
   ['documents', 'Documents'],
   ['fields', 'Extracted fields'],
   ['report', 'Report'],
+  ['ask', 'Ask this case', 'chat'],
   ['audit', 'Audit'],
 ]
 
@@ -363,7 +366,7 @@ export default function CaseWorkspacePage() {
           ) : (
             <>
               <div className="tabs" role="tablist" aria-label="Case sections">
-                {TABS.map(([key, label]) => (
+                {TABS.map(([key, label, icon]) => (
                   <button
                     key={key}
                     role="tab"
@@ -372,6 +375,7 @@ export default function CaseWorkspacePage() {
                     className={`tab${tab === key ? ' on' : ''}`}
                     onClick={() => setTab(key)}
                   >
+                    {icon && <Icon name={icon} size={16} className="tab-icon" />}
                     {label}
                   </button>
                 ))}
@@ -552,6 +556,16 @@ export default function CaseWorkspacePage() {
                     />
                   ) : (
                     <p className="muted">The report appears here after the case is assessed.</p>
+                  )}
+                </div>
+              )}
+
+              {tab === 'ask' && (
+                <div className="tab-body chat-body">
+                  {report ? (
+                    <CaseChat caseId={id} reportVersion={c.report_version} />
+                  ) : (
+                    <p className="muted">Chat opens when the report is ready.</p>
                   )}
                 </div>
               )}
