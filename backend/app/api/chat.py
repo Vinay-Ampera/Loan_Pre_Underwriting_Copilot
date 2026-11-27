@@ -66,7 +66,7 @@ def _models(request: Request) -> Any:
 def _turn_out(row: Any) -> dict[str, Any]:
     return {
         "id": row.id, "question": row.question, "outcome": row.outcome,
-        "text": service.FIXED.get(row.outcome), "answer": row.answer,
+        "text": service.fixed_reply(row.outcome, row.question), "answer": row.answer,
         "report_version": row.report_version, "created_at": row.created_at,
         "note": service.MASKED_NOTE if any(t in row.question for t in _HIDDEN) else None,
     }  # fmt: skip

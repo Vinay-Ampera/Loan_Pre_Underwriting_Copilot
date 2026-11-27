@@ -16,29 +16,63 @@ const HINT = {
   progress: 'Draft, uploaded or being assessed',
 }
 
-/** The officer's own pace (Stage 12 Part B, `/me/insights`); never another officer's numbers. */
-function YourPace({ mine }) {
-  const decided = mine.decided_30d > 0
+/** One figure in the strip. The hint is kept for screen readers and as the hover text. */
+function Stat({ label, value, hint, to, quiet = false }) {
+  const inside = (
+    <>
+      <span className="stat-label">{label}</span>
+      <span className={quiet ? 'stat-empty' : 'stat-value'}>{value}</span>
+      <span className="sr-only">{hint}</span>
+    </>
+  )
   return (
-    <ul className="tiles" aria-label="Your pace">
-      <li>
-        <div className="tile tile-static card">
-          <span className={decided ? 'tile-count tile-time' : 'tile-empty'}>
-            {decided ? duration(mine.median_decision_s) : 'No decisions yet'}
-          </span>
-          <span className="tile-label">Your median time to decide</span>
-          <span className="tile-hint small muted">Report ready to your decision, last 30 days</span>
-        </div>
-      </li>
-      <li>
-        <Link to="/cases?due=overdue" className="tile card">
-          <span className="tile-count">{mine.overdue}</span>
-          <span className="tile-label">Overdue</span>
-          <span className="tile-hint small muted">
-            Past the {mine.sla_working_days} working day target
-          </span>
+    <li>
+      {to ? (
+        <Link to={to} className="stat" title={hint}>
+          {inside}
         </Link>
-      </li>
+      ) : (
+        <div className="stat" title={hint}>
+          {inside}
+        </div>
+      )}
+    </li>
+  )
+}
+
+/**
+ * The officer's counts in one strip, then their own pace (Stage 12, `/me/insights`; never another
+ * officer's numbers).
+ */
+function Summary({ counts, mine }) {
+  const decided = mine?.decided_30d > 0
+  return (
+    <ul className="stats" aria-label="Case summary">
+      {TILES.map((key) => (
+        <Stat
+          key={key}
+          to={`/cases?view=${key}`}
+          label={VIEWS[key].label}
+          value={counts[key]}
+          hint={HINT[key]}
+        />
+      ))}
+      {mine && (
+        <>
+          <Stat
+            label="Your median time to decide"
+            value={decided ? duration(mine.median_decision_s) : 'No decisions yet'}
+            quiet={!decided}
+            hint="Report ready to your decision, last 30 days"
+          />
+          <Stat
+            to="/cases?due=overdue"
+            label="Overdue"
+            value={mine.overdue}
+            hint={`Past the ${mine.sla_working_days} working day target`}
+          />
+        </>
+      )}
     </ul>
   )
 }
@@ -78,18 +112,7 @@ export default function HomePage() {
               <Link to="/cases?view=corrected">See which</Link>
             </p>
           )}
-          <ul className="tiles" aria-label="Case summary">
-            {TILES.map((key) => (
-              <li key={key}>
-                <Link to={`/cases?view=${key}`} className="tile card rise">
-                  <span className="tile-count">{counts[key]}</span>
-                  <span className="tile-label">{VIEWS[key].label}</span>
-                  <span className="tile-hint small muted">{HINT[key]}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {mine.data && <YourPace mine={mine.data} />}
+          <Summary counts={counts} mine={mine.data} />
           <section className="recent">
             <div className="recent-head">
               <h2>Recent cases</h2>

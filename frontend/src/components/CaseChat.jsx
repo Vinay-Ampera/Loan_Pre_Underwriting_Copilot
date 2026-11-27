@@ -61,6 +61,39 @@ function Answer({ answer }) {
   )
 }
 
+// Shown one after another while the answer is on its way. They follow a timer, not the server.
+const STEPS = [
+  'Understanding your question',
+  'Reading the case',
+  'Looking up the policy',
+  'Writing the answer',
+  'Checking the sources',
+]
+export const STEP_MS = 1800
+
+/** The answer being written: a short line of what is going on and three moving dots. */
+function Thinking() {
+  const [step, setStep] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setStep((n) => Math.min(n + 1, STEPS.length - 1)), STEP_MS)
+    return () => clearInterval(timer)
+  }, [])
+  return (
+    <div className="chat-answer chat-thinking" role="status">
+      {/* one announcement for screen readers, not one for every step */}
+      <span className="sr-only">Working on your answer</span>
+      <span className="muted" aria-hidden="true">
+        {STEPS[step]}
+      </span>
+      <span className="chat-dots" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </span>
+    </div>
+  )
+}
+
 function Turn({ turn, latestVersion }) {
   return (
     <li className="chat-turn">
@@ -68,7 +101,7 @@ function Turn({ turn, latestVersion }) {
         <span className="sr-only">You asked: </span>
         {turn.question}
       </p>
-      {turn.note && <p className="small muted">{turn.note}</p>}
+      {turn.note && <p className="chat-note small muted">{turn.note}</p>}
       <div className="chat-answer">
         {turn.answer ? <Answer answer={turn.answer} /> : <p>{turn.text}</p>}
         {latestVersion != null && turn.report_version !== latestVersion && (
@@ -111,13 +144,14 @@ export default function CaseChat({ caseId, reportVersion }) {
     if (!ready) return
     const asked = question.trim()
     setWaiting(asked)
+    setQuestion('') // it moves into the conversation at once
     setFailed(null)
     try {
       const turn = await api.post(`/cases/${caseId}/chat`, { question: asked })
       setAdded((list) => [...list, turn])
-      setQuestion('')
     } catch (e) {
-      setFailed(e.message) // the question stays in the box
+      setQuestion(asked) // back in the box, to try again
+      setFailed(e.message)
     } finally {
       setWaiting(null)
     }
@@ -139,13 +173,16 @@ export default function CaseChat({ caseId, reportVersion }) {
           {turns.map((t) => (
             <Turn key={t.id} turn={t} latestVersion={data.report_version} />
           ))}
+          {waiting && (
+            <li className="chat-turn">
+              <p className="chat-question">
+                <span className="sr-only">You asked: </span>
+                {waiting}
+              </p>
+              <Thinking />
+            </li>
+          )}
         </ol>
-        {waiting && (
-          <>
-            <p className="chat-question">{waiting}</p>
-            <SectionLoader label="Reading the case" />
-          </>
-        )}
         <span ref={end} />
       </div>
       <form
@@ -165,6 +202,7 @@ export default function CaseChat({ caseId, reportVersion }) {
             placeholder={EXAMPLE}
             value={question}
             disabled={data.off}
+            readOnly={Boolean(waiting)}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {

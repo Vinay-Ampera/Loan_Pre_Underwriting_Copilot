@@ -17,6 +17,11 @@ ROLE = "case_assistant"
 STAGE = "chat"
 MAX_QUESTION = 500
 CANNOT = "I can't answer that from this case's documents and policy."
+GREETING = (
+    "Hello. Ask me about this case, for example why a stage lost points, what a document shows "
+    "or what a policy rule says."
+)
+THANKS = "You're welcome. Ask me anything else about this case."
 WHAT_IF = (
     "Chat does not work out other amounts or tenures. If a change would help, the report shows "
     "it under Other amounts or tenures."
@@ -49,8 +54,34 @@ _ASKS = re.compile(
 )
 
 
+# only a message that is nothing but a greeting: "hi, why did KYC lose points?" is a question
+_GREETING = re.compile(
+    r"^\W*(?:(?P<hello>h+i+|h+e+y+|hello+|hai|namaste|good\s+(?:morning|afternoon|evening))"
+    r"(?:\s+(?:there|pramaan))?|(?P<thanks>(?:ok(?:ay)?\s+)?(?:thanks|thank\s+(?:you|u))))\W*$",
+    re.I,
+)
+
+
+def small_talk(question: str) -> str | None:
+    """The reply to a bare greeting or thanks, or None."""
+    found = _GREETING.match(question)
+    if not found:
+        return None
+    return GREETING if found["hello"] else THANKS
+
+
+def fixed_reply(outcome: str, question: str) -> str | None:
+    """The fixed text of a turn that has no answer. Read from the stored (masked) question."""
+    if outcome == "fixed_text" and (reply := small_talk(question)):
+        return reply
+    return FIXED.get(outcome)
+
+
 def route(question: str) -> str | None:
-    """'refused' (reads like an instruction), 'what_if', or None to ask the model."""
+    """'refused' (reads like an instruction), 'what_if', 'fixed_text' (a greeting), or None to
+    ask the model."""
+    if small_talk(question):
+        return "fixed_text"
     hits = injection.scan(question)
     if _ASKS.match(question):
         hits = [h for h in hits if h != "FORCE_OUTCOME"]

@@ -58,11 +58,13 @@ describe('ScoreWaterfall', () => {
     const rows = () => within(screen.getByRole('table')).getAllByRole('row')
     expect(rows()[3]).toHaveTextContent('Income and FOIR301218')
     expect(screen.getByRole('table').parentElement).toHaveClass('sr-only')
-    const toggle = screen.getByRole('button', { name: 'Show as a table' })
-    await user.click(toggle)
-    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Show as a table' }))
     expect(screen.getByRole('table').parentElement).not.toHaveClass('sr-only')
     expect(screen.queryByRole('img')).toBeNull()
+    // in the table view the button offers the way back
+    await user.click(screen.getByRole('button', { name: 'Show as a graph' }))
+    expect(screen.getByRole('img')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show as a table' })).toBeInTheDocument()
   })
 
   it('shows exactly the numbers it is given and works none out', () => {

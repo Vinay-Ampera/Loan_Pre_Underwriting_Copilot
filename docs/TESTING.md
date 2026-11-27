@@ -321,7 +321,7 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
   - the chart draws the payload's numbers and computes none (a payload with deliberately odd numbers is drawn as given);
   - the 85 and 60 lines;
   - the cap marker and the bonus step;
-  - the text summary and the "Show as a table" table match;
+  - the text summary and the "Show as a table" table match, and the button then reads "Show as a graph";
   - no chart without a breakdown.
 
   Token pairs for the chart colours are added to `tokens.test.js` (AA in light and dark).
@@ -344,7 +344,7 @@ File: `backend/tests/test_knowledge_base.py` (48 tests; fake embedder and rerank
 - **Off and limits:** with `LLM_ENABLED=false`, and with the AI control switch off, the answer is "chat is off" with no call; the 21st question in an hour gets 429.
 - **Other:** the retention job removes old turns and counts them; migration 0028 applies and rolls back; the new role validates on the AI control page and the prompt has a test sample.
 - **Browser:** `e2e/chat.spec.js`. The officer opens a report, asks a question (the e2e server uses a scripted model), sees the answer with citation chips, opens a clause, and sees the off message when models are off.
-- **Frontend unit:** `CaseChat.test.jsx` (fixed texts, citation chips, the limit message, the disabled state before a report).
+- **Frontend unit:** `CaseChat.test.jsx` (fixed texts, citation chips, the limit message, the disabled state before a report, the question leaving the box and the typing line while waiting).
 
 **Chat golden set** (`data/eval/chat_dev.yaml`, dev cases only, about 20 questions):
 - **What is in it:**

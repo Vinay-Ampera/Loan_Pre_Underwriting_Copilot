@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import CaseChat from './CaseChat'
+import CaseChat, { STEP_MS } from './CaseChat'
 import { api } from '../api/client'
 
 vi.mock('../api/client', () => ({ api: { get: vi.fn(), post: vi.fn() } }))
@@ -70,6 +70,33 @@ describe('CaseChat', () => {
     expect(screen.queryByText('FOIR of 40 percent or under.')).toBeNull()
   })
 
+  it('moves the question into the conversation at once and shows what is going on', async () => {
+    let reply
+    api.post.mockReturnValue(new Promise((resolve) => (reply = resolve)))
+    render(<CaseChat caseId="c1" reportVersion={2} />)
+    await screen.findByText('0 of 500')
+    vi.useFakeTimers()
+    try {
+      fireEvent.change(box(), { target: { value: answered.question } })
+      fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+      expect(box()).toHaveValue('')
+      expect(box()).toHaveAttribute('readonly')
+      expect(screen.getByText(answered.question)).toHaveClass('chat-question')
+      expect(screen.getByRole('status')).toHaveTextContent('Understanding your question')
+      act(() => vi.advanceTimersByTime(STEP_MS))
+      expect(screen.getByRole('status')).toHaveTextContent('Reading the case')
+      act(() => vi.advanceTimersByTime(STEP_MS * 20)) // a slow answer holds on the last step
+      expect(screen.getByRole('status')).toHaveTextContent('Checking the sources')
+      await act(async () => reply(answered))
+      expect(screen.queryByRole('status')).toBeNull()
+      expect(screen.getByText(/The FOIR earned 6 of 12 points/)).toBeInTheDocument()
+      expect(screen.getAllByText(answered.question)).toHaveLength(1)
+      expect(box()).not.toHaveAttribute('readonly')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('makes a new line with Shift+Enter and counts the characters', async () => {
     const user = userEvent.setup()
     render(<CaseChat caseId="c1" />)
@@ -113,7 +140,7 @@ describe('CaseChat', () => {
     expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
   })
 
-  it('keeps the question in the box and shows the limit message', async () => {
+  it('puts the question back in the box and shows the limit message', async () => {
     api.post.mockRejectedValue(
       new Error('You have asked many questions in the last hour. Please try again a little later.'),
     )
