@@ -359,6 +359,26 @@ def test_ordinary_questions_about_the_outcome_are_not_blocked(question: str) -> 
     assert service.route(question) is None
 
 
+@pytest.mark.parametrize(
+    ("question", "words"),
+    [("hi", service.GREETING), ("Hello there!", service.GREETING), ("thank you", service.THANKS)],
+)
+def test_a_greeting_gets_a_friendly_fixed_reply_without_a_model_call(
+    client: TestClient, engine: Engine, script: Script, question: str, words: str
+) -> None:
+    case = seed(engine)
+    turn = ask(client, "asha", case, question).json()
+    assert (turn["outcome"], turn["text"]) == ("fixed_text", words)
+    assert script.calls == []
+
+
+@pytest.mark.parametrize(
+    "question", ["hi, why did KYC lose points?", "history of the EMI", "who is the president?"]
+)
+def test_only_a_bare_greeting_counts_as_small_talk(question: str) -> None:
+    assert service.small_talk(question) is None
+
+
 # --------------------------------------------------------------------------- access
 def test_only_the_owner_and_the_admin_and_each_sees_their_own_turns(
     client: TestClient,

@@ -136,7 +136,7 @@ A three-way pill in the sidebar: **system** (default), **dark**, **light**, show
 1. **Login (the landing page).** No public page and no signup; staff accounts are created by the admin. Split layout: a brand panel on the left (the 5-stage journey, the 20/15/30/25/10 score bar with the three bands, "A human confirms every case", a "Pramaan is a sample bank; synthetic data only" note) and the sign-in form on the right. The panel stacks above the form on small screens.
    **Follow-up (built 2026-11-02):** the panel keeps the five stages, "A human confirms every case", the sample-bank note and a few lines of About; the score bar and band wording are on the Help page behind sign-in. Under the form: "Can't sign in? Contact your admin." (plain sentence only). No footer on the login page and no request form.
 2. **App shell.** Sidebar with the Pramaan mark, navigation (officer: Home, Cases, New case, Sent items, Report a problem, Help; admin: Home, Precedents, Users, Issues, Help), the theme toggle and the user menu (avatar, name, role; the menu shows name, email and role and has Sign out) sit top right, the signed-in user and role, sign out, and the theme toggle. It collapses to icons on tablet widths (up to 1024 px, confirmed 2026-11-02; the names stay for screen readers) and becomes a bar across the top on phones. The Sent items, Report a problem (officer) and Issues (admin) links arrived with Stage 9.
-3. **Home (officer).** Summary tiles (awaiting confirmation, referred, stopped, in progress) and recent cases. Tiles filter the case list.
+3. **Home (officer).** A summary strip (awaiting confirmation, referred, stopped, in progress, then the officer's pace, 17.3) and recent cases. One box divided by hairlines, label over figure; the hint is the hover text and is read to screen readers. The counts filter the case list. The admin and auditor homes keep their tiles.
 4. **Case workspace.** The 5-stage stepper (8.5) above the existing tabs.
 5. **Report.** Score ring with band and "Recommended: ..." wording; the 3C strip (8.6); Conditions (missing or unverified items to fix or ask for); existing stage cards with rule IDs and clause links; confirm bar. The summary text appears with a one-time typing effect (confirmed 2026-11-02).
 6. **Admin Home.** Pending precedents, active officers and disabled accounts.
@@ -410,7 +410,7 @@ Built with the existing tokens and components only (no new colour unless named b
   - There is no badge when the case is not timed (before submit, stopped for a fix, decided).
 - **Filter:** "Due" select (Any, Due today, Overdue) beside the status and loan filters.
 - **Export:** an "Export CSV" secondary button at the top right of the queue, with no dialog. The line under it reads "Exports the cases shown, with your filters. No applicant names." The admin's "Export all cases" sits on Home's recent-decisions card, and "Export this officer's cases" on the admin officer page (user's choice, 2026-11-26). Files are named `pramaan-cases-YYYY-MM-DD.csv`.
-- **Home (officer):** two tiles in a second row under the case tiles, labelled "Your pace": "Your median time to decide" (built in Part B: for example "36 hours", hint "Report ready to your decision, last 30 days"; "No decisions yet" when empty; a figure, not a link) and "Overdue" (Part C: count, hint "Past the 2 working day target", opens the queue filtered).
+- **Home (officer):** two more figures at the end of the summary strip: "Your median time to decide" (built in Part B: for example "36 hours", hint "Report ready to your decision, last 30 days"; "No decisions yet" when empty; a figure, not a link) and "Overdue" (Part C: count, hint "Past the 2 working day target", opens the queue filtered).
 - **Notices (fixed text, no digits):**
   - Officer: title "A case is past its decision time", body "Open the case to make your decision."
   - Admin: title "A case is still waiting for its officer", body "It passed its decision time a working day ago."
@@ -451,6 +451,8 @@ Built with the existing tokens and components only (no new colour unless named b
 - **Conversation:** the person's questions sit on the right (`--brand-soft`), answers on the left in a bordered bubble. While waiting, the left side shows a short line and three moving dots. The line steps through "Understanding your question", "Reading the case", "Looking up the policy", "Writing the answer" and "Checking the sources" on a timer (it is not server progress) and holds on the last. Screen readers hear "Working on your answer" once; with reduced motion the dots stand still. The shield loader is used only while the earlier turns are first loaded.
 - **Fixed texts:**
   - Cannot answer: "I can't answer that from this case's documents and policy."
+  - Greeting (the whole message is "hi", "hello" and the like): "Hello. Ask me about this case, for example why a stage lost points, what a document shows or what a policy rule says."
+  - Thanks: "You're welcome. Ask me anything else about this case."
   - What if: "Chat does not work out other amounts or tenures. If a change would help, the report shows it under Other amounts or tenures."
   - Off: "Chat is off because the AI models are switched off. The report and its citations are still here."
   - Limit: "You have asked many questions in the last hour. Please try again a little later."

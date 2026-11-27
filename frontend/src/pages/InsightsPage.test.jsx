@@ -151,7 +151,7 @@ describe('officer Home', () => {
       answer({ decided_30d: 2, median_decision_s: 36 * H, overdue: 3, sla_working_days: 2 }),
     )
     show(<HomePage />)
-    const pace = await screen.findByRole('list', { name: 'Your pace' })
+    const pace = await screen.findByRole('list', { name: 'Case summary' })
     expect(within(pace).getByText('36 hours')).toBeInTheDocument()
     expect(within(pace).getByText('Your median time to decide')).toBeInTheDocument()
     const overdue = within(pace).getByRole('link', { name: /Overdue/ })

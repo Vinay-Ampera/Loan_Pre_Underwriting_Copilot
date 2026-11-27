@@ -107,7 +107,7 @@ None of these changes the graph order, the gates or a score.
 officer or admin question (POST /cases/{id}/chat)
   -> access: case owner or admin (other officer 404, auditor 403); report must exist; rate limit per person
   -> models off? -> "Chat is off" (no call)
-  -> mask the question (same masker; names tokenised) -> injection scan -> what-if check
+  -> mask the question (same masker; names tokenised) -> greeting check -> injection scan -> what-if check
         hit -> fixed text, audit row, no model call
   -> context (code): report facts, findings and rule evidence (masked), masked extracted fields,
      clauses: the report's cited clauses + top reranked clauses for the question,

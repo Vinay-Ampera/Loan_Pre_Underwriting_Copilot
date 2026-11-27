@@ -17,13 +17,14 @@ function files(dir, ext) {
 const css = files(src, '.css').map((f) => [path.relative(src, f), readFileSync(f, 'utf8')])
 const jsx = files(src, '.jsx').map((f) => [path.relative(src, f), readFileSync(f, 'utf8')])
 
-// Only states that are really live may loop: a case being assessed, the stage in progress, and
-// a loading placeholder.
+// Only states that are really live may loop: a case being assessed, the stage in progress, a
+// loading placeholder and a chat answer on its way.
 const LOOP_OK = [
   'components/StatusChip.css',
   'components/StageProgress.css',
   'components/States.css',
   'components/Loader.css',
+  'components/CaseChat.css',
 ]
 
 describe('craft rules for every stylesheet', () => {

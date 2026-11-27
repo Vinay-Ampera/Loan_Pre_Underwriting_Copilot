@@ -150,7 +150,8 @@ Not a pipeline agent: it runs only when a person asks a question about a case th
 - **Before the model:**
   - the question is masked with the same masker as every other model input (`assert_masked` still guards the call);
   - the question is scanned with the injection patterns of `intake/injection.py`: a hit gets the fixed answer with no model call and an audit row;
-  - a "what if" question (another amount, tenure or product) gets a fixed pointer to the counter-offer box with no model call.
+  - a "what if" question (another amount, tenure or product) gets a fixed pointer to the counter-offer box with no model call;
+  - a message that is only a greeting or thanks gets a short fixed reply with no model call (stored as `fixed_text`).
 - **Output:** `ChatAnswer { answerable: bool, sentences: [{text, citations: [{kind: rule | clause | field, id}]}] }`. Extra fields are refused, and every sentence needs at least one citation. No score, no decision and no arithmetic: numbers in the text must be copied from the material.
 - **Code checks** (`app/chat/check.py`):
   - every clause ID is in the clauses given;
